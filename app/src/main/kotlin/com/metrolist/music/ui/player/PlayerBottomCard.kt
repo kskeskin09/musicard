@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,7 +34,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +56,15 @@ import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.models.MediaMetadata
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
+import com.metrolist.music.lyrics.lyricsTextLooksSynced
+import com.metrolist.music.lyrics.LyricsUtils
+import com.metrolist.music.lyrics.LyricsEntry
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 private const val LyricsPage = 0
 private const val UpNextPage = 1
@@ -70,7 +79,6 @@ fun PlayerBottomCard(
     positionProvider: () -> Long,
     isPlayerExpanded: Boolean,
     isPlaying: Boolean,
-    lyricsExpanded: Boolean,
     contentColor: Color,
     isListenTogetherGuest: Boolean,
     sleepTimerEnabled: Boolean,
@@ -84,10 +92,6 @@ fun PlayerBottomCard(
     val coroutineScope = rememberCoroutineScope()
     val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
-    LaunchedEffect(lyricsExpanded) {
-        if (lyricsExpanded) pagerState.animateScrollToPage(LyricsPage)
-    }
-
     Column(
         modifier =
             modifier
@@ -100,20 +104,21 @@ fun PlayerBottomCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 8.dp, top = 8.dp),
+                    .padding(start = 18.dp, end = 6.dp, top = 2.dp)
+                    .height(40.dp),
         ) {
             listOf(R.string.lyrics, R.string.up_next).forEachIndexed { page, label ->
                 val selected = pagerState.currentPage == page
                 Text(
                     text = stringResource(label),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     color = contentColor.copy(alpha = if (selected) 1f else 0.5f),
                     modifier =
                         Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { coroutineScope.launch { pagerState.animateScrollToPage(page) } }
-                            .padding(horizontal = 6.dp, vertical = 8.dp),
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
                 )
                 if (page == LyricsPage) Spacer(Modifier.width(8.dp))
             }
@@ -156,19 +161,13 @@ fun PlayerBottomCard(
         ) { page ->
             when (page) {
                 LyricsPage ->
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(WindowInsets.navigationBars.asPaddingValues()),
-                    ) {
-                        InlineLyricsView(
-                            mediaMetadata = mediaMetadata,
-                            // Also drives keep-screen-on, so only while the lyrics are actually on screen and playing.
-                            showLyrics = isPlayerExpanded && isPlaying && pagerState.currentPage == LyricsPage,
-                            positionProvider = positionProvider,
-                        )
-                    }
+                    InlineLyricsView(
+                        mediaMetadata = mediaMetadata,
+                        showLyrics = isPlayerExpanded && pagerState.currentPage == LyricsPage,
+                        positionProvider = positionProvider,
+                        compactColor = contentColor,
+                        isPlaying = isPlaying,
+                    )
 
                 else ->
                     UpNextList(
@@ -378,6 +377,79 @@ private fun UpNextRow(
                 color = contentColor.copy(alpha = 0.7f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * Small-screen lyrics for the bottom card: left aligned, the current line bold and bright,
+ * the others dimmed. Synced lines auto-scroll and can be tapped to seek.
+ */
+@Composable
+fun CompactLyrics(
+    lyrics: String,
+    positionProvider: () -> Long,
+    color: Color,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
+    val lines =
+        remember(lyrics) {
+            if (synced) {
+                LyricsUtils.parseLyrics(lyrics).filter { it.text.isNotBlank() }
+            } else {
+                lyrics.lines().filter { it.isNotBlank() }.map { LyricsEntry(0L, it.trim()) }
+            }
+        }
+    var currentIndex by remember(lines) {
+        mutableIntStateOf(if (synced) LyricsUtils.findCurrentLineIndex(lines, positionProvider()) else -1)
+    }
+    if (synced) {
+        LaunchedEffect(lines, isPlaying) {
+            while (isActive) {
+                currentIndex = LyricsUtils.findCurrentLineIndex(lines, positionProvider())
+                if (!isPlaying) break
+                delay(150)
+            }
+        }
+    }
+
+    val listState = rememberLazyListState()
+    LaunchedEffect(currentIndex) {
+        if (currentIndex >= 0) listState.animateScrollToItem(currentIndex)
+    }
+
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 2.dp, bottom = 16.dp + navBottom),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier.fillMaxSize(),
+    ) {
+        itemsIndexed(lines) { index, line ->
+            val active = synced && index == currentIndex
+            Text(
+                text = line.text,
+                style =
+                    if (active) {
+                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    } else {
+                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                    },
+                color = color.copy(alpha = if (active || !synced) 1f else 0.5f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (synced) {
+                                Modifier.clickable { playerConnection.player.seekTo(line.time) }
+                            } else {
+                                Modifier
+                            },
+                        ),
             )
         }
     }

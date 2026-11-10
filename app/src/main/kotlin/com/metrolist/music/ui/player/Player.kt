@@ -17,7 +17,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -98,7 +97,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -242,10 +243,18 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    val playerBackground by rememberEnumPreference(
+    // Portrait uses the card layout: lyrics / up next live in a card at the bottom, and the
+    // full queue sheet is hidden off-screen until it is opened from that card.
+    val useCardLayout = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
+
+    val playerBackgroundPreference by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
         defaultValue = PlayerBackgroundStyle.DEFAULT,
     )
+    // The card layout always uses a soft color taken from the album art (light text on top),
+    // so it runs through the GRADIENT code paths for colors and palette extraction.
+    val playerBackground =
+        if (useCardLayout) PlayerBackgroundStyle.GRADIENT else playerBackgroundPreference
     val playerButtonsStyle by rememberEnumPreference(
         key = PlayerButtonsStyleKey,
         defaultValue = PlayerButtonsStyle.DEFAULT,
@@ -811,11 +820,11 @@ fun BottomSheetPlayer(
         }
     }
 
-    // Portrait uses the card layout: lyrics / up next live in a card at the bottom, and the
-    // full queue sheet is hidden off-screen until it is opened from that card.
-    val useCardLayout = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
     LaunchedEffect(useCardLayout) {
-        if (useCardLayout) isFullScreen = false
+        if (useCardLayout) {
+            isFullScreen = false
+            showInlineLyrics = false
+        }
     }
 
     val dismissedBound =
@@ -897,7 +906,27 @@ fun BottomSheetPlayer(
                         }
                     }
 
-                    PlayerBackgroundStyle.GRADIENT -> {
+                    PlayerBackgroundStyle.GRADIENT -> if (useCardLayout) {
+                        val albumColor by animateColorAsState(
+                            targetValue = gradientColors.firstOrNull()?.let(::albumBackgroundColor) ?: DefaultAlbumBackground,
+                            animationSpec = tween(800),
+                            label = "albumBackground",
+                        )
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .alpha(backgroundAlpha)
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            lerp(albumColor, Color.White, 0.06f),
+                                            albumColor,
+                                            lerp(albumColor, Color.Black, 0.18f),
+                                        ),
+                                    ),
+                                ),
+                        )
+                    } else {
                         AnimatedContent(
                             targetState = gradientColors,
                             transitionSpec = {
@@ -1222,23 +1251,12 @@ fun BottomSheetPlayer(
                     // For episodes, show saved state (inLibrary); for songs, show liked state
                     val isEpisode = currentSong?.song?.isEpisode == true
                     val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        PlayerCircleButton(
-                            icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
-                            contentDescription = null,
-                            contentColor = TextBackgroundColor,
-                            onClick = playerConnection::toggleLike,
-                        )
-                        PlayerCircleButton(
-                            icon = if (showInlineLyrics) R.drawable.expand_more else R.drawable.expand_less,
-                            contentDescription = stringResource(R.string.lyrics),
-                            contentColor = TextBackgroundColor,
-                            onClick = { showInlineLyrics = !showInlineLyrics },
-                        )
-                    }
+                    PlayerCircleButton(
+                        icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
+                        contentDescription = null,
+                        contentColor = TextBackgroundColor,
+                        onClick = playerConnection::toggleLike,
+                    )
                 } else if (useNewPlayerDesign) {
                     val shareShape =
                         RoundedCornerShape(
@@ -1660,9 +1678,9 @@ fun BottomSheetPlayer(
                                 modifier = Modifier.size(72.dp),
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.skip_previous),
+                                    painter = painterResource(R.drawable.player_backward),
                                     contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
+                                    modifier = Modifier.size(52.dp),
                                 )
                             }
 
@@ -1681,8 +1699,8 @@ fun BottomSheetPlayer(
                                                 isListenTogetherGuest ->
                                                     if (isMuted) R.drawable.volume_off else R.drawable.volume_up
                                                 playbackState == STATE_ENDED -> R.drawable.replay
-                                                effectiveIsPlaying -> R.drawable.pause
-                                                else -> R.drawable.play
+                                                effectiveIsPlaying -> R.drawable.player_pause
+                                                else -> R.drawable.player_play
                                             },
                                         ),
                                     contentDescription =
@@ -1702,9 +1720,9 @@ fun BottomSheetPlayer(
                                 modifier = Modifier.size(72.dp),
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.skip_next),
+                                    painter = painterResource(R.drawable.player_forward),
                                     contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
+                                    modifier = Modifier.size(52.dp),
                                 )
                             }
                         }
@@ -2106,10 +2124,10 @@ fun BottomSheetPlayer(
                             .fillMaxSize()
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)),
                 ) {
-                    // Leave room for the controls (~260dp) and a usable lyrics card below them.
+                    // Leave room for the controls (~240dp) and a lyrics card that fits a few lines (~200dp).
                     val artSize =
                         maxOf(
-                            minOf(maxWidth - PlayerHorizontalPadding * 2, maxHeight - topInset - 440.dp),
+                            minOf(maxWidth - PlayerHorizontalPadding * 2, maxHeight - topInset - 500.dp),
                             120.dp,
                         )
                     Column(
@@ -2127,11 +2145,7 @@ fun BottomSheetPlayer(
                                     .background(TextBackgroundColor.copy(alpha = 0.35f)),
                         )
 
-                        AnimatedVisibility(
-                            visible = !showInlineLyrics,
-                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                        ) {
+                        run {
                             // Remember lambdas to prevent unnecessary recomposition
                             val currentSliderPosition by rememberUpdatedState(sliderPosition)
                             val sliderPositionProvider = remember { { currentSliderPosition } }
@@ -2165,7 +2179,6 @@ fun BottomSheetPlayer(
                             positionProvider = { effectivePosition },
                             isPlayerExpanded = state.isExpanded,
                             isPlaying = effectiveIsPlaying,
-                            lyricsExpanded = showInlineLyrics,
                             contentColor = TextBackgroundColor,
                             isListenTogetherGuest = isListenTogetherGuest,
                             sleepTimerEnabled = sleepTimerEnabled,
@@ -2256,6 +2269,9 @@ fun InlineLyricsView(
     mediaMetadata: MediaMetadata?,
     showLyrics: Boolean,
     positionProvider: () -> Long,
+    // When set, renders the small card version of the lyrics in this color.
+    compactColor: Color? = null,
+    isPlaying: Boolean = true,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
@@ -2366,8 +2382,17 @@ fun InlineLyricsView(
                 Text(
                     text = stringResource(R.string.lyrics_not_found),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    color = (compactColor ?: MaterialTheme.colorScheme.onSurface).copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
+                )
+            }
+
+            compactColor != null -> {
+                CompactLyrics(
+                    lyrics = lyrics,
+                    positionProvider = positionProvider,
+                    color = compactColor,
+                    isPlaying = isPlaying,
                 )
             }
 
@@ -2459,4 +2484,15 @@ private fun PlayerCircleButton(
             modifier = Modifier.size(24.dp),
         )
     }
+}
+
+private val DefaultAlbumBackground = Color(0xFF2B2A30)
+
+/** Softens an album art color into a calm, mid-dark tone that white text reads well on. */
+private fun albumBackgroundColor(base: Color): Color {
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(base.toArgb(), hsl)
+    hsl[1] = (hsl[1] * 0.8f).coerceAtMost(0.55f)
+    hsl[2] = hsl[2].coerceIn(0.24f, 0.36f)
+    return Color(ColorUtils.HSLToColor(hsl))
 }
