@@ -17,6 +17,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -38,6 +39,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -52,6 +54,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -62,6 +65,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
@@ -807,13 +811,25 @@ fun BottomSheetPlayer(
         }
     }
 
-    val dismissedBound = QueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+    // Portrait uses the card layout: lyrics / up next live in a card at the bottom, and the
+    // full queue sheet is hidden off-screen until it is opened from that card.
+    val useCardLayout = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
+    LaunchedEffect(useCardLayout) {
+        if (useCardLayout) isFullScreen = false
+    }
+
+    val dismissedBound =
+        if (useCardLayout) {
+            0.dp
+        } else {
+            QueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+        }
 
     val queueSheetState =
         rememberBottomSheetState(
             dismissedBound = dismissedBound,
             expandedBound = state.expandedBound,
-            collapsedBound = dismissedBound + 1.dp,
+            collapsedBound = if (useCardLayout) dismissedBound else dismissedBound + 1.dp,
             initialAnchor = 1,
         )
 
@@ -939,6 +955,19 @@ fun BottomSheetPlayer(
             )
         },
     ) {
+        val onPlayPauseClick: () -> Unit = {
+            if (isListenTogetherGuest) {
+                playerConnection.toggleMute()
+            } else if (isCasting) {
+                if (castIsPlaying) castHandler?.pause() else castHandler?.play()
+            } else if (playbackState == STATE_ENDED) {
+                playerConnection.player.seekTo(0, 0)
+                playerConnection.player.playWhenReady = true
+            } else {
+                playerConnection.togglePlayPause()
+            }
+        }
+
         val controlsContent: @Composable ColumnScope.(MediaMetadata) -> Unit = { mediaMetadata ->
             val playPauseRoundness by animateDpAsState(
                 targetValue = if (isPlaying) 24.dp else 36.dp,
@@ -1189,7 +1218,28 @@ fun BottomSheetPlayer(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                if (useNewPlayerDesign) {
+                if (useCardLayout) {
+                    // For episodes, show saved state (inLibrary); for songs, show liked state
+                    val isEpisode = currentSong?.song?.isEpisode == true
+                    val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PlayerCircleButton(
+                            icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
+                            contentDescription = null,
+                            contentColor = TextBackgroundColor,
+                            onClick = playerConnection::toggleLike,
+                        )
+                        PlayerCircleButton(
+                            icon = if (showInlineLyrics) R.drawable.expand_more else R.drawable.expand_less,
+                            contentDescription = stringResource(R.string.lyrics),
+                            contentColor = TextBackgroundColor,
+                            onClick = { showInlineLyrics = !showInlineLyrics },
+                        )
+                    }
+                } else if (useNewPlayerDesign) {
                     val shareShape =
                         RoundedCornerShape(
                             topStart = 50.dp,
@@ -1589,7 +1639,76 @@ fun BottomSheetPlayer(
                 exit = shrinkVertically(shrinkTowards = Alignment.Top) + slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             ) {
                 Column {
-                    if (useNewPlayerDesign) {
+                    if (useCardLayout) {
+                        val controlColors =
+                            IconButtonDefaults.iconButtonColors(
+                                contentColor = TextBackgroundColor,
+                                disabledContentColor = TextBackgroundColor.copy(alpha = 0.38f),
+                            )
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = PlayerHorizontalPadding),
+                        ) {
+                            IconButton(
+                                onClick = playerConnection::seekToPrevious,
+                                enabled = canSkipPrevious && !isListenTogetherGuest,
+                                colors = controlColors,
+                                modifier = Modifier.size(72.dp),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.skip_previous),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                )
+                            }
+
+                            IconButton(
+                                onClick = onPlayPauseClick,
+                                colors = controlColors,
+                                modifier =
+                                    Modifier
+                                        .size(80.dp)
+                                        .focusRequester(focusRequester),
+                            ) {
+                                Icon(
+                                    painter =
+                                        painterResource(
+                                            when {
+                                                isListenTogetherGuest ->
+                                                    if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                                                playbackState == STATE_ENDED -> R.drawable.replay
+                                                effectiveIsPlaying -> R.drawable.pause
+                                                else -> R.drawable.play
+                                            },
+                                        ),
+                                    contentDescription =
+                                        if (isListenTogetherGuest) {
+                                            if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute)
+                                        } else {
+                                            if (effectiveIsPlaying) stringResource(R.string.player_pause) else stringResource(R.string.play)
+                                        },
+                                    modifier = Modifier.size(60.dp),
+                                )
+                            }
+
+                            IconButton(
+                                onClick = playerConnection::seekToNext,
+                                enabled = canSkipNext && !isListenTogetherGuest,
+                                colors = controlColors,
+                                modifier = Modifier.size(72.dp),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.skip_next),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                )
+                            }
+                        }
+                    } else if (useNewPlayerDesign) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
@@ -1980,53 +2099,124 @@ fun BottomSheetPlayer(
             }
 
             else -> {
-                val bottomPadding by animateDpAsState(
-                    targetValue = if (isFullScreen) 0.dp else queueSheetState.collapsedBound,
-                    label = "bottomPadding",
-                )
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                BoxWithConstraints(
                     modifier =
                         Modifier
-                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                            .padding(bottom = bottomPadding)
-                            .animateContentSize(),
+                            .fillMaxSize()
+                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)),
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.weight(1f),
+                    // Leave room for the controls (~260dp) and a usable lyrics card below them.
+                    val artSize =
+                        maxOf(
+                            minOf(maxWidth - PlayerHorizontalPadding * 2, maxHeight - topInset - 440.dp),
+                            120.dp,
+                        )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxSize(),
                     ) {
-                        // Remember lambdas to prevent unnecessary recomposition
-                        val currentSliderPosition by rememberUpdatedState(sliderPosition)
-                        val sliderPositionProvider = remember { { currentSliderPosition } }
-                        val isExpandedProvider = remember(state) { { state.isExpanded } }
-                        AnimatedContent(
-                            targetState = showInlineLyrics,
-                            label = "Lyrics",
-                            transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        ) { showLyrics ->
-                            if (showLyrics) {
-                                InlineLyricsView(
-                                    mediaMetadata = mediaMetadata,
-                                    showLyrics = showLyrics,
-                                    positionProvider = { effectivePosition },
-                                )
-                            } else {
+                        Spacer(Modifier.height(topInset))
+
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(vertical = 12.dp)
+                                    .size(width = 40.dp, height = 4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(TextBackgroundColor.copy(alpha = 0.35f)),
+                        )
+
+                        AnimatedVisibility(
+                            visible = !showInlineLyrics,
+                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                        ) {
+                            // Remember lambdas to prevent unnecessary recomposition
+                            val currentSliderPosition by rememberUpdatedState(sliderPosition)
+                            val sliderPositionProvider = remember { { currentSliderPosition } }
+                            val isExpandedProvider = remember(state) { { state.isExpanded } }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Thumbnail(
                                     sliderPositionProvider = sliderPositionProvider,
-                                    modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(artSize)
+                                            .nestedScroll(state.preUpPostDownNestedScrollConnection),
                                     isPlayerExpanded = isExpandedProvider,
                                     isListenTogetherGuest = isListenTogetherGuest,
+                                    compact = true,
+                                    isPlaying = effectiveIsPlaying,
                                 )
+                                // Same gap as between the title row and the progress bar.
+                                Spacer(Modifier.height(24.dp))
                             }
                         }
-                    }
 
-                    mediaMetadata?.let {
-                        controlsContent(it)
-                    }
+                        mediaMetadata?.let {
+                            controlsContent(it)
+                        }
 
-                    Spacer(Modifier.height(30.dp))
+                        Spacer(Modifier.height(16.dp))
+
+                        PlayerBottomCard(
+                            mediaMetadata = mediaMetadata,
+                            positionProvider = { effectivePosition },
+                            isPlayerExpanded = state.isExpanded,
+                            isPlaying = effectiveIsPlaying,
+                            lyricsExpanded = showInlineLyrics,
+                            contentColor = TextBackgroundColor,
+                            isListenTogetherGuest = isListenTogetherGuest,
+                            sleepTimerEnabled = sleepTimerEnabled,
+                            onSleepTimerClick = {
+                                if (sleepTimerEnabled) {
+                                    playerConnection.service.sleepTimer?.clear()
+                                } else {
+                                    showSleepTimerDialog = true
+                                }
+                            },
+                            onLyricsMenuClick = lyricsMenu@{
+                                val metadata = mediaMetadata ?: return@lyricsMenu
+                                menuState.show {
+                                    com.metrolist.music.ui.menu.LyricsMenu(
+                                        lyricsProvider = { playerConnection.currentLyrics.value },
+                                        songProvider = { currentSong?.song },
+                                        mediaMetadataProvider = { metadata },
+                                        onDismiss = menuState::dismiss,
+                                        onShowOffsetDialog = {
+                                            bottomSheetPageState.show {
+                                                ShowOffsetDialog(
+                                                    songProvider = { currentSong?.song },
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                            },
+                            onOpenFullQueue = { queueSheetState.expandSoft() },
+                            onMoreClick = moreMenu@{
+                                val metadata = mediaMetadata ?: return@moreMenu
+                                menuState.show {
+                                    PlayerMenu(
+                                        mediaMetadata = metadata,
+                                        playerBottomSheetState = state,
+                                        onShowDetailsDialog = {
+                                            bottomSheetPageState.show {
+                                                ShowMediaInfo(metadata.id)
+                                            }
+                                        },
+                                        onDismiss = menuState::dismiss,
+                                    )
+                                }
+                            },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .padding(horizontal = 12.dp),
+                        )
+                    }
                 }
             }
         }
@@ -2242,6 +2432,31 @@ private fun PlayerMoreMenuButton(
             painter = painterResource(R.drawable.more_horiz),
             contentDescription = null,
             colorFilter = ColorFilter.tint(iconButtonColor),
+        )
+    }
+}
+
+@Composable
+private fun PlayerCircleButton(
+    icon: Int,
+    contentDescription: String?,
+    contentColor: Color,
+    onClick: () -> Unit,
+) {
+    FilledIconButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = contentColor.copy(alpha = 0.15f),
+                contentColor = contentColor,
+            ),
+        modifier = Modifier.size(44.dp),
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(24.dp),
         )
     }
 }

@@ -6,6 +6,9 @@
 package com.metrolist.music.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -99,6 +102,9 @@ data class ThumbnailDimensions(
     val cornerRadius: Dp
 )
 
+private val CompactThumbnailCornerRadius = 20.dp
+private const val PausedThumbnailScale = 0.93f
+
 /**
  * Cached media items data to prevent recalculation on every recomposition.
  */
@@ -118,20 +124,21 @@ private fun calculateThumbnailDimensions(
     containerWidth: Dp,
     containerHeight: Dp = containerWidth,
     horizontalPadding: Dp = PlayerHorizontalPadding,
-    cornerRadius: Dp = ThumbnailCornerRadius,
-    isLandscape: Boolean = false
+    cornerRadius: Dp = ThumbnailCornerRadius * 2,
+    isLandscape: Boolean = false,
+    fitHeight: Boolean = false,
 ): ThumbnailDimensions {
     // In landscape, use height as the constraining dimension for a square thumbnail
-    val effectiveSize = if (isLandscape) {
-        minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
-    } else {
-        containerWidth - (horizontalPadding * 2)
+    val effectiveSize = when {
+        isLandscape -> minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
+        fitHeight -> minOf(containerWidth - (horizontalPadding * 2), containerHeight)
+        else -> containerWidth - (horizontalPadding * 2)
     }
     return ThumbnailDimensions(
         itemWidth = containerWidth,
         containerSize = containerWidth,
         thumbnailSize = effectiveSize,
-        cornerRadius = cornerRadius * 2
+        cornerRadius = cornerRadius
     )
 }
 
@@ -202,6 +209,10 @@ fun Thumbnail(
     isPlayerExpanded: () -> Boolean = { true },
     isLandscape: Boolean = false,
     isListenTogetherGuest: Boolean = false,
+    // Card layout: no "Now playing" header, art fits the given height, rounder corners,
+    // and the current art shrinks slightly while paused.
+    compact: Boolean = false,
+    isPlaying: Boolean = true,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -326,7 +337,7 @@ fun Thumbnail(
             exit = fadeOut(),
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (!isLandscape) Modifier.statusBarsPadding() else Modifier),
+                .then(if (!isLandscape && !compact) Modifier.statusBarsPadding() else Modifier),
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -334,7 +345,7 @@ fun Thumbnail(
                 verticalArrangement = if (isLandscape) Arrangement.Center else Arrangement.Top
             ) {
                 // Now Playing header - hide in landscape mode
-                if (!isLandscape) {
+                if (!isLandscape && !compact) {
                     ThumbnailHeader(
                         queueTitle = queueTitle,
                         albumTitle = mediaMetadata?.album?.title,
@@ -352,11 +363,13 @@ fun Thumbnail(
                     }
                 ) {
                     // Calculate dimensions once per size change, considering landscape mode
-                    val dimensions = remember(maxWidth, maxHeight, isLandscape) {
+                    val dimensions = remember(maxWidth, maxHeight, isLandscape, compact) {
                         calculateThumbnailDimensions(
                             containerWidth = maxWidth,
                             containerHeight = maxHeight,
-                            isLandscape = isLandscape
+                            cornerRadius = if (compact) CompactThumbnailCornerRadius else ThumbnailCornerRadius * 2,
+                            isLandscape = isLandscape,
+                            fitHeight = compact,
                         )
                     }
 
@@ -403,7 +416,8 @@ fun Thumbnail(
                                 isLandscape = isLandscape,
                                 isListenTogetherGuest = isListenTogetherGuest,
                                 currentMediaId = mediaMetadata?.id,
-                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl
+                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
+                                shrink = compact && !isPlaying && item.mediaId == mediaMetadata?.id,
                             )
                         }
                     }
@@ -501,8 +515,17 @@ private fun ThumbnailItem(
     isListenTogetherGuest: Boolean = false,
     currentMediaId: String? = null,
     currentMediaThumbnail: String? = null,
+    shrink: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val artScale by animateFloatAsState(
+        targetValue = if (shrink) PausedThumbnailScale else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "artScale",
+    )
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
     var skipMultiplier by remember { mutableIntStateOf(1) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
@@ -558,6 +581,10 @@ private fun ThumbnailItem(
     ) {
         Box(
             modifier = Modifier
+                .graphicsLayer {
+                    scaleX = artScale
+                    scaleY = artScale
+                }
                 .size(dimensions.thumbnailSize)
                 .clip(RoundedCornerShape(dimensions.cornerRadius))
         ) {

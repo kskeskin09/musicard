@@ -994,4 +994,7 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+    <string name="up_next">Up next</string>
+    <string name="up_next_empty">Nothing up next</string>
+    <string name="open_full_queue">Open full queue</string>
 </resources>
