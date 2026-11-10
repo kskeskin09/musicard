@@ -162,6 +162,8 @@ fun ExperimentalLyrics(
     onPullDownAtTop: (() -> Unit)? = null,
     // When set, the "Lyrics from ..." source under the last line is a button.
     onProviderClick: (() -> Unit)? = null,
+    // Side padding for the lines (and the instrumental dots); null keeps the default per alignment.
+    horizontalPadding: androidx.compose.ui.unit.Dp? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
@@ -749,7 +751,8 @@ fun ExperimentalLyrics(
                         modifier = Modifier
                             .fillMaxWidth()
                             .offset { IntOffset(0, (animatedProviderBase + userManualOffset).roundToInt()) }
-                            .padding(horizontal = 18.dp)
+                            // The pill's text lines up with the lyrics (the pill has 14 dp inner padding).
+                            .padding(horizontal = horizontalPadding?.let { it - 14.dp } ?: 18.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.lyrics_from_provider, lyricsEntity.provider),
@@ -796,8 +799,20 @@ fun ExperimentalLyrics(
                                         isAutoScrollEnabled &&
                                             currentEffectivePosition >= listItem.gapStartMs &&
                                             currentEffectivePosition <= listItem.gapEndMs - 650L
+                                    // The dots sit where the next line starts, like the lines themselves.
+                                    val dotsAlignment = when {
+                                        respectAgentPositioning && listItem.nextAgent == "v1" -> Alignment.Start
+                                        respectAgentPositioning && listItem.nextAgent == "v2" -> Alignment.End
+                                        respectAgentPositioning && listItem.nextAgent == "v1000" -> Alignment.CenterHorizontally
+                                        else -> when (lyricsTextPosition) {
+                                            LyricsPosition.LEFT -> Alignment.Start
+                                            LyricsPosition.CENTER -> Alignment.CenterHorizontally
+                                            LyricsPosition.RIGHT -> Alignment.End
+                                        }
+                                    }
+                                    val dotsPadding = horizontalPadding ?: if (lyricsTextPosition == LyricsPosition.CENTER) 24.dp else 11.dp
                                     IntervalIndicator(listItem.gapStartMs, listItem.gapEndMs - 650L, currentEffectivePosition, visible, expressiveAccent,
-                                        Modifier.fillMaxWidth().onSizeChanged { itemHeights[listIndex] = it.height }.padding(horizontal = 24.dp).wrapContentWidth(Alignment.CenterHorizontally))
+                                        Modifier.fillMaxWidth().onSizeChanged { itemHeights[listIndex] = it.height }.padding(horizontal = dotsPadding).wrapContentWidth(dotsAlignment))
                                 }
                                 is LyricsListItem.Line -> {
                                     val index = listItem.index
@@ -824,6 +839,7 @@ fun ExperimentalLyrics(
                                         displayedCurrentLineIndex = deferredCurrentLineIndex, romanizeAsMain = romanizeAsMain,
                                         enabledLanguages = enabledLanguages, romanizeLyrics = currentSong?.romanizeLyrics == true,
                                         onSizeChanged = { itemHeights[listIndex] = it },
+                                        horizontalPadding = horizontalPadding,
                                         onClick = {
                                             if (isSelectionModeActive) {
                                                 if (selectedIndices.contains(index)) {

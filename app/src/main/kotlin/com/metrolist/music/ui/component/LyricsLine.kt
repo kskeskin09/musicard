@@ -143,7 +143,9 @@ internal fun LyricsLine(
     onSizeChanged: (Int) -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // When set, the same side padding is used for every alignment (lines up with the screen's titles).
+    horizontalPadding: androidx.compose.ui.unit.Dp? = null,
 ) {
     val density = LocalDensity.current
     
@@ -157,8 +159,8 @@ internal fun LyricsLine(
         )
         .background(if (isSelected && isSelectionModeActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
         .padding(
-            start = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
-            end = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
+            start = horizontalPadding ?: when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
+            end = horizontalPadding ?: when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
             top = if (item.isBackground) 0.dp else 12.dp,
             bottom = if (item.isBackground) 2.dp else 12.dp // simplified gap logic
         )

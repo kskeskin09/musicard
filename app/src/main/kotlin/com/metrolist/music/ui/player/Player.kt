@@ -107,6 +107,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -123,6 +127,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
@@ -184,6 +189,7 @@ import com.metrolist.music.ui.component.ResizableIconButton
 import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
 import com.metrolist.music.ui.component.rememberBottomSheetState
+import com.metrolist.music.ui.menu.AddToPlaylistDialog
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.theme.PlayerColorExtractor
@@ -759,6 +765,20 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
+    // Long-pressing the heart in the card layout opens "Add to playlist" for the current song.
+    val database = LocalDatabase.current
+    mediaMetadata?.let { metadata ->
+        AddToPlaylistDialog(
+            isVisible = showChoosePlaylistDialog,
+            onGetSong = {
+                database.withTransaction { insert(metadata) }
+                listOf(metadata.id)
+            },
+            onGetSongIds = { listOf(metadata.id) },
+            onDismiss = { showChoosePlaylistDialog = false },
+        )
+    }
+
     // Position update - only for local playback
     // When casting, we use castPosition directly to avoid sync issues
     // Use isPlaying instead of playbackState to ensure continuous updates during playback
@@ -1254,6 +1274,7 @@ fun BottomSheetPlayer(
                         contentDescription = null,
                         contentColor = TextBackgroundColor,
                         onClick = playerConnection::toggleLike,
+                        onLongClick = { showChoosePlaylistDialog = true },
                     )
                 } else if (useNewPlayerDesign) {
                     val shareShape =
@@ -1656,11 +1677,6 @@ fun BottomSheetPlayer(
             ) {
                 Column {
                     if (useCardLayout) {
-                        val controlColors =
-                            IconButtonDefaults.iconButtonColors(
-                                contentColor = TextBackgroundColor,
-                                disabledContentColor = TextBackgroundColor.copy(alpha = 0.38f),
-                            )
                         Row(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically,
@@ -1669,60 +1685,50 @@ fun BottomSheetPlayer(
                                     .fillMaxWidth()
                                     .padding(horizontal = PlayerHorizontalPadding),
                         ) {
-                            IconButton(
-                                onClick = playerConnection::seekToPrevious,
+                            PlayerControlButton(
+                                icon = R.drawable.player_backward,
+                                contentDescription = null,
                                 enabled = canSkipPrevious && !isListenTogetherGuest,
-                                colors = controlColors,
+                                color = TextBackgroundColor,
+                                iconSize = 52.dp,
+                                onClick = playerConnection::seekToPrevious,
                                 modifier = Modifier.size(72.dp),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.player_backward),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(52.dp),
-                                )
-                            }
+                            )
 
-                            IconButton(
+                            PlayerControlButton(
+                                icon =
+                                    when {
+                                        isListenTogetherGuest ->
+                                            if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                                        playbackState == STATE_ENDED -> R.drawable.replay
+                                        effectiveIsPlaying -> R.drawable.player_pause
+                                        else -> R.drawable.player_play
+                                    },
+                                contentDescription =
+                                    if (isListenTogetherGuest) {
+                                        if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute)
+                                    } else {
+                                        if (effectiveIsPlaying) stringResource(R.string.player_pause) else stringResource(R.string.play)
+                                    },
+                                enabled = true,
+                                color = TextBackgroundColor,
+                                iconSize = 60.dp,
                                 onClick = onPlayPauseClick,
-                                colors = controlColors,
                                 modifier =
                                     Modifier
                                         .size(80.dp)
                                         .focusRequester(focusRequester),
-                            ) {
-                                Icon(
-                                    painter =
-                                        painterResource(
-                                            when {
-                                                isListenTogetherGuest ->
-                                                    if (isMuted) R.drawable.volume_off else R.drawable.volume_up
-                                                playbackState == STATE_ENDED -> R.drawable.replay
-                                                effectiveIsPlaying -> R.drawable.player_pause
-                                                else -> R.drawable.player_play
-                                            },
-                                        ),
-                                    contentDescription =
-                                        if (isListenTogetherGuest) {
-                                            if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute)
-                                        } else {
-                                            if (effectiveIsPlaying) stringResource(R.string.player_pause) else stringResource(R.string.play)
-                                        },
-                                    modifier = Modifier.size(60.dp),
-                                )
-                            }
+                            )
 
-                            IconButton(
-                                onClick = playerConnection::seekToNext,
+                            PlayerControlButton(
+                                icon = R.drawable.player_forward,
+                                contentDescription = null,
                                 enabled = canSkipNext && !isListenTogetherGuest,
-                                colors = controlColors,
+                                color = TextBackgroundColor,
+                                iconSize = 52.dp,
+                                onClick = playerConnection::seekToNext,
                                 modifier = Modifier.size(72.dp),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.player_forward),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(52.dp),
-                                )
-                            }
+                            )
                         }
                     } else if (useNewPlayerDesign) {
                         Row(
@@ -2487,21 +2493,83 @@ private fun PlayerCircleButton(
     contentDescription: String?,
     contentColor: Color,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
-    FilledIconButton(
-        onClick = onClick,
-        shape = RoundedCornerShape(50),
-        colors =
-            IconButtonDefaults.filledIconButtonColors(
-                containerColor = contentColor.copy(alpha = 0.15f),
-                contentColor = contentColor,
-            ),
-        modifier = Modifier.size(44.dp),
+    val haptic = LocalHapticFeedback.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(50))
+                .background(contentColor.copy(alpha = 0.15f))
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick =
+                        onLongClick?.let { longClick ->
+                            {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                longClick()
+                            }
+                        },
+                ),
     ) {
         Icon(
             painter = painterResource(icon),
             contentDescription = contentDescription,
+            tint = contentColor,
             modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+/**
+ * Previous / play-pause / next in the card layout. No ripple circle: the icon shrinks a little
+ * while pressed and the phone gives a short vibration on each tap.
+ */
+@Composable
+private fun PlayerControlButton(
+    icon: Int,
+    contentDescription: String?,
+    enabled: Boolean,
+    color: Color,
+    iconSize: Dp,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.85f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f),
+        label = "controlPressScale",
+    )
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            modifier.clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = {
+                    view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                    onClick()
+                },
+            ),
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = contentDescription,
+            tint = if (enabled) color else color.copy(alpha = 0.38f),
+            modifier =
+                Modifier
+                    .size(iconSize)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    },
         )
     }
 }
@@ -2590,7 +2658,9 @@ private fun FullScreenLyrics(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(start = 20.dp, end = 8.dp, bottom = 4.dp),
+                        // Art and title line up with the lyrics and the song title in the controls;
+                        // the close icon's right edge sits on the same margin.
+                        .padding(start = PlayerHorizontalPadding, end = PlayerHorizontalPadding - 12.dp, bottom = 4.dp),
             ) {
                 AsyncImage(
                     model = mediaMetadata?.thumbnailUrl,
@@ -2635,6 +2705,7 @@ private fun FullScreenLyrics(
                 accentOverride = Color.White,
                 onPullDownAtTop = onClose,
                 onProviderClick = { showSourceDialog = true },
+                horizontalPadding = PlayerHorizontalPadding,
                 modifier =
                     Modifier
                         .weight(1f)

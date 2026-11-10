@@ -22,6 +22,7 @@ fun Lyrics(
     accentOverride: androidx.compose.ui.graphics.Color? = null,
     onPullDownAtTop: (() -> Unit)? = null,
     onProviderClick: (() -> Unit)? = null,
+    horizontalPadding: androidx.compose.ui.unit.Dp? = null,
 ) {
     val (experimentalLyrics, _) = rememberPreference(key = ExperimentalLyricsKey, defaultValue = true)
 
@@ -34,6 +35,7 @@ fun Lyrics(
             accentOverride = accentOverride,
             onPullDownAtTop = onPullDownAtTop,
             onProviderClick = onProviderClick,
+            horizontalPadding = horizontalPadding,
         )
     } else {
         OriginalLyrics(

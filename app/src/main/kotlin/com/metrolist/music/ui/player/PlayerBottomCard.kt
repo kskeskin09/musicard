@@ -25,6 +25,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.wrapContentWidth
+import com.metrolist.music.ui.component.InterludeDots
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -469,23 +480,39 @@ fun CompactLyrics(
     val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
-    val lines =
+    val allLines =
         remember(lyrics) {
             if (synced) {
-                LyricsUtils.parseLyrics(lyrics).filter { it.text.isNotBlank() }
+                LyricsUtils.parseLyrics(lyrics)
             } else {
                 lyrics.lines().filter { it.isNotBlank() }.map { LyricsEntry(0L, it.trim()) }
+            }
+        }
+    val lines = remember(allLines) { allLines.filter { it.text.isNotBlank() } }
+    // Instrumental breaks, found the same way as in the full lyrics view.
+    val gaps = remember(allLines, synced) { if (synced) findInterludes(allLines) else emptyList() }
+    val cardItems =
+        remember(lines, gaps) {
+            buildList {
+                lines.indices.forEach { index ->
+                    add(CompactItem.Line(index))
+                    gaps.filter { it.afterLine == index }.forEach { add(CompactItem.Dots(it)) }
+                }
             }
         }
     val hasWordTimings = remember(lines) { lines.any { !it.words.isNullOrEmpty() } }
 
     var position by remember { mutableLongStateOf(positionProvider() + lyricsOffset) }
+    val activeGap by remember(gaps) {
+        derivedStateOf { gaps.firstOrNull { position >= it.startMs && position <= it.endMs - InterludeEndLeadMs } }
+    }
     if (synced) {
         LaunchedEffect(lines, isPlaying, lyricsOffset) {
             while (isActive) {
                 position = positionProvider() + lyricsOffset
                 if (!isPlaying) break
-                delay(if (hasWordTimings) 32L else 150L)
+                // Fast updates only while something moves smoothly (word sweep or the dots).
+                delay(if (hasWordTimings || activeGap != null) 32L else 150L)
             }
         }
     }
@@ -493,57 +520,154 @@ fun CompactLyrics(
         derivedStateOf { if (synced) LyricsUtils.findCurrentLineIndex(lines, position) else -1 }
     }
 
+    // During a break the dots move to the top, otherwise the current line does.
+    val scrollTarget by remember(cardItems) {
+        derivedStateOf {
+            val gap = activeGap
+            if (gap != null) {
+                cardItems.indexOfFirst { it is CompactItem.Dots && it.gap == gap }
+            } else {
+                cardItems.indexOfFirst { it is CompactItem.Line && it.index == currentIndex }
+            }
+        }
+    }
     val listState = rememberLazyListState()
-    LaunchedEffect(currentIndex) {
-        if (currentIndex >= 0) listState.animateScrollToItem(currentIndex)
+    LaunchedEffect(scrollTarget) {
+        if (scrollTarget < 0) return@LaunchedEffect
+        val visible = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollTarget }
+        if (visible != null) {
+            // A visible slide (a little slower than the default), like the full lyrics view.
+            listState.animateScrollBy(visible.offset.toFloat(), tween(LineScrollMillis, easing = FastOutSlowInEasing))
+        } else {
+            listState.animateScrollToItem(scrollTarget)
+        }
     }
 
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
         state = listState,
         userScrollEnabled = false,
-        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 2.dp, bottom = 16.dp + navBottom),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 16.dp + navBottom),
         modifier = modifier.fillMaxSize(),
     ) {
-        itemsIndexed(lines) { index, line ->
-            val active = synced && index == currentIndex
-            val textAlign =
-                when {
-                    line.isBackground -> TextAlign.Center
-                    respectAgentPositioning && line.agent == "v2" -> TextAlign.End
-                    respectAgentPositioning && line.agent == "v1000" -> TextAlign.Center
-                    else -> TextAlign.Start
+        items(cardItems) { item ->
+            when (item) {
+                is CompactItem.Dots -> {
+                    val gap = item.gap
+                    val dotsAlign =
+                        when {
+                            respectAgentPositioning && gap.nextAgent == "v2" -> Alignment.End
+                            respectAgentPositioning && gap.nextAgent == "v1000" -> Alignment.CenterHorizontally
+                            else -> Alignment.Start
+                        }
+                    AnimatedVisibility(
+                        visible = activeGap == gap,
+                        enter = expandVertically() + fadeIn(),
+                        exit = fadeOut() + shrinkVertically(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        val progress =
+                            ((position - gap.startMs).toFloat() / (gap.endMs - InterludeEndLeadMs - gap.startMs).coerceAtLeast(1L))
+                                .coerceIn(0f, 1f)
+                        InterludeDots(
+                            progress = progress,
+                            positionMs = position,
+                            color = color,
+                            dotSize = 10.dp,
+                            modifier =
+                                Modifier
+                                    .padding(vertical = 8.dp)
+                                    .fillMaxWidth()
+                                    .wrapContentWidth(dotsAlign),
+                        )
+                    }
                 }
-            val baseStyle =
-                when {
-                    line.isBackground -> MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
-                    active -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    else -> MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+
+                is CompactItem.Line -> {
+                    val index = item.index
+                    val line = lines[index]
+                    val active = synced && index == currentIndex && activeGap == null
+                    val textAlign =
+                        when {
+                            line.isBackground -> TextAlign.Center
+                            respectAgentPositioning && line.agent == "v2" -> TextAlign.End
+                            respectAgentPositioning && line.agent == "v1000" -> TextAlign.Center
+                            else -> TextAlign.Start
+                        }
+                    val baseStyle =
+                        when {
+                            line.isBackground -> MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
+                            active -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                            else -> MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                        }
+                    val dimAlpha = if (line.isBackground) 0.4f else 0.5f
+                    val words = line.words
+                    Box(modifier = Modifier.padding(vertical = 3.dp)) {
+                        if (active && !words.isNullOrEmpty()) {
+                            SweepingWordsLine(
+                                words = words,
+                                positionMsProvider = { position },
+                                color = color,
+                                dimAlpha = dimAlpha,
+                                style = baseStyle,
+                                textAlign = textAlign,
+                            )
+                        } else {
+                            Text(
+                                text = line.text,
+                                style = baseStyle,
+                                color = color.copy(alpha = if (active || !synced) 1f else dimAlpha),
+                                textAlign = textAlign,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
                 }
-            val dimAlpha = if (line.isBackground) 0.4f else 0.5f
-            val words = line.words
-            if (active && !words.isNullOrEmpty()) {
-                SweepingWordsLine(
-                    words = words,
-                    positionMsProvider = { position },
-                    color = color,
-                    dimAlpha = dimAlpha,
-                    style = baseStyle,
-                    textAlign = textAlign,
-                )
-            } else {
-                Text(
-                    text = line.text,
-                    style = baseStyle,
-                    color = color.copy(alpha = if (active || !synced) 1f else dimAlpha),
-                    textAlign = textAlign,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         }
     }
 }
+
+private data class Interlude(
+    val afterLine: Int,
+    val startMs: Long,
+    val endMs: Long,
+    val nextAgent: String?,
+)
+
+private sealed interface CompactItem {
+    data class Line(val index: Int) : CompactItem
+
+    data class Dots(val gap: Interlude) : CompactItem
+}
+
+/**
+ * Finds breaks longer than [InterludeMinMs] between lines. [lines] includes blank lines; the
+ * returned [Interlude.afterLine] counts only the non-blank lines (the ones shown on the card).
+ */
+private fun findInterludes(lines: List<LyricsEntry>): List<Interlude> {
+    val result = mutableListOf<Interlude>()
+    var shownIndex = -1
+    lines.forEachIndexed { i, entry ->
+        if (entry.text.isNotBlank()) shownIndex++
+        if (i >= lines.size - 1 || shownIndex < 0) return@forEachIndexed
+        val nextStart = lines[i + 1].time
+        val currentEnd =
+            when {
+                !entry.words.isNullOrEmpty() -> (entry.words.last().endTime * 1000).toLong()
+                entry.text.isBlank() -> entry.time
+                else -> null
+            }
+        if (currentEnd != null && nextStart - currentEnd > InterludeMinMs) {
+            result.add(Interlude(shownIndex, currentEnd, nextStart, lines[i + 1].agent))
+        }
+    }
+    return result
+}
+
+private const val InterludeMinMs = 4000L
+private const val InterludeEndLeadMs = 650L
+private const val LineScrollMillis = 650
 
 /**
  * One word-timed line. The dim text is drawn first, then the bright text is revealed across
