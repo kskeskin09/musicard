@@ -55,6 +55,7 @@ fun TopLevelHeader(
     onProfileLongClick: () -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
+    profileCrop: ProfileCrop = ProfileCrop(),
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Column(
@@ -98,7 +99,7 @@ fun TopLevelHeader(
                             model = profileImageUrl,
                             contentDescription = stringResource(R.string.account),
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(44.dp).clip(CircleShape),
+                            modifier = Modifier.size(44.dp).profileCrop(profileCrop),
                         )
                     } else {
                         Icon(

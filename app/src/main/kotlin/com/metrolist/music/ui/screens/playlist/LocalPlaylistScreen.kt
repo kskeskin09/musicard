@@ -5,6 +5,19 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.width
+import com.metrolist.music.constants.LibrarySortOption
+import com.metrolist.music.ui.component.LibrarySortButton
+import com.metrolist.music.ui.component.labelRes
+import com.metrolist.music.ui.theme.albumBackgroundColor
+import com.metrolist.music.ui.theme.rememberCoverColor
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -471,8 +484,27 @@ fun LocalPlaylistScreen(
         }
     }
 
+    // The page is tinted with the cover's color, fading into the normal background further down.
+    val pageBackground = MaterialTheme.colorScheme.background
+    val darkTheme = pageBackground.luminance() < 0.5f
+    val coverColor = rememberCoverColor(playlist?.thumbnails?.firstOrNull())
+    val tint by animateColorAsState(
+        targetValue = coverColor?.let { lerp(pageBackground, albumBackgroundColor(it, darkTheme), 0.6f) } ?: pageBackground,
+        animationSpec = tween(600),
+        label = "playlistTint",
+    )
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(pageBackground)
+                .background(
+                    Brush.verticalGradient(
+                        0f to tint,
+                        0.55f to pageBackground,
+                    ),
+                ),
     ) {
         LazyColumn(
             state = lazyListState,
@@ -512,20 +544,39 @@ fun LocalPlaylistScreen(
                                     .padding(start = 16.dp)
                                     .animateItem(),
                         ) {
-                            SortHeader(
-                                sortType = sortType,
-                                sortDescending = sortDescending,
-                                onSortTypeChange = onSortTypeChange,
-                                onSortDescendingChange = onSortDescendingChange,
-                                sortTypeText = { sortType ->
-                                    when (sortType) {
-                                        PlaylistSongSortType.CUSTOM -> R.string.sort_by_custom
-                                        PlaylistSongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                        PlaylistSongSortType.NAME -> R.string.sort_by_name
-                                        PlaylistSongSortType.ARTIST -> R.string.sort_by_artist
-                                        PlaylistSongSortType.PLAY_TIME -> R.string.sort_by_play_time
-                                    }
+                            // Same six orders as the library.
+                            val sortOption =
+                                when {
+                                    sortType == PlaylistSongSortType.CUSTOM -> LibrarySortOption.CUSTOM
+                                    sortType == PlaylistSongSortType.NAME -> LibrarySortOption.NAME
+                                    sortType == PlaylistSongSortType.MODIFIED_DATE && sortDescending -> LibrarySortOption.MODIFIED_NEWEST
+                                    sortType == PlaylistSongSortType.MODIFIED_DATE -> LibrarySortOption.MODIFIED_OLDEST
+                                    sortDescending -> LibrarySortOption.ADDED_NEWEST
+                                    else -> LibrarySortOption.ADDED_OLDEST
+                                }
+                            LibrarySortButton(
+                                selected = sortOption,
+                                onSelect = { option ->
+                                    val (type, descending) =
+                                        when (option) {
+                                            LibrarySortOption.CUSTOM -> PlaylistSongSortType.CUSTOM to sortDescending
+                                            LibrarySortOption.NAME -> PlaylistSongSortType.NAME to false
+                                            LibrarySortOption.ADDED_NEWEST -> PlaylistSongSortType.CREATE_DATE to true
+                                            LibrarySortOption.ADDED_OLDEST -> PlaylistSongSortType.CREATE_DATE to false
+                                            LibrarySortOption.MODIFIED_NEWEST -> PlaylistSongSortType.MODIFIED_DATE to true
+                                            LibrarySortOption.MODIFIED_OLDEST -> PlaylistSongSortType.MODIFIED_DATE to false
+                                        }
+                                    onSortTypeChange(type)
+                                    onSortDescendingChange(descending)
                                 },
+                                containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = stringResource(sortOption.labelRes),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
                                 modifier = Modifier.weight(1f),
                             )
                             if (editable) {
@@ -844,6 +895,11 @@ fun LocalPlaylistScreen(
                     }
                 }
             },
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (showTopBarTitle) tint else Color.Transparent,
+                    scrolledContainerColor = tint,
+                ),
         )
 
         SnackbarHost(

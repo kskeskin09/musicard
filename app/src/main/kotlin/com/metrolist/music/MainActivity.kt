@@ -185,6 +185,10 @@ import com.metrolist.music.ui.component.AppNavigationBar
 import com.metrolist.music.ui.component.ProfilePictureDialog
 import com.metrolist.music.ui.component.TopLevelHeader
 import com.metrolist.music.constants.ProfileImageUrlKey
+import com.metrolist.music.constants.ProfileImageZoomKey
+import com.metrolist.music.constants.ProfileImageOffsetXKey
+import com.metrolist.music.constants.ProfileImageOffsetYKey
+import com.metrolist.music.ui.component.ProfileCrop
 import com.metrolist.music.constants.TopLevelHeaderHeight
 import com.metrolist.music.ui.component.AppNavigationRail
 import com.metrolist.music.ui.component.BottomSheetMenu
@@ -1031,6 +1035,10 @@ class MainActivity : FragmentActivity() {
                 var showAccountDialog by remember { mutableStateOf(false) }
                 var showProfilePictureDialog by remember { mutableStateOf(false) }
                 val (profileImageUrl, setProfileImageUrl) = rememberPreference(ProfileImageUrlKey, defaultValue = "")
+                val (profileZoom, setProfileZoom) = rememberPreference(ProfileImageZoomKey, defaultValue = 1f)
+                val (profileOffsetX, setProfileOffsetX) = rememberPreference(ProfileImageOffsetXKey, defaultValue = 0f)
+                val (profileOffsetY, setProfileOffsetY) = rememberPreference(ProfileImageOffsetYKey, defaultValue = 0f)
+                val profileCrop = ProfileCrop(profileZoom, profileOffsetX, profileOffsetY)
 
                 val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
                 val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
@@ -1073,6 +1081,7 @@ class MainActivity : FragmentActivity() {
                                 TopLevelHeader(
                                     title = currentTitleRes?.let { stringResource(it) } ?: "",
                                     profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
+                                    profileCrop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
                                     showBadge = latestVersionName != BuildConfig.BASE_VERSION_NAME,
                                     onProfileClick = { showAccountDialog = true },
                                     onProfileLongClick = { showProfilePictureDialog = true },
@@ -1153,8 +1162,14 @@ class MainActivity : FragmentActivity() {
 
                                             // Use appropriate key based on screen type
                                             if (screen == Screens.Search) {
-                                                val current = targetEntry?.savedStateHandle?.get<Int>("scrollToTopCount") ?: 0
-                                                targetEntry?.savedStateHandle?.set("scrollToTopCount", current + 1)
+                                                // Focus the search field of the page that is open (the search page
+                                                // or the results), keeping that page open.
+                                                listOfNotNull(targetEntry, navController.currentBackStackEntry)
+                                                    .distinct()
+                                                    .forEach { entry ->
+                                                        val current = entry.savedStateHandle.get<Int>("scrollToTopCount") ?: 0
+                                                        entry.savedStateHandle["scrollToTopCount"] = current + 1
+                                                    }
                                             } else {
                                                 targetEntry?.savedStateHandle?.set("scrollToTop", true)
                                             }
@@ -1400,9 +1415,13 @@ class MainActivity : FragmentActivity() {
                     if (showProfilePictureDialog) {
                         ProfilePictureDialog(
                             initialUrl = profileImageUrl,
+                            initialCrop = profileCrop,
                             onDismiss = { showProfilePictureDialog = false },
-                            onSave = {
-                                setProfileImageUrl(it.trim())
+                            onSave = { url, crop ->
+                                setProfileImageUrl(url.trim())
+                                setProfileZoom(crop.zoom)
+                                setProfileOffsetX(crop.offsetX)
+                                setProfileOffsetY(crop.offsetY)
                                 showProfilePictureDialog = false
                             },
                         )

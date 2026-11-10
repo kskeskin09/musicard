@@ -1003,4 +1003,19 @@
     <string name="search_hint_everything">Search songs, artists, albums</string>
     <string name="profile_picture">Profile picture</string>
     <string name="profile_picture_url_hint">Image link (https://…)</string>
+    <string name="profile_picture_zoom">Zoom</string>
+    <string name="profile_picture_horizontal">Left / right</string>
+    <string name="profile_picture_vertical">Up / down</string>
+    <string name="library_sort">Sort</string>
+    <string name="library_sort_custom">Custom</string>
+    <string name="library_sort_name">Name A–Z</string>
+    <string name="library_sort_added_newest">Date Added (Newest First)</string>
+    <string name="library_sort_added_oldest">Date Added (Oldest First)</string>
+    <string name="library_sort_modified_newest">Date Modified (Newest First)</string>
+    <string name="library_sort_modified_oldest">Date Modified (Oldest First)</string>
+    <string name="library_kind_playlist">Playlist</string>
+    <string name="library_kind_artist">Artist</string>
+    <string name="library_kind_album">Album</string>
+    <string name="library_pin_limit">You can pin up to 3 items</string>
+    <string name="library_pinned">Pinned</string>
 </resources>

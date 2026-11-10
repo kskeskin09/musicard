@@ -315,6 +315,7 @@ enum class PlaylistSongSortType {
     NAME,
     ARTIST,
     PLAY_TIME,
+    MODIFIED_DATE,
 }
 
 enum class ArtistSortType {
@@ -722,3 +723,21 @@ val CountryCodeToName =
 
 // Profile picture shown at the top right of the main tabs: an image URL kept on the device.
 val ProfileImageUrlKey = stringPreferencesKey("profileImageUrl")
+// Crop of the profile picture: zoom (1..3) and the visible center as fractions (-1..1).
+val ProfileImageZoomKey = floatPreferencesKey("profileImageZoom")
+val ProfileImageOffsetXKey = floatPreferencesKey("profileImageOffsetX")
+val ProfileImageOffsetYKey = floatPreferencesKey("profileImageOffsetY")
+
+// Library: sort option, custom order and pinned items (ids separated by '\n').
+val LibrarySortKey = stringPreferencesKey("librarySort")
+val LibraryCustomOrderKey = stringPreferencesKey("libraryCustomOrder")
+val LibraryPinnedKey = stringPreferencesKey("libraryPinned")
+
+enum class LibrarySortOption {
+    CUSTOM,
+    NAME,
+    ADDED_NEWEST,
+    ADDED_OLDEST,
+    MODIFIED_NEWEST,
+    MODIFIED_OLDEST,
+}

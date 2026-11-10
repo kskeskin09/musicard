@@ -119,6 +119,8 @@ import com.metrolist.music.constants.PlayerHorizontalPadding
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import com.metrolist.music.utils.rememberEnumPreference
 import kotlin.math.abs
+import androidx.compose.foundation.interaction.DragInteraction
+import kotlinx.coroutines.flow.first
 
 internal const val LyricsPage = 0
 internal const val UpNextPage = 1
@@ -147,8 +149,11 @@ fun PlayerBottomCard(
     onPageChanged: (Int) -> Unit = {},
     // How far the card is opened toward full screen (0..1); its corners straighten out with it.
     expandFraction: () -> Float = { 0f },
+    // Room kept free at the bottom of the fully opened card for the playback controls.
+    openBottomPadding: Dp = 0.dp,
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val latestOnPageChanged by rememberUpdatedState(onPageChanged)
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { latestOnPageChanged(it) }
@@ -225,12 +230,17 @@ fun PlayerBottomCard(
             // Tapping the lyrics or swiping up on either page opens its full-screen view.
             // Dragging the card up is handled by the player around the card, which stays put
             // while the card grows (see BottomSheetPlayer).
+            val fraction = expandFraction().coerceIn(0f, 1f)
             val pageModifier =
                 Modifier
                     .fillMaxSize()
-                    // Lyrics and the up-next list fade out toward the bottom of the card. This is
-                    // a single gradient mask drawn with the page, much cheaper than a real blur.
-                    .fadingEdge(bottom = CardBottomFade)
+                    // Lyrics and the up-next list fade out toward the bottom of the card (and, once
+                    // opened, under the header at the top). This is a single gradient mask drawn
+                    // with the page, much cheaper than a real blur.
+                    .fadingEdge(
+                        top = if (fraction > 0f) (statusTop + OpenHeaderHeight - CardHeaderHeight) * fraction else null,
+                        bottom = CardBottomFade,
+                    )
             when (page) {
                 LyricsPage ->
                     Box(
@@ -248,6 +258,7 @@ fun PlayerBottomCard(
                             compactColor = contentColor,
                             isPlaying = isPlaying,
                             expandFraction = expandFraction,
+                            openBottomPadding = openBottomPadding,
                         )
                     }
 
@@ -256,6 +267,8 @@ fun PlayerBottomCard(
                         UpNextList(
                             contentColor = contentColor,
                             isListenTogetherGuest = isListenTogetherGuest,
+                            expandFraction = expandFraction,
+                            openBottomPadding = openBottomPadding,
                         )
                     }
             }
@@ -362,6 +375,8 @@ fun PlayerPillButton(
 private fun UpNextList(
     contentColor: Color,
     isListenTogetherGuest: Boolean,
+    expandFraction: () -> Float,
+    openBottomPadding: Dp,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
@@ -394,9 +409,18 @@ private fun UpNextList(
     }
 
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val fraction = expandFraction().coerceIn(0f, 1f)
     LazyColumn(
-        userScrollEnabled = false,
-        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 12.dp + navBottom),
+        // Scrollable only once the card is fully opened; in the small card it just shows what's next.
+        userScrollEnabled = fraction >= 1f,
+        contentPadding =
+            PaddingValues(
+                start = 8.dp,
+                end = 8.dp,
+                top = lerp(4.dp, statusTop + OpenHeaderHeight - CardHeaderHeight, fraction),
+                bottom = lerp(12.dp + navBottom, openBottomPadding, fraction),
+            ),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -487,6 +511,7 @@ fun CompactLyrics(
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     expandFraction: () -> Float = { 0f },
+    openBottomPadding: Dp = 0.dp,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle()
@@ -562,6 +587,19 @@ fun CompactLyrics(
     val anchorPx = with(density) { (fullAnchorDrop * fraction).roundToPx() }
 
     val listState = rememberLazyListState()
+    // Fully opened, the lyrics can be scrolled and tapped. While the user scrolls, following the
+    // song pauses, and resumes a few seconds after the last touch.
+    val interactive = fraction >= 1f
+    var userScrollTick by remember { mutableIntStateOf(0) }
+    var followPaused by remember { mutableStateOf(false) }
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions.collect {
+            if (it is DragInteraction.Start) {
+                followPaused = true
+                userScrollTick++
+            }
+        }
+    }
     val appliedAnchor = remember { intArrayOf(0) }
     if (anchorPx != appliedAnchor[0]) {
         // Applied before this frame's layout, so the lines follow the finger without lagging.
@@ -570,8 +608,17 @@ fun CompactLyrics(
             if (scrollTarget >= 0) listState.requestScrollToItem(scrollTarget, -anchorPx)
         }
     }
-    LaunchedEffect(scrollTarget) {
-        if (scrollTarget < 0) return@LaunchedEffect
+    LaunchedEffect(userScrollTick) {
+        if (!followPaused) return@LaunchedEffect
+        snapshotFlow { listState.isScrollInProgress }.first { !it }
+        delay(FollowResumeMillis)
+        followPaused = false
+    }
+    LaunchedEffect(interactive) {
+        if (!interactive) followPaused = false
+    }
+    LaunchedEffect(scrollTarget, followPaused) {
+        if (scrollTarget < 0 || followPaused) return@LaunchedEffect
         val visible = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollTarget }
         if (visible != null) {
             // A visible slide (a little slower than the default), like the full lyrics view.
@@ -616,9 +663,14 @@ fun CompactLyrics(
 
     LazyColumn(
         state = listState,
-        userScrollEnabled = false,
+        userScrollEnabled = interactive,
         contentPadding =
-            PaddingValues(start = sidePadding, end = sidePadding, top = topPadding, bottom = 16.dp + navBottom),
+            PaddingValues(
+                start = sidePadding,
+                end = sidePadding,
+                top = topPadding,
+                bottom = lerp(16.dp + navBottom, openBottomPadding, fraction),
+            ),
         modifier = modifier.fillMaxSize(),
     ) {
         items(cardItems) { item ->
@@ -730,10 +782,23 @@ fun CompactLyrics(
                     val textModifier = Modifier.fillMaxWidth().wrapContentWidth(BiasAlignment.Horizontal(bias))
                     Box(
                         modifier =
-                            Modifier.padding(
-                                top = lerp(5.dp, if (line.isBackground) 0.dp else FullLineGap + 12.dp, fraction),
-                                bottom = lerp(5.dp, if (line.isBackground) 2.dp else 12.dp, fraction),
-                            ),
+                            Modifier
+                                .then(
+                                    if (interactive && synced) {
+                                        // Tapping a line jumps the song there.
+                                        Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                playerConnection.player.seekTo((line.time - lyricsOffset).coerceAtLeast(0L))
+                                                followPaused = false
+                                            }
+                                    } else {
+                                        Modifier
+                                    },
+                                ).padding(
+                                    top = lerp(5.dp, if (line.isBackground) 0.dp else FullLineGap + 12.dp, fraction),
+                                    bottom = lerp(5.dp, if (line.isBackground) 2.dp else 12.dp, fraction),
+                                ),
                     ) {
                         if (active && !words.isNullOrEmpty()) {
                             SweepingWordsLine(
@@ -821,6 +886,10 @@ private fun findInterludes(lines: List<LyricsEntry>): List<Interlude> {
 private const val InterludeMinMs = 4000L
 private const val InterludeEndLeadMs = 650L
 private const val LineScrollMillis = 650
+private const val FollowResumeMillis = 3000L
+
+// Height of the opened card's header (art and title) below the status bar.
+private val OpenHeaderHeight = 72.dp
 
 /**
  * One word-timed line. The dim text is drawn first, then the bright text is revealed across

@@ -36,6 +36,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -112,6 +115,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -212,6 +216,7 @@ import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.theme.MusicardDarkColorScheme
 import com.metrolist.music.ui.theme.PlayerColorExtractor
+import com.metrolist.music.ui.theme.albumBackgroundColor
 import com.metrolist.music.ui.theme.PlayerSliderColors
 import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.ui.utils.ShowOffsetDialog
@@ -901,57 +906,47 @@ fun BottomSheetPlayer(
 
     val backgroundAlpha = state.progress.coerceIn(0f, 1f)
 
+    val appDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val cardAlbumColor by animateColorAsState(
-        targetValue = gradientColors.firstOrNull()?.let(::albumBackgroundColor) ?: DefaultAlbumBackground,
+        targetValue = gradientColors.firstOrNull()?.let { albumBackgroundColor(it, appDarkTheme) } ?: DefaultAlbumBackground,
         animationSpec = tween(800),
         label = "albumBackground",
     )
-    var showFullLyrics by rememberSaveable { mutableStateOf(false) }
-
     // Card layout: how far the lyrics / up-next card is opened toward full screen (0..1). It
-    // follows the finger while the card is dragged up, then hands off to the full-screen view.
+    // follows the finger while the card is dragged up. Fully opened, the card itself is the
+    // full-screen lyrics / up-next view (no separate page is swapped in), so opening and closing
+    // is one continuous movement.
     var cardExpand by remember { mutableFloatStateOf(0f) }
+    var cardOpen by remember { mutableStateOf(false) }
     // Distance from the card's top to the top of the screen, i.e. the drag that fully opens it.
     var cardTravelPx by remember { mutableFloatStateOf(1f) }
     var cardPage by remember { mutableIntStateOf(LyricsPage) }
     val cardExpandScope = rememberCoroutineScope()
-    // Fades the full queue in when it opens from the card.
+    // Kept at 1: the full queue sheet is no longer opened from the card.
     val queueFade = remember { Animatable(1f) }
-    var queueOpenedFromCard by remember { mutableStateOf(false) }
     var cardExpandJob by remember { mutableStateOf<Job?>(null) }
+    // Bumped on every touch while the card is open; shows the auto-hidden controls again.
+    var cardTouchTick by remember { mutableIntStateOf(0) }
+    var cardControlsShown by remember { mutableStateOf(true) }
     val animateCardExpand: suspend (Float, Int) -> Unit = { target, millis ->
         animate(cardExpand, target, animationSpec = tween(millis, easing = FastOutSlowInEasing)) { value, _ ->
             cardExpand = value
         }
     }
-    val openCardFull: (Int) -> Unit = { page ->
+    val openCardFull: (Int) -> Unit = { _ ->
         cardExpandJob?.cancel()
         cardExpandJob =
             cardExpandScope.launch {
                 animateCardExpand(1f, (CardExpandMillis * (1f - cardExpand)).toInt().coerceAtLeast(120))
-                if (page == LyricsPage) {
-                    showFullLyrics = true
-                    // Let the full-screen view fade in over the opened card before resetting it.
-                    delay(FullViewFadeMillis.toLong() + 60L)
-                } else {
-                    // Same hand-off as the lyrics: the queue appears in place over the opened
-                    // card (same background) and fades in, instead of sliding up.
-                    queueFade.snapTo(0f)
-                    queueSheetState.snapToAndWait(queueSheetState.expandedBound)
-                    queueOpenedFromCard = true
-                    queueFade.animateTo(1f, tween(FullViewFadeMillis))
-                    delay(60L)
-                }
-                cardExpand = 0f
+                cardOpen = true
             }
     }
-    val closeFullLyrics: () -> Unit = {
+    val closeCardFull: () -> Unit = {
         cardExpandJob?.cancel()
         cardExpandJob =
             cardExpandScope.launch {
-                cardExpand = 1f
-                showFullLyrics = false
-                animateCardExpand(0f, CardExpandMillis)
+                cardOpen = false
+                animateCardExpand(0f, (CardExpandMillis * cardExpand).toInt().coerceAtLeast(120))
             }
     }
     val onCardDrag: (Int, Float) -> Unit = { _, deltaPx ->
@@ -959,34 +954,32 @@ fun BottomSheetPlayer(
         cardExpand = (cardExpand - deltaPx / cardTravelPx).coerceIn(0f, 1f)
     }
     val onCardDragEnd: (Int, Float) -> Unit = { page, velocity ->
-        val open = velocity < -CardFlingVelocity || (velocity < CardFlingVelocity && cardExpand > 0.4f)
+        val open =
+            if (cardOpen) {
+                // Opened: a short pull down is enough to close it again.
+                !(velocity > CardFlingVelocity || (velocity > -CardFlingVelocity && cardExpand < 0.8f))
+            } else {
+                velocity < -CardFlingVelocity || (velocity < CardFlingVelocity && cardExpand > 0.4f)
+            }
         if (open) {
             openCardFull(page)
-        } else if (cardExpand > 0f) {
-            cardExpandJob?.cancel()
-            cardExpandJob = cardExpandScope.launch { animateCardExpand(0f, (CardExpandMillis * cardExpand).toInt().coerceAtLeast(120)) }
+        } else if (cardExpand > 0f || cardOpen) {
+            closeCardFull()
         }
     }
 
-    // When the queue opened from the card closes (drag down, back, close button), the card
-    // shrinks back underneath it, the reverse of opening.
-    LaunchedEffect(queueSheetState) {
-        snapshotFlow { queueSheetState.isExpanded }.collect { expanded ->
-            if (!expanded && queueOpenedFromCard) {
-                queueOpenedFromCard = false
-                cardExpandJob?.cancel()
-                cardExpandJob =
-                    cardExpandScope.launch {
-                        cardExpand = 1f
-                        animateCardExpand(0f, CardExpandMillis)
-                    }
-            }
+    // Lyrics fill the screen without the controls after a few seconds; any touch brings them back.
+    LaunchedEffect(cardOpen, cardPage, cardTouchTick) {
+        cardControlsShown = true
+        if (cardOpen && cardPage == LyricsPage) {
+            delay(ControlsAutoHideMillis)
+            cardControlsShown = false
         }
     }
 
     LaunchedEffect(state.isExpanded) {
         if (!state.isExpanded) {
-            showFullLyrics = false
+            cardOpen = false
             cardExpandJob?.cancel()
             cardExpand = 0f
         }
@@ -2252,6 +2245,11 @@ fun BottomSheetPlayer(
                 val marginPx = with(density) { PlayerHorizontalPadding.toPx() }
                 val headerTitleLeftPx = with(density) { (PlayerHorizontalPadding + 48.dp + 12.dp).toPx() }
                 val headerTitleTopPx = headerTopPx + with(density) { 2.dp.toPx() }
+                val cardControlsAlpha by animateFloatAsState(
+                    targetValue = if (cardControlsShown) 1f else 0f,
+                    animationSpec = tween(FullViewFadeMillis),
+                    label = "cardControlsAlpha",
+                )
                 val playbackTravelPx = {
                     (boxBottomPx - navBottomPx - with(density) { 12.dp.toPx() } - playbackHeightPx - playbackTopPx)
                         .coerceAtLeast(0f)
@@ -2261,7 +2259,16 @@ fun BottomSheetPlayer(
                         Modifier
                             .fillMaxSize()
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                            .onGloballyPositioned { boxBottomPx = it.positionInRoot().y + it.size.height },
+                            .onGloballyPositioned { boxBottomPx = it.positionInRoot().y + it.size.height }
+                            // Any touch on the opened card shows its auto-hidden controls again.
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        if (event.type == PointerEventType.Press && cardOpen) cardTouchTick++
+                                    }
+                                }
+                            },
                 ) {
                     // Leave room for the controls (~240dp) and a lyrics card that fits a few lines (~200dp).
                     val artSize =
@@ -2366,7 +2373,12 @@ fun BottomSheetPlayer(
                                             playbackTopPx = it.positionInRoot().y
                                             playbackHeightPx = it.size.height.toFloat()
                                         }
-                                    }.graphicsLayer { translationY = cardExpand * playbackTravelPx() },
+                                    }.graphicsLayer {
+                                        translationY = cardExpand * playbackTravelPx()
+                                        alpha = cardControlsAlpha
+                                        // Hidden controls are moved away so they don't catch touches.
+                                        if (cardControlsAlpha == 0f) translationY += OffscreenOffsetPx
+                                    },
                         ) {
                             mediaMetadata?.let { playbackControlsContent(it) }
                         }
@@ -2410,6 +2422,7 @@ fun BottomSheetPlayer(
                             onOpenFullLyrics = { openCardFull(LyricsPage) },
                             onPageChanged = { cardPage = it },
                             expandFraction = { cardExpand },
+                            openBottomPadding = with(density) { (playbackHeightPx + navBottomPx).toDp() } + 24.dp,
                             onMoreClick = moreMenu@{
                                 val metadata = mediaMetadata ?: return@moreMenu
                                 menuState.show {
@@ -2464,33 +2477,52 @@ fun BottomSheetPlayer(
                         )
                     }
 
-                    BackHandler(enabled = showFullLyrics && state.isExpanded) {
-                        closeFullLyrics()
+                    BackHandler(enabled = cardOpen && state.isExpanded) {
+                        closeCardFull()
                     }
-                    // The full-screen lyrics stay composed while the player is open, parked off
-                    // screen when hidden, so they keep following the song and open already on the
-                    // current line instead of loading and scrolling there. The opened card
-                    // underneath matches this view's layout, so it only fades in.
-                    val keepFullLyrics by remember { derivedStateOf { state.progress > 0f } }
-                    if (keepFullLyrics || showFullLyrics) {
-                        val fullLyricsAlpha by animateFloatAsState(
-                            targetValue = if (showFullLyrics) 1f else 0f,
-                            animationSpec = tween(FullViewFadeMillis),
-                            label = "fullLyricsAlpha",
-                        )
-                        FullScreenLyrics(
-                            mediaMetadata = mediaMetadata,
-                            backgroundColor = cardAlbumColor,
-                            positionProvider = { effectivePosition },
-                            onClose = closeFullLyrics,
-                            visible = showFullLyrics,
-                            controls = { mediaMetadata?.let { controlsContent(it) } },
+                    // Header of the opened card: dragging it down closes the card (following the
+                    // finger), and the chevron closes it too. The art and title sit underneath.
+                    if (cardExpand > 0f) {
+                        Box(
                             modifier =
                                 Modifier
-                                    .offset {
-                                        if (showFullLyrics || fullLyricsAlpha > 0f) IntOffset.Zero else IntOffset(0, OffscreenOffsetPx)
-                                    }.graphicsLayer { alpha = fullLyricsAlpha },
-                        )
+                                    .zIndex(3f)
+                                    .fillMaxWidth()
+                                    .height(topInset + 64.dp)
+                                    .pointerInput(Unit) {
+                                        val tracker = VelocityTracker()
+                                        detectVerticalDragGestures(
+                                            onDragStart = { tracker.resetTracking() },
+                                            onVerticalDrag = { change, dragAmount ->
+                                                change.consume()
+                                                tracker.addPosition(change.uptimeMillis, change.position)
+                                                onCardDrag(cardPage, dragAmount)
+                                            },
+                                            onDragEnd = { onCardDragEnd(cardPage, tracker.calculateVelocity().y) },
+                                            onDragCancel = { onCardDragEnd(cardPage, 0f) },
+                                        )
+                                    },
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = topInset + 14.dp, end = PlayerHorizontalPadding - 4.dp)
+                                        .graphicsLayer { alpha = ((cardExpand - 0.5f) * 2f).coerceIn(0f, 1f) }
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(TextBackgroundColor.copy(alpha = 0.12f))
+                                        .clickable(enabled = cardOpen) { closeCardFull() },
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.expand_more),
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = TextBackgroundColor,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -2551,6 +2583,7 @@ fun InlineLyricsView(
     isPlaying: Boolean = true,
     // Card layout: how far the card is opened toward full screen (0..1).
     expandFraction: () -> Float = { 0f },
+    openBottomPadding: Dp = 0.dp,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
@@ -2673,6 +2706,7 @@ fun InlineLyricsView(
                     color = compactColor,
                     isPlaying = isPlaying,
                     expandFraction = expandFraction,
+                    openBottomPadding = openBottomPadding,
                 )
             }
 
@@ -2889,14 +2923,6 @@ private fun PlayerControlButton(
 private val DefaultAlbumBackground = Color(0xFF2B2A30)
 
 /** Softens an album art color into a calm, mid-dark tone that white text reads well on. */
-private fun albumBackgroundColor(base: Color): Color {
-    val hsl = FloatArray(3)
-    ColorUtils.colorToHSL(base.toArgb(), hsl)
-    hsl[1] = (hsl[1] * 0.8f).coerceAtMost(0.55f)
-    hsl[2] = hsl[2].coerceIn(0.24f, 0.36f)
-    return Color(ColorUtils.HSLToColor(hsl))
-}
-
 private fun albumBackgroundBrush(color: Color): Brush =
     Brush.verticalGradient(
         listOf(

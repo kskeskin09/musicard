@@ -88,6 +88,14 @@ constructor(
                 }
 
                 PlaylistSongSortType.PLAY_TIME -> filteredSongs.sortedBy { it.song.song.totalPlayTime }
+                // Last change to the song entry (file date, else when it was added to the library),
+                // then the order it was added to the playlist.
+                PlaylistSongSortType.MODIFIED_DATE ->
+                    filteredSongs.sortedWith(
+                        compareBy<PlaylistSong, java.time.LocalDateTime?>(nullsFirst()) {
+                            it.song.song.dateModified ?: it.song.song.inLibrary
+                        }.thenBy { it.map.id },
+                    )
             }.reversed(sortDescending && sortType != PlaylistSongSortType.CUSTOM)
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
