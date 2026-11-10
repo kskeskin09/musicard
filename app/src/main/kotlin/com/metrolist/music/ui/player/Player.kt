@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -859,6 +860,16 @@ fun BottomSheetPlayer(
 
     val backgroundAlpha = state.progress.coerceIn(0f, 1f)
 
+    val cardAlbumColor by animateColorAsState(
+        targetValue = gradientColors.firstOrNull()?.let(::albumBackgroundColor) ?: DefaultAlbumBackground,
+        animationSpec = tween(800),
+        label = "albumBackground",
+    )
+    var showFullLyrics by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.isExpanded) {
+        if (!state.isExpanded) showFullLyrics = false
+    }
+
     BottomSheet(
         state = state,
         modifier = modifier,
@@ -907,24 +918,11 @@ fun BottomSheetPlayer(
                     }
 
                     PlayerBackgroundStyle.GRADIENT -> if (useCardLayout) {
-                        val albumColor by animateColorAsState(
-                            targetValue = gradientColors.firstOrNull()?.let(::albumBackgroundColor) ?: DefaultAlbumBackground,
-                            animationSpec = tween(800),
-                            label = "albumBackground",
-                        )
                         Box(
                             Modifier
                                 .fillMaxSize()
                                 .alpha(backgroundAlpha)
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            lerp(albumColor, Color.White, 0.06f),
-                                            albumColor,
-                                            lerp(albumColor, Color.Black, 0.18f),
-                                        ),
-                                    ),
-                                ),
+                                .background(albumBackgroundBrush(cardAlbumColor)),
                         )
                     } else {
                         AnimatedContent(
@@ -1649,7 +1647,7 @@ fun BottomSheetPlayer(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(if (useCardLayout) 8.dp else 24.dp))
 
             AnimatedVisibility(
                 visible = !isFullScreen,
@@ -2145,6 +2143,10 @@ fun BottomSheetPlayer(
                                     .background(TextBackgroundColor.copy(alpha = 0.35f)),
                         )
 
+                        // Pushes art, title and progress bar down; the 16dp is taken back from the
+                        // gap above the play controls, so those stay where they were.
+                        Spacer(Modifier.height(16.dp))
+
                         run {
                             // Remember lambdas to prevent unnecessary recomposition
                             val currentSliderPosition by rememberUpdatedState(sliderPosition)
@@ -2208,6 +2210,7 @@ fun BottomSheetPlayer(
                                 }
                             },
                             onOpenFullQueue = { queueSheetState.expandSoft() },
+                            onOpenFullLyrics = { showFullLyrics = true },
                             onMoreClick = moreMenu@{
                                 val metadata = mediaMetadata ?: return@moreMenu
                                 menuState.show {
@@ -2228,6 +2231,22 @@ fun BottomSheetPlayer(
                                     .fillMaxWidth()
                                     .weight(1f)
                                     .padding(horizontal = 12.dp),
+                        )
+                    }
+
+                    BackHandler(enabled = showFullLyrics && state.isExpanded) {
+                        showFullLyrics = false
+                    }
+                    AnimatedVisibility(
+                        visible = showFullLyrics,
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    ) {
+                        FullScreenLyrics(
+                            mediaMetadata = mediaMetadata,
+                            backgroundColor = cardAlbumColor,
+                            positionProvider = { effectivePosition },
+                            onClose = { showFullLyrics = false },
                         )
                     }
                 }
@@ -2495,4 +2514,95 @@ private fun albumBackgroundColor(base: Color): Color {
     hsl[1] = (hsl[1] * 0.8f).coerceAtMost(0.55f)
     hsl[2] = hsl[2].coerceIn(0.24f, 0.36f)
     return Color(ColorUtils.HSLToColor(hsl))
+}
+
+private fun albumBackgroundBrush(color: Color): Brush =
+    Brush.verticalGradient(
+        listOf(
+            lerp(color, Color.White, 0.06f),
+            color,
+            lerp(color, Color.Black, 0.18f),
+        ),
+    )
+
+/**
+ * Full-screen lyrics opened from the lyrics card. Closes with the back button, the close
+ * button, or by pulling down again once the lyrics are scrolled to the top.
+ */
+@Composable
+private fun FullScreenLyrics(
+    mediaMetadata: MediaMetadata?,
+    backgroundColor: Color,
+    positionProvider: () -> Long,
+    onClose: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(albumBackgroundBrush(backgroundColor))
+                // Keeps taps from reaching the player underneath.
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
+    ) {
+        Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 8.dp, bottom = 4.dp),
+        ) {
+            AsyncImage(
+                model = mediaMetadata?.thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = mediaMetadata?.title.orEmpty(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = mediaMetadata?.artists?.joinToString { it.name }.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(
+                onClick = onClose,
+                colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.expand_more),
+                    contentDescription = stringResource(R.string.close),
+                )
+            }
+        }
+        Lyrics(
+            sliderPositionProvider = positionProvider,
+            showLyrics = true,
+            accentOverride = Color.White,
+            onPullDownAtTop = onClose,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+        )
+        Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()))
+    }
 }

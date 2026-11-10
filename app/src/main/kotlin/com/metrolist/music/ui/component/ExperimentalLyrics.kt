@@ -149,7 +149,11 @@ fun ExperimentalLyrics(
     sliderPositionProvider: () -> Long?,
     modifier: Modifier = Modifier,
     showLyrics: Boolean,
-    lyricsViewModel: LyricsViewModel = hiltViewModel()
+    lyricsViewModel: LyricsViewModel = hiltViewModel(),
+    // Overrides the lyrics color (e.g. white on the album color background).
+    accentOverride: Color? = null,
+    // Called when the user pulls down again after the lyrics are already at the top.
+    onPullDownAtTop: (() -> Unit)? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
@@ -295,7 +299,7 @@ fun ExperimentalLyrics(
         }
     }
 
-    val expressiveAccent = when (playerBackground) {
+    val expressiveAccent = accentOverride ?: when (playerBackground) {
         PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.primary
         PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> Color.White
     }
@@ -558,6 +562,9 @@ fun ExperimentalLyrics(
         // effectively unbounded overscroll away from the lyrics.
         val scrollClampMin = minOf(minOffset, maxOffset)
         val scrollClampMax = maxOf(minOffset, maxOffset)
+        val latestClampMax by rememberUpdatedState(scrollClampMax)
+        val latestOnPullDownAtTop by rememberUpdatedState(onPullDownAtTop)
+        val pullDownThresholdPx = with(density) { 72.dp.toPx() }
 
         LaunchedEffect(scrollClampMin, scrollClampMax) {
             if (userManualOffset < scrollClampMin || userManualOffset > scrollClampMax) {
@@ -682,10 +689,19 @@ fun ExperimentalLyrics(
                                 isAutoScrollEnabled = false
                                 lastPreviewTime = System.currentTimeMillis()
                                 velocityTracker.addPosition(down.uptimeMillis, down.position)
+                                val startedAtTop = userManualOffset >= latestClampMax - 1f
+                                var pullDown = 0f
                                 verticalDrag(down.id) { change ->
-                                    userManualOffset = (userManualOffset + change.positionChange().y).coerceIn(scrollClampMin, scrollClampMax)
+                                    val dy = change.positionChange().y
+                                    if (startedAtTop) pullDown = (pullDown + dy).coerceAtLeast(0f)
+                                    userManualOffset = (userManualOffset + dy).coerceIn(scrollClampMin, scrollClampMax)
                                     velocityTracker.addPosition(change.uptimeMillis, change.position)
                                     change.consume()
+                                }
+                                val pullDownCallback = latestOnPullDownAtTop
+                                if (startedAtTop && pullDownCallback != null && pullDown > pullDownThresholdPx) {
+                                    pullDownCallback()
+                                    continue
                                 }
                                 val velocity = velocityTracker.calculateVelocity().y
                                 flingJob = scope.launch {

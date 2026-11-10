@@ -127,6 +127,26 @@ android {
                 "proguard-rules.pro",
             )
         }
+        // Optimized, non-debuggable build for testing on a phone (same R8 setup as release,
+        // signed with the debug/workflow key). Debug builds are much slower at runtime.
+        create("preview") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            if (applicationIdOverride == null) {
+                applicationIdSuffix = ".preview"
+            }
+            if (appNameOverride == null) {
+                resValue("string", "app_name", "Musicard Preview")
+            }
+            signingConfig =
+                if (workflowDebugKeystoreFile != null) {
+                    signingConfigs.getByName("workflowDebug")
+                } else if (persistentDebugKeystoreFile.exists()) {
+                    signingConfigs.getByName("persistentDebug")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
+        }
         debug {
             if (applicationIdOverride == null) {
                 applicationIdSuffix = ".debug"

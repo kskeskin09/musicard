@@ -56,6 +56,19 @@ import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.models.MediaMetadata
 import kotlinx.coroutines.launch
+import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.constants.RespectAgentPositioningKey
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import com.metrolist.music.lyrics.lyricsTextLooksSynced
@@ -68,6 +81,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 
 private const val LyricsPage = 0
 private const val UpNextPage = 1
+private val OpenSwipeThreshold = 40.dp
 
 /**
  * Card at the bottom of the portrait player. It reaches the bottom edge of the screen.
@@ -85,6 +99,7 @@ fun PlayerBottomCard(
     onSleepTimerClick: () -> Unit,
     onLyricsMenuClick: () -> Unit,
     onOpenFullQueue: () -> Unit,
+    onOpenFullLyrics: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -159,21 +174,51 @@ fun PlayerBottomCard(
                     .fillMaxWidth()
                     .weight(1f),
         ) { page ->
+            // Tapping the lyrics or swiping up on either page opens its full-screen view.
+            val openFull = if (page == LyricsPage) onOpenFullLyrics else onOpenFullQueue
+            val latestOpenFull by rememberUpdatedState(openFull)
+            val pageModifier =
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        var dragged = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { dragged = 0f },
+                            onVerticalDrag = { change, dragAmount ->
+                                dragged += dragAmount
+                                change.consume()
+                            },
+                            onDragEnd = {
+                                if (dragged < -OpenSwipeThreshold.toPx()) latestOpenFull()
+                            },
+                        )
+                    }
             when (page) {
                 LyricsPage ->
-                    InlineLyricsView(
-                        mediaMetadata = mediaMetadata,
-                        showLyrics = isPlayerExpanded && pagerState.currentPage == LyricsPage,
-                        positionProvider = positionProvider,
-                        compactColor = contentColor,
-                        isPlaying = isPlaying,
-                    )
+                    Box(
+                        modifier =
+                            pageModifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onOpenFullLyrics,
+                            ),
+                    ) {
+                        InlineLyricsView(
+                            mediaMetadata = mediaMetadata,
+                            showLyrics = isPlayerExpanded && pagerState.currentPage == LyricsPage,
+                            positionProvider = positionProvider,
+                            compactColor = contentColor,
+                            isPlaying = isPlaying,
+                        )
+                    }
 
                 else ->
-                    UpNextList(
-                        contentColor = contentColor,
-                        isListenTogetherGuest = isListenTogetherGuest,
-                    )
+                    Box(modifier = pageModifier) {
+                        UpNextList(
+                            contentColor = contentColor,
+                            isListenTogetherGuest = isListenTogetherGuest,
+                        )
+                    }
             }
         }
     }
@@ -308,6 +353,7 @@ private fun UpNextList(
 
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
+        userScrollEnabled = false,
         contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 12.dp + navBottom),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier.fillMaxSize(),
@@ -383,8 +429,9 @@ private fun UpNextRow(
 }
 
 /**
- * Small-screen lyrics for the bottom card: left aligned, the current line bold and bright,
- * the others dimmed. Synced lines auto-scroll and can be tapped to seek.
+ * Small-screen lyrics for the bottom card: the current line bold and bright, the others dimmed.
+ * Word/syllable timed lines light up word by word, and duet agents (v1/v2) align left/right
+ * like in the full lyrics view.
  */
 @Composable
 fun CompactLyrics(
@@ -395,6 +442,9 @@ fun CompactLyrics(
     modifier: Modifier = Modifier,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle()
+    val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
+    val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
     val lines =
         remember(lyrics) {
@@ -404,17 +454,20 @@ fun CompactLyrics(
                 lyrics.lines().filter { it.isNotBlank() }.map { LyricsEntry(0L, it.trim()) }
             }
         }
-    var currentIndex by remember(lines) {
-        mutableIntStateOf(if (synced) LyricsUtils.findCurrentLineIndex(lines, positionProvider()) else -1)
-    }
+    val hasWordTimings = remember(lines) { lines.any { !it.words.isNullOrEmpty() } }
+
+    var position by remember { mutableLongStateOf(positionProvider() + lyricsOffset) }
     if (synced) {
-        LaunchedEffect(lines, isPlaying) {
+        LaunchedEffect(lines, isPlaying, lyricsOffset) {
             while (isActive) {
-                currentIndex = LyricsUtils.findCurrentLineIndex(lines, positionProvider())
+                position = positionProvider() + lyricsOffset
                 if (!isPlaying) break
-                delay(150)
+                delay(if (hasWordTimings) 50L else 150L)
             }
         }
+    }
+    val currentIndex by remember(lines, synced) {
+        derivedStateOf { if (synced) LyricsUtils.findCurrentLineIndex(lines, position) else -1 }
     }
 
     val listState = rememberLazyListState()
@@ -425,32 +478,54 @@ fun CompactLyrics(
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
         state = listState,
+        userScrollEnabled = false,
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 2.dp, bottom = 16.dp + navBottom),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier.fillMaxSize(),
     ) {
         itemsIndexed(lines) { index, line ->
             val active = synced && index == currentIndex
-            Text(
-                text = line.text,
-                style =
-                    if (active) {
-                        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    } else {
-                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
-                    },
-                color = color.copy(alpha = if (active || !synced) 1f else 0.5f),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (synced) {
-                                Modifier.clickable { playerConnection.player.seekTo(line.time) }
-                            } else {
-                                Modifier
-                            },
-                        ),
-            )
+            val textAlign =
+                when {
+                    line.isBackground -> TextAlign.Center
+                    respectAgentPositioning && line.agent == "v2" -> TextAlign.End
+                    respectAgentPositioning && line.agent == "v1000" -> TextAlign.Center
+                    else -> TextAlign.Start
+                }
+            val baseStyle =
+                when {
+                    line.isBackground -> MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
+                    active -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    else -> MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                }
+            val dimAlpha = if (line.isBackground) 0.4f else 0.5f
+            val words = line.words
+            if (active && !words.isNullOrEmpty()) {
+                val positionSec = position / 1000.0
+                Text(
+                    text =
+                        buildAnnotatedString {
+                            words.forEach { word ->
+                                val sung = positionSec >= word.startTime
+                                withStyle(SpanStyle(color = color.copy(alpha = if (sung) 1f else dimAlpha))) {
+                                    append(word.text)
+                                }
+                                if (word.hasTrailingSpace) append(" ")
+                            }
+                        },
+                    style = baseStyle,
+                    textAlign = textAlign,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Text(
+                    text = line.text,
+                    style = baseStyle,
+                    color = color.copy(alpha = if (active || !synced) 1f else dimAlpha),
+                    textAlign = textAlign,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }

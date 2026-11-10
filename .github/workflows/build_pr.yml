@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v7
@@ -67,8 +67,9 @@ jobs:
           path: app/pr-debug.keystore
           key: ${{ steps.pr_keystore.outputs.cache-primary-key }}
 
-      - name: Build GMS Debug APK
-        run: ./gradlew --console=plain assembleGmsDebug --warning-mode summary
+      # Optimized (R8, non-debuggable) build so the test APK runs as fast as a release.
+      - name: Build GMS Preview APK
+        run: ./gradlew --console=plain assembleGmsPreview --warning-mode summary
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           METROLIST_APPLICATION_ID: com.kskeskin09.musicard.pr.p${{ github.event.number }}
@@ -82,4 +83,4 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: app-universal-debug-pr-${{ github.event.number }}
-          path: app/build/outputs/apk/gms/debug/*.apk
+          path: app/build/outputs/apk/gms/preview/*.apk

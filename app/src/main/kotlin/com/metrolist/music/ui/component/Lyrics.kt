@@ -18,7 +18,9 @@ fun Lyrics(
     sliderPositionProvider: () -> Long?,
     modifier: Modifier = Modifier,
     showLyrics: Boolean,
-    lyricsViewModel: LyricsViewModel = hiltViewModel()
+    lyricsViewModel: LyricsViewModel = hiltViewModel(),
+    accentOverride: androidx.compose.ui.graphics.Color? = null,
+    onPullDownAtTop: (() -> Unit)? = null,
 ) {
     val (experimentalLyrics, _) = rememberPreference(key = ExperimentalLyricsKey, defaultValue = true)
 
@@ -27,7 +29,9 @@ fun Lyrics(
             sliderPositionProvider = sliderPositionProvider,
             modifier = modifier,
             showLyrics = showLyrics,
-            lyricsViewModel = lyricsViewModel
+            lyricsViewModel = lyricsViewModel,
+            accentOverride = accentOverride,
+            onPullDownAtTop = onPullDownAtTop,
         )
     } else {
         OriginalLyrics(
