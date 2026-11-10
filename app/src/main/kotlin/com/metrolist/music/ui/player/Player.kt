@@ -2670,4 +2670,4 @@ private fun FullScreenLyrics(
     }
 }
 
-private const val ControlsAutoHideMillis = 2000L
+private const val ControlsAutoHideMillis = 3000L

@@ -53,6 +53,7 @@ import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.ui.utils.fadingEdge
 import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.models.MediaMetadata
@@ -97,6 +98,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 private const val LyricsPage = 0
 private const val UpNextPage = 1
 private val OpenSwipeThreshold = 40.dp
+private val CardBottomFade = 72.dp
 
 /**
  * Card at the bottom of the portrait player. It reaches the bottom edge of the screen.
@@ -194,6 +196,9 @@ fun PlayerBottomCard(
             val pageModifier =
                 Modifier
                     .fillMaxSize()
+                    // Lyrics and the up-next list fade out toward the bottom of the card. This is
+                    // a single gradient mask drawn with the page, much cheaper than a real blur.
+                    .fadingEdge(bottom = CardBottomFade)
                     .pointerInput(Unit) {
                         var dragged = 0f
                         detectVerticalDragGestures(
