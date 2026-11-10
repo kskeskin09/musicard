@@ -90,12 +90,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import com.metrolist.music.lyrics.lyricsTextLooksSynced
@@ -104,11 +102,11 @@ import com.metrolist.music.lyrics.LyricsEntry
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.lazy.rememberLazyListState
 
-private const val LyricsPage = 0
-private const val UpNextPage = 1
-private val OpenSwipeThreshold = 40.dp
+internal const val LyricsPage = 0
+internal const val UpNextPage = 1
 private val CardBottomFade = 72.dp
 
 /**
@@ -130,10 +128,19 @@ fun PlayerBottomCard(
     onOpenFullLyrics: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
+    // Reports the shown page (LyricsPage or UpNextPage), e.g. for dragging the card open.
+    onPageChanged: (Int) -> Unit = {},
+    // How far the card is opened toward full screen (0..1); its corners straighten out with it.
+    expandFraction: () -> Float = { 0f },
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
+    val latestOnPageChanged by rememberUpdatedState(onPageChanged)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { latestOnPageChanged(it) }
+    }
     val coroutineScope = rememberCoroutineScope()
-    val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val corner = 28.dp * (1f - expandFraction().coerceIn(0f, 1f))
+    val shape = RoundedCornerShape(topStart = corner, topEnd = corner)
 
     Column(
         modifier =
@@ -202,27 +209,14 @@ fun PlayerBottomCard(
                     .weight(1f),
         ) { page ->
             // Tapping the lyrics or swiping up on either page opens its full-screen view.
-            val openFull = if (page == LyricsPage) onOpenFullLyrics else onOpenFullQueue
-            val latestOpenFull by rememberUpdatedState(openFull)
+            // Dragging the card up is handled by the player around the card, which stays put
+            // while the card grows (see BottomSheetPlayer).
             val pageModifier =
                 Modifier
                     .fillMaxSize()
                     // Lyrics and the up-next list fade out toward the bottom of the card. This is
                     // a single gradient mask drawn with the page, much cheaper than a real blur.
                     .fadingEdge(bottom = CardBottomFade)
-                    .pointerInput(Unit) {
-                        var dragged = 0f
-                        detectVerticalDragGestures(
-                            onDragStart = { dragged = 0f },
-                            onVerticalDrag = { change, dragAmount ->
-                                dragged += dragAmount
-                                change.consume()
-                            },
-                            onDragEnd = {
-                                if (dragged < -OpenSwipeThreshold.toPx()) latestOpenFull()
-                            },
-                        )
-                    }
             when (page) {
                 LyricsPage ->
                     Box(
