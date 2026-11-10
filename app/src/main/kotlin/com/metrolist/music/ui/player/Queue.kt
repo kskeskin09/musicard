@@ -1199,8 +1199,7 @@ fun Queue(
                     enabled = !isListenTogetherGuest,
                     contentColor = LocalContentColor.current,
                     activeIconColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.secondaryContainer,
-                    width = 56.dp,
-                    height = 42.dp,
+                    size = 44.dp,
                     iconSize = 24.dp,
                     onClick = {
                         coroutineScope
@@ -1221,8 +1220,7 @@ fun Queue(
                     enabled = !isListenTogetherGuest,
                     contentColor = LocalContentColor.current,
                     activeIconColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.secondaryContainer,
-                    width = 56.dp,
-                    height = 42.dp,
+                    size = 44.dp,
                     iconSize = 24.dp,
                     onClick = playerConnection.player::toggleRepeatMode,
                 )

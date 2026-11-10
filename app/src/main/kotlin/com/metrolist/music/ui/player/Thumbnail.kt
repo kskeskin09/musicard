@@ -88,6 +88,7 @@ import com.metrolist.music.listentogether.RoomRole
 import com.metrolist.music.ui.component.CastButton
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 /**
@@ -283,21 +284,34 @@ fun Thumbnail(
         }
     }
 
-    // Update position when song changes
-    LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext) {
-        val index = maxOf(0, currentMediaIndex)
-        if (index >= 0 && index < mediaItems.size) {
-            try {
-                thumbnailLazyGridState.animateScrollToItem(index)
-            } catch (e: Exception) {
+    // Slide to the new song's art when the song changes. The grid keeps the art that was showing
+    // in place while the list around it is rebuilt, so this starts from the previous song. If the
+    // user already swiped to the new art there is nothing left to do.
+    var shownMediaId by remember { mutableStateOf(mediaMetadata?.id) }
+    LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext, playerConnection.player.currentMediaItemIndex) {
+        val index = currentMediaIndex
+        if (index !in mediaItems.indices) return@LaunchedEffect
+        val previousId = shownMediaId
+        val currentId = mediaItems[index].mediaId
+        shownMediaId = currentId
+        val settledKey =
+            thumbnailLazyGridState.layoutInfo.visibleItemsInfo
+                .firstOrNull()
+                ?.key
+                ?.takeIf { thumbnailLazyGridState.firstVisibleItemScrollOffset == 0 }
+        try {
+            if (settledKey == currentId) {
                 thumbnailLazyGridState.scrollToItem(index)
+                return@LaunchedEffect
             }
-        }
-    }
-
-    LaunchedEffect(playerConnection.player.currentMediaItemIndex) {
-        val index = mediaItemsData.currentIndex
-        if (index >= 0 && index != currentItem) {
+            val from = mediaItems.indexOfFirst { it.mediaId == previousId }
+            if (from >= 0 && from != index && settledKey == previousId) {
+                thumbnailLazyGridState.scrollToItem(from)
+            }
+            thumbnailLazyGridState.animateScrollToItem(index)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             thumbnailLazyGridState.scrollToItem(index)
         }
     }

@@ -17,7 +17,9 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
@@ -1336,9 +1338,8 @@ fun BottomSheetPlayer(
                     // For episodes, show saved state (inLibrary); for songs, show liked state
                     val isEpisode = currentSong?.song?.isEpisode == true
                     val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
-                    PlayerCircleButton(
-                        icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
-                        contentDescription = null,
+                    PlayerLikeButton(
+                        liked = isFavorite,
                         contentColor = TextBackgroundColor,
                         onClick = playerConnection::toggleLike,
                         onLongClick = { showChoosePlaylistDialog = true },
@@ -2449,6 +2450,8 @@ fun InlineLyricsView(
     // When set, renders the small card version of the lyrics in this color.
     compactColor: Color? = null,
     isPlaying: Boolean = true,
+    // Card layout: how far the card is opened toward full screen (0..1).
+    expandFraction: () -> Float = { 0f },
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
@@ -2570,6 +2573,7 @@ fun InlineLyricsView(
                     positionProvider = positionProvider,
                     color = compactColor,
                     isPlaying = isPlaying,
+                    expandFraction = expandFraction,
                 )
             }
 
@@ -2638,6 +2642,62 @@ private fun PlayerMoreMenuButton(
     }
 }
 
+/**
+ * Heart in the card layout: outlined, or filled while the song is liked. Liking it by tap makes
+ * the heart grow a little (it stays inside the circle), wobble left and right once and settle.
+ */
+@Composable
+private fun PlayerLikeButton(
+    liked: Boolean,
+    contentColor: Color,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val view = LocalView.current
+    val scale = remember { Animatable(1f) }
+    val rotation = remember { Animatable(0f) }
+    // Only a tap animates; a liked song that merely comes on screen shows the filled heart as is.
+    var tapped by remember { mutableStateOf(false) }
+    LaunchedEffect(liked) {
+        if (liked && tapped) {
+            launch {
+                scale.animateTo(1.2f, tween(160, easing = FastOutSlowInEasing))
+                scale.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 300f))
+            }
+            rotation.animateTo(
+                0f,
+                keyframes {
+                    durationMillis = 520
+                    -9f at 110
+                    8f at 240
+                    -4f at 360
+                    2f at 450
+                },
+            )
+        }
+        tapped = false
+    }
+    PlayerCircleButton(
+        icon = if (liked) R.drawable.favorite else R.drawable.favorite_border,
+        contentDescription = stringResource(R.string.action_like),
+        contentColor = contentColor,
+        onClick = {
+            tapped = true
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            onClick()
+        },
+        onLongClick = onLongClick,
+        modifier = modifier,
+        iconModifier =
+            Modifier.graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+                rotationZ = rotation.value
+            },
+    )
+}
+
 @Composable
 private fun PlayerCircleButton(
     icon: Int,
@@ -2646,6 +2706,7 @@ private fun PlayerCircleButton(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
 ) {
     val haptic = LocalHapticFeedback.current
     Box(
@@ -2670,7 +2731,7 @@ private fun PlayerCircleButton(
             painter = painterResource(icon),
             contentDescription = contentDescription,
             tint = contentColor,
-            modifier = Modifier.size(24.dp),
+            modifier = iconModifier.size(24.dp),
         )
     }
 }

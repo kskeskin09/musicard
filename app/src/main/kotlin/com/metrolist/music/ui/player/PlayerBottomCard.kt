@@ -40,8 +40,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -104,6 +102,23 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.lerp
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
+import com.metrolist.music.constants.LyricsTextPositionKey
+import com.metrolist.music.constants.PlayerHorizontalPadding
+import com.metrolist.music.ui.screens.settings.LyricsPosition
+import com.metrolist.music.utils.rememberEnumPreference
+import kotlin.math.abs
 
 internal const val LyricsPage = 0
 internal const val UpNextPage = 1
@@ -154,8 +169,10 @@ fun PlayerBottomCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = 18.dp, end = 6.dp, top = 2.dp)
-                    .height(40.dp),
+                    // The full-screen views have their own header, so this one fades out on the way.
+                    .graphicsLayer { alpha = (1f - expandFraction() * 2f).coerceIn(0f, 1f) }
+                    .padding(start = 18.dp, end = 16.dp, top = CardHeaderTopPadding)
+                    .height(CardHeaderRowHeight),
         ) {
             listOf(R.string.lyrics, R.string.up_next).forEachIndexed { page, label ->
                 val selected = pagerState.currentPage == page
@@ -178,16 +195,14 @@ fun PlayerBottomCard(
             Spacer(Modifier.weight(1f))
 
             if (pagerState.currentPage == LyricsPage) {
-                IconButton(
+                PlayerPillButton(
+                    icon = R.drawable.more_horiz,
+                    contentDescription = stringResource(R.string.more_options),
+                    active = false,
+                    enabled = true,
+                    contentColor = contentColor,
                     onClick = onLyricsMenuClick,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = contentColor),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.more_horiz),
-                        contentDescription = stringResource(R.string.more_options),
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+                )
             } else {
                 UpNextActions(
                     contentColor = contentColor,
@@ -196,7 +211,6 @@ fun PlayerBottomCard(
                     onSleepTimerClick = onSleepTimerClick,
                     onMoreClick = onMoreClick,
                 )
-                Spacer(Modifier.width(10.dp))
             }
         }
 
@@ -233,6 +247,7 @@ fun PlayerBottomCard(
                             positionProvider = positionProvider,
                             compactColor = contentColor,
                             isPlaying = isPlaying,
+                            expandFraction = expandFraction,
                         )
                     }
 
@@ -300,8 +315,8 @@ private fun UpNextActions(
 }
 
 /**
- * Apple Music style toggle: a small rounded pill. Inactive it is a faint tint of [contentColor];
- * active it is filled with [contentColor] and the icon takes the background color.
+ * Small round toggle. Inactive it is a faint tint of [contentColor]; active it is filled with
+ * [contentColor] and the icon takes the background color.
  */
 @Composable
 fun PlayerPillButton(
@@ -313,8 +328,7 @@ fun PlayerPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     activeIconColor: Color = Color.Black.copy(alpha = 0.75f),
-    width: Dp = 40.dp,
-    height: Dp = 32.dp,
+    size: Dp = 34.dp,
     iconSize: Dp = 18.dp,
 ) {
     val background by animateColorAsState(
@@ -329,8 +343,8 @@ fun PlayerPillButton(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
-                .size(width = width, height = height)
-                .clip(RoundedCornerShape(10.dp))
+                .size(size)
+                .clip(CircleShape)
                 .background(background)
                 .clickable(enabled = enabled, onClick = onClick)
                 .alpha(if (enabled) 1f else 0.4f),
@@ -460,6 +474,10 @@ private fun UpNextRow(
  * Small-screen lyrics for the bottom card: the current line bold and bright, the others dimmed.
  * Word/syllable timed lines light up word by word, and duet agents (v1/v2) align left/right
  * like in the full lyrics view.
+ *
+ * While the card is opened toward full screen ([expandFraction] 0..1) the text grows and moves
+ * toward the size, spacing and position it has in the full-screen lyrics, so the two views
+ * line up when one fades into the other.
  */
 @Composable
 fun CompactLyrics(
@@ -468,11 +486,13 @@ fun CompactLyrics(
     color: Color,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    expandFraction: () -> Float = { 0f },
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle()
     val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
+    val lyricsTextPosition by rememberEnumPreference(LyricsTextPositionKey, LyricsPosition.CENTER)
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
     val allLines =
         remember(lyrics) {
@@ -525,34 +545,99 @@ fun CompactLyrics(
             }
         }
     }
+
+    val fraction = expandFraction().coerceIn(0f, 1f)
+    val density = LocalDensity.current
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val windowHeight = with(density) { LocalWindowInfo.current.containerSize.height.toDp() }
+    // Where the full-screen lyrics put their lines, measured from the top of this list once the
+    // card covers the screen: the first line near the top, the current line 35% down.
+    val fullLyricsHeight = windowHeight - statusTop - FullLyricsTop - navBottom - 12.dp
+    val fullFirstLineTop = (statusTop + FullLyricsTop + FullLyricsTopPadding - CardHeaderHeight - FullLineGap).coerceAtLeast(0.dp)
+    val fullAnchorDrop = (fullLyricsHeight * FullLyricsAnchorRatio - FullLyricsTopPadding).coerceAtLeast(0.dp)
+    val topPadding = lerp(2.dp, fullFirstLineTop, fraction)
+    val sidePadding = lerp(24.dp, PlayerHorizontalPadding, fraction)
+    // How far below the top of the list the current line sits (0 in the small card).
+    val anchorPx = with(density) { (fullAnchorDrop * fraction).roundToPx() }
+
     val listState = rememberLazyListState()
+    val appliedAnchor = remember { intArrayOf(0) }
+    if (anchorPx != appliedAnchor[0]) {
+        // Applied before this frame's layout, so the lines follow the finger without lagging.
+        SideEffect {
+            appliedAnchor[0] = anchorPx
+            if (scrollTarget >= 0) listState.requestScrollToItem(scrollTarget, -anchorPx)
+        }
+    }
     LaunchedEffect(scrollTarget) {
         if (scrollTarget < 0) return@LaunchedEffect
         val visible = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollTarget }
         if (visible != null) {
             // A visible slide (a little slower than the default), like the full lyrics view.
-            listState.animateScrollBy(visible.offset.toFloat(), tween(LineScrollMillis, easing = FastOutSlowInEasing))
+            listState.animateScrollBy(
+                (visible.offset - appliedAnchor[0]).toFloat(),
+                tween(LineScrollMillis, easing = FastOutSlowInEasing),
+            )
         } else {
-            listState.animateScrollToItem(scrollTarget)
+            listState.animateScrollToItem(scrollTarget, -appliedAnchor[0])
+        }
+        // The card may have been dragged meanwhile; make sure the line ends where it belongs.
+        val settled = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollTarget }
+        if (settled == null || settled.offset != appliedAnchor[0]) {
+            listState.requestScrollToItem(scrollTarget, -appliedAnchor[0])
         }
     }
 
-    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val typography = MaterialTheme.typography
+    val compactStyles =
+        remember(typography) {
+            val shared =
+                TextStyle(
+                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    lineHeightStyle =
+                        LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.Both,
+                        ),
+                )
+            CompactStyles(
+                active = typography.titleLarge.copy(fontWeight = FontWeight.Bold).merge(shared),
+                inactive = typography.bodyLarge.copy(fontWeight = FontWeight.Medium).merge(shared),
+                background = typography.bodyMedium.copy(fontStyle = FontStyle.Italic).merge(shared),
+            )
+        }
+    val preferredBias =
+        when (lyricsTextPosition) {
+            LyricsPosition.LEFT -> -1f
+            LyricsPosition.CENTER -> 0f
+            LyricsPosition.RIGHT -> 1f
+        }
+
     LazyColumn(
         state = listState,
         userScrollEnabled = false,
-        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 16.dp + navBottom),
+        contentPadding =
+            PaddingValues(start = sidePadding, end = sidePadding, top = topPadding, bottom = 16.dp + navBottom),
         modifier = modifier.fillMaxSize(),
     ) {
         items(cardItems) { item ->
             when (item) {
                 is CompactItem.Dots -> {
                     val gap = item.gap
-                    val dotsAlign =
-                        when {
-                            respectAgentPositioning && gap.nextAgent == "v2" -> Alignment.End
-                            respectAgentPositioning && gap.nextAgent == "v1000" -> Alignment.CenterHorizontally
-                            else -> Alignment.Start
+                    val agent = gap.nextAgent.takeIf { respectAgentPositioning }
+                    val compactBias =
+                        when (agent) {
+                            "v2" -> 1f
+                            "v1000" -> 0f
+                            else -> -1f
+                        }
+                    val fullBias =
+                        when (agent) {
+                            "v1" -> -1f
+                            "v2" -> 1f
+                            "v1000" -> 0f
+                            else -> preferredBias
                         }
                     AnimatedVisibility(
                         visible = activeGap == gap,
@@ -567,12 +652,12 @@ fun CompactLyrics(
                             progress = progress,
                             positionMs = position,
                             color = color,
-                            dotSize = 10.dp,
+                            dotSize = lerp(10.dp, 14.dp, fraction),
                             modifier =
                                 Modifier
-                                    .padding(vertical = 8.dp)
+                                    .padding(top = lerp(8.dp, 34.dp, fraction), bottom = lerp(8.dp, 18.dp, fraction))
                                     .fillMaxWidth()
-                                    .wrapContentWidth(dotsAlign),
+                                    .wrapContentWidth(BiasAlignment.Horizontal(lerp(compactBias, fullBias, fraction))),
                         )
                     }
                 }
@@ -581,38 +666,92 @@ fun CompactLyrics(
                     val index = item.index
                     val line = lines[index]
                     val active = synced && index == currentIndex && activeGap == null
+                    val agent = line.agent.takeIf { respectAgentPositioning }
+                    val compactBias =
+                        when {
+                            line.isBackground -> 0f
+                            agent == "v2" -> 1f
+                            agent == "v1000" -> 0f
+                            else -> -1f
+                        }
+                    val fullBias =
+                        when {
+                            agent == "v1" -> -1f
+                            agent == "v2" -> 1f
+                            agent == "v1000" -> 0f
+                            line.isBackground -> 0f
+                            else -> preferredBias
+                        }
+                    val bias = lerp(compactBias, fullBias, fraction)
                     val textAlign =
-                        when {
-                            line.isBackground -> TextAlign.Center
-                            respectAgentPositioning && line.agent == "v2" -> TextAlign.End
-                            respectAgentPositioning && line.agent == "v1000" -> TextAlign.Center
-                            else -> TextAlign.Start
+                        when (if (fraction < 0.5f) compactBias else fullBias) {
+                            -1f -> TextAlign.Start
+                            1f -> TextAlign.End
+                            else -> TextAlign.Center
                         }
-                    val baseStyle =
+                    val compactStyle =
                         when {
-                            line.isBackground -> MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
-                            active -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                            else -> MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                            line.isBackground -> compactStyles.background
+                            active -> compactStyles.active
+                            else -> compactStyles.inactive
                         }
-                    val dimAlpha = if (line.isBackground) 0.4f else 0.5f
+                    val style =
+                        if (fraction == 0f) {
+                            compactStyle
+                        } else {
+                            // The full-screen lyrics draw every line bold at this size.
+                            val fullSize = if (line.isBackground) FullLyricsTextSize * 0.7f else FullLyricsTextSize
+                            lerp(
+                                compactStyle,
+                                compactStyle.copy(
+                                    fontSize = fullSize.sp,
+                                    lineHeight = (fullSize * FullLyricsLineSpacing).sp,
+                                    letterSpacing = (-0.5).sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                                fraction,
+                            )
+                        }
+                    val compactDim = if (line.isBackground) 0.4f else 0.5f
+                    val fullDim =
+                        when {
+                            line.isBackground -> 0.5f
+                            currentIndex < 0 -> 0.2f
+                            else ->
+                                when (abs(index - currentIndex)) {
+                                    0, 1, 2 -> 0.2f
+                                    3 -> 0.15f
+                                    4 -> 0.1f
+                                    else -> 0.08f
+                                }
+                        }
+                    val dimAlpha = lerp(compactDim, fullDim, fraction)
                     val words = line.words
-                    Box(modifier = Modifier.padding(vertical = 3.dp)) {
+                    val textModifier = Modifier.fillMaxWidth().wrapContentWidth(BiasAlignment.Horizontal(bias))
+                    Box(
+                        modifier =
+                            Modifier.padding(
+                                top = lerp(5.dp, if (line.isBackground) 0.dp else FullLineGap + 12.dp, fraction),
+                                bottom = lerp(5.dp, if (line.isBackground) 2.dp else 12.dp, fraction),
+                            ),
+                    ) {
                         if (active && !words.isNullOrEmpty()) {
                             SweepingWordsLine(
                                 words = words,
                                 positionMsProvider = { position },
                                 color = color,
                                 dimAlpha = dimAlpha,
-                                style = baseStyle,
+                                style = style,
                                 textAlign = textAlign,
+                                modifier = textModifier,
                             )
                         } else {
                             Text(
                                 text = line.text,
-                                style = baseStyle,
+                                style = style,
                                 color = color.copy(alpha = if (active || !synced) 1f else dimAlpha),
                                 textAlign = textAlign,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = textModifier,
                             )
                         }
                     }
@@ -621,6 +760,26 @@ fun CompactLyrics(
         }
     }
 }
+
+private class CompactStyles(
+    val active: TextStyle,
+    val inactive: TextStyle,
+    val background: TextStyle,
+)
+
+private val CardHeaderTopPadding = 2.dp
+private val CardHeaderRowHeight = 40.dp
+private val CardHeaderHeight = CardHeaderTopPadding + CardHeaderRowHeight
+
+// Layout of the full-screen lyrics (FullScreenLyrics in Player.kt and ExperimentalLyrics), which the
+// card lyrics grow into: its header takes 60 dp under the status bar, the first line starts 40 dp
+// below that, the current line sits 35% down, and lines are 36 sp with 16 dp between them.
+private val FullLyricsTop = 60.dp
+private val FullLyricsTopPadding = 40.dp
+private val FullLineGap = 16.dp
+private const val FullLyricsAnchorRatio = 0.35f
+private const val FullLyricsTextSize = 36f
+private const val FullLyricsLineSpacing = 1.3f
 
 private data class Interlude(
     val afterLine: Int,
@@ -677,6 +836,7 @@ private fun SweepingWordsLine(
     dimAlpha: Float,
     style: TextStyle,
     textAlign: TextAlign,
+    modifier: Modifier = Modifier,
 ) {
     val built =
         remember(words) {
@@ -701,8 +861,7 @@ private fun SweepingWordsLine(
         textAlign = textAlign,
         onTextLayout = { layout = it },
         modifier =
-            Modifier
-                .fillMaxWidth()
+            modifier
                 .drawWithContent {
                     drawContent()
                     val textLayout = layout ?: return@drawWithContent
