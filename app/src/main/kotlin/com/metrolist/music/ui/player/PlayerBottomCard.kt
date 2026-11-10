@@ -131,6 +131,8 @@ fun PlayerBottomCard(
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     color = contentColor.copy(alpha = if (selected) 1f else 0.5f),
+                    maxLines = 1,
+                    softWrap = false,
                     modifier =
                         Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -301,7 +303,7 @@ fun PlayerPillButton(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
-                .size(width = 44.dp, height = 32.dp)
+                .size(width = 40.dp, height = 32.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(background)
                 .clickable(enabled = enabled, onClick = onClick)
