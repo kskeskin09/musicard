@@ -23,6 +23,7 @@ fun Lyrics(
     onPullDownAtTop: (() -> Unit)? = null,
     onProviderClick: (() -> Unit)? = null,
     horizontalPadding: androidx.compose.ui.unit.Dp? = null,
+    liveUpdates: Boolean = true,
 ) {
     val (experimentalLyrics, _) = rememberPreference(key = ExperimentalLyricsKey, defaultValue = true)
 
@@ -36,6 +37,7 @@ fun Lyrics(
             onPullDownAtTop = onPullDownAtTop,
             onProviderClick = onProviderClick,
             horizontalPadding = horizontalPadding,
+            liveUpdates = liveUpdates,
         )
     } else {
         OriginalLyrics(

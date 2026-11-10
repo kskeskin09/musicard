@@ -49,6 +49,8 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.metrolist.music.constants.NavigationBarHeight
+import com.metrolist.music.constants.SlimNavBarHeight
 import com.metrolist.music.ui.screens.Screens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -173,12 +175,14 @@ fun AppNavigationBar(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
+                // Sits right on top of the system navigation bar area; the bar's height above
+                // that area is the pill plus a small gap toward the mini player.
                 .align(Alignment.TopCenter)
                 .padding(horizontal = 16.dp)
-                .padding(top = 6.dp)
+                .padding(top = 4.dp)
                 .widthIn(max = 520.dp)
                 .fillMaxWidth()
-                .height(if (slimNav) 52.dp else 66.dp)
+                .height((if (slimNav) SlimNavBarHeight else NavigationBarHeight) - 4.dp)
                 .clip(pillShape)
                 .background(containerColor)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), pillShape)

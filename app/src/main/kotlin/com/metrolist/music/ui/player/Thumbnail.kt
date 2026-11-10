@@ -30,6 +30,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -269,18 +274,37 @@ fun Thumbnail(
         )
     }
 
-    // Current item tracking - derived state for efficiency
-    val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
-    val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
 
-    // Handle swipe to change song
-    LaunchedEffect(itemScrollOffset) {
-        if (!thumbnailLazyGridState.isScrollInProgress || !swipeThumbnail || itemScrollOffset != 0 || currentMediaIndex < 0) return@LaunchedEffect
-
-        if (currentItem > currentMediaIndex && canSkipNext) {
-            playerConnection.player.seekToNext()
-        } else if (currentItem < currentMediaIndex && canSkipPrevious) {
-            playerConnection.player.seekToPreviousMediaItem()
+    // Handle swipe to change song. Checked when a scroll the user started by dragging comes to
+    // rest: reading the offset while the fling settles could miss the last frame (the scroll is
+    // already over by then), which left the next song's art on screen without changing the song.
+    val latestCurrentMediaIndex by rememberUpdatedState(currentMediaIndex)
+    val latestCanSkipNext by rememberUpdatedState(canSkipNext)
+    val latestCanSkipPrevious by rememberUpdatedState(canSkipPrevious)
+    LaunchedEffect(thumbnailLazyGridState, swipeThumbnail) {
+        if (!swipeThumbnail) return@LaunchedEffect
+        var userDragged = false
+        launch {
+            thumbnailLazyGridState.interactionSource.interactions.collect { interaction ->
+                if (interaction is DragInteraction.Start) userDragged = true
+            }
+        }
+        snapshotFlow { thumbnailLazyGridState.isScrollInProgress }.collect { inProgress ->
+            if (inProgress || !userDragged) return@collect
+            userDragged = false
+            val layoutInfo = thumbnailLazyGridState.layoutInfo
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            val settled =
+                layoutInfo.visibleItemsInfo
+                    .minByOrNull { abs(it.offset.x + it.size.width / 2 - viewportCenter) }
+                    ?.index ?: return@collect
+            val current = latestCurrentMediaIndex
+            if (current < 0) return@collect
+            if (settled > current && latestCanSkipNext) {
+                playerConnection.player.seekToNext()
+            } else if (settled < current && latestCanSkipPrevious) {
+                playerConnection.player.seekToPreviousMediaItem()
+            }
         }
     }
 

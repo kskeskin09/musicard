@@ -83,6 +83,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -105,6 +106,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.util.lerp
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -205,6 +210,7 @@ import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.menu.AddToPlaylistDialog
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
+import com.metrolist.music.ui.theme.MusicardDarkColorScheme
 import com.metrolist.music.ui.theme.PlayerColorExtractor
 import com.metrolist.music.ui.theme.PlayerSliderColors
 import com.metrolist.music.ui.utils.ShowMediaInfo
@@ -909,6 +915,9 @@ fun BottomSheetPlayer(
     var cardTravelPx by remember { mutableFloatStateOf(1f) }
     var cardPage by remember { mutableIntStateOf(LyricsPage) }
     val cardExpandScope = rememberCoroutineScope()
+    // Fades the full queue in when it opens from the card.
+    val queueFade = remember { Animatable(1f) }
+    var queueOpenedFromCard by remember { mutableStateOf(false) }
     var cardExpandJob by remember { mutableStateOf<Job?>(null) }
     val animateCardExpand: suspend (Float, Int) -> Unit = { target, millis ->
         animate(cardExpand, target, animationSpec = tween(millis, easing = FastOutSlowInEasing)) { value, _ ->
@@ -925,9 +934,13 @@ fun BottomSheetPlayer(
                     // Let the full-screen view fade in over the opened card before resetting it.
                     delay(FullViewFadeMillis.toLong() + 60L)
                 } else {
-                    // The queue sheet slides up over the opened card; reset once it covers it.
-                    queueSheetState.expandSoft()
-                    withTimeoutOrNull(1500L) { snapshotFlow { queueSheetState.isExpanded }.first { it } }
+                    // Same hand-off as the lyrics: the queue appears in place over the opened
+                    // card (same background) and fades in, instead of sliding up.
+                    queueFade.snapTo(0f)
+                    queueSheetState.snapToAndWait(queueSheetState.expandedBound)
+                    queueOpenedFromCard = true
+                    queueFade.animateTo(1f, tween(FullViewFadeMillis))
+                    delay(60L)
                 }
                 cardExpand = 0f
             }
@@ -952,6 +965,22 @@ fun BottomSheetPlayer(
         } else if (cardExpand > 0f) {
             cardExpandJob?.cancel()
             cardExpandJob = cardExpandScope.launch { animateCardExpand(0f, (CardExpandMillis * cardExpand).toInt().coerceAtLeast(120)) }
+        }
+    }
+
+    // When the queue opened from the card closes (drag down, back, close button), the card
+    // shrinks back underneath it, the reverse of opening.
+    LaunchedEffect(queueSheetState) {
+        snapshotFlow { queueSheetState.isExpanded }.collect { expanded ->
+            if (!expanded && queueOpenedFromCard) {
+                queueOpenedFromCard = false
+                cardExpandJob?.cancel()
+                cardExpandJob =
+                    cardExpandScope.launch {
+                        cardExpand = 1f
+                        animateCardExpand(0f, CardExpandMillis)
+                    }
+            }
         }
     }
 
@@ -2212,6 +2241,17 @@ fun BottomSheetPlayer(
                 var boxBottomPx by remember { mutableFloatStateOf(0f) }
                 var playbackTopPx by remember { mutableFloatStateOf(0f) }
                 var playbackHeightPx by remember { mutableFloatStateOf(0f) }
+                // Art and title row at rest (measured while the card is closed). While the card opens
+                // they shrink and move to the header of the full-screen lyrics (48 dp art at the
+                // player margin under the status bar, title next to it).
+                var artBoxPos by remember { mutableStateOf(Offset.Zero) }
+                var artBoxSize by remember { mutableStateOf(IntSize.Zero) }
+                var titleRowPos by remember { mutableStateOf(Offset.Zero) }
+                val headerTopPx = with(density) { (topInset + 8.dp).toPx() }
+                val headerArtPx = with(density) { 48.dp.toPx() }
+                val marginPx = with(density) { PlayerHorizontalPadding.toPx() }
+                val headerTitleLeftPx = with(density) { (PlayerHorizontalPadding + 48.dp + 12.dp).toPx() }
+                val headerTitleTopPx = headerTopPx + with(density) { 2.dp.toPx() }
                 val playbackTravelPx = {
                     (boxBottomPx - navBottomPx - with(density) { 12.dp.toPx() } - playbackHeightPx - playbackTopPx)
                         .coerceAtLeast(0f)
@@ -2238,7 +2278,7 @@ fun BottomSheetPlayer(
                         Box(
                             modifier =
                                 Modifier
-                                    .graphicsLayer { alpha = (1f - cardExpand * 2f).coerceIn(0f, 1f) }
+                                    .graphicsLayer { alpha = (1f - cardExpand * 3f).coerceIn(0f, 1f) }
                                     .padding(vertical = 12.dp)
                                     .size(width = 40.dp, height = 4.dp)
                                     .clip(RoundedCornerShape(2.dp))
@@ -2254,14 +2294,11 @@ fun BottomSheetPlayer(
                             val currentSliderPosition by rememberUpdatedState(sliderPosition)
                             val sliderPositionProvider = remember { { currentSliderPosition } }
                             val isExpandedProvider = remember(state) { { state.isExpanded } }
-                            // Art and title slide up and fade while the card is dragged open.
+                            // Art and title stay visible while the card is dragged open: they shrink
+                            // and move into the full-screen lyrics header, drawn above the card.
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier =
-                                    Modifier.graphicsLayer {
-                                        translationY = -cardExpand * cardTravelPx * 0.45f
-                                        alpha = (1f - cardExpand * 1.25f).coerceIn(0f, 1f)
-                                    },
+                                modifier = Modifier.zIndex(2f),
                             ) {
                                 Thumbnail(
                                     sliderPositionProvider = sliderPositionProvider,
@@ -2269,7 +2306,24 @@ fun BottomSheetPlayer(
                                         Modifier
                                             .fillMaxWidth()
                                             .height(artSize)
-                                            .nestedScroll(state.preUpPostDownNestedScrollConnection),
+                                            .onGloballyPositioned {
+                                                if (cardExpand == 0f) {
+                                                    artBoxPos = it.positionInRoot()
+                                                    artBoxSize = it.size
+                                                }
+                                            }.graphicsLayer {
+                                                val p = cardExpand
+                                                if (p == 0f || artBoxSize.height == 0) return@graphicsLayer
+                                                val art = artBoxSize.height.toFloat()
+                                                val artLocalLeft = (artBoxSize.width - art) / 2f
+                                                val scale = 1f + (headerArtPx / art - 1f) * p
+                                                transformOrigin = TransformOrigin(0f, 0f)
+                                                scaleX = scale
+                                                scaleY = scale
+                                                val left = lerp(artBoxPos.x + artLocalLeft, marginPx, p)
+                                                translationX = left - artBoxPos.x - artLocalLeft * scale
+                                                translationY = lerp(artBoxPos.y, headerTopPx, p) - artBoxPos.y
+                                            }.nestedScroll(state.preUpPostDownNestedScrollConnection),
                                     isPlayerExpanded = isExpandedProvider,
                                     isListenTogetherGuest = isListenTogetherGuest,
                                     compact = true,
@@ -2277,7 +2331,26 @@ fun BottomSheetPlayer(
                                 )
                                 // Same gap as between the title row and the progress bar.
                                 Spacer(Modifier.height(24.dp))
-                                mediaMetadata?.let { titleRowContent(it) }
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .onGloballyPositioned {
+                                                if (cardExpand == 0f) titleRowPos = it.positionInRoot()
+                                            }.graphicsLayer {
+                                                val p = cardExpand
+                                                if (p == 0f) return@graphicsLayer
+                                                // titleLarge (22 sp) -> titleMedium (16 sp) in the header
+                                                val scale = 1f + (TitleHeaderScale - 1f) * p
+                                                transformOrigin = TransformOrigin(0f, 0f)
+                                                scaleX = scale
+                                                scaleY = scale
+                                                val textLeft = lerp(titleRowPos.x + marginPx, headerTitleLeftPx, p)
+                                                translationX = textLeft - titleRowPos.x - marginPx * scale
+                                                translationY = lerp(titleRowPos.y, headerTitleTopPx, p) - titleRowPos.y
+                                            },
+                                ) {
+                                    mediaMetadata?.let { titleRowContent(it) }
+                                }
                             }
                         }
 
@@ -2394,18 +2467,29 @@ fun BottomSheetPlayer(
                     BackHandler(enabled = showFullLyrics && state.isExpanded) {
                         closeFullLyrics()
                     }
-                    // The opened card underneath already matches this view's layout, so it only fades.
-                    AnimatedVisibility(
-                        visible = showFullLyrics,
-                        enter = fadeIn(tween(FullViewFadeMillis)),
-                        exit = fadeOut(tween(FullViewFadeMillis)),
-                    ) {
+                    // The full-screen lyrics stay composed while the player is open, parked off
+                    // screen when hidden, so they keep following the song and open already on the
+                    // current line instead of loading and scrolling there. The opened card
+                    // underneath matches this view's layout, so it only fades in.
+                    val keepFullLyrics by remember { derivedStateOf { state.progress > 0f } }
+                    if (keepFullLyrics || showFullLyrics) {
+                        val fullLyricsAlpha by animateFloatAsState(
+                            targetValue = if (showFullLyrics) 1f else 0f,
+                            animationSpec = tween(FullViewFadeMillis),
+                            label = "fullLyricsAlpha",
+                        )
                         FullScreenLyrics(
                             mediaMetadata = mediaMetadata,
                             backgroundColor = cardAlbumColor,
                             positionProvider = { effectivePosition },
                             onClose = closeFullLyrics,
+                            visible = showFullLyrics,
                             controls = { mediaMetadata?.let { controlsContent(it) } },
+                            modifier =
+                                Modifier
+                                    .offset {
+                                        if (showFullLyrics || fullLyricsAlpha > 0f) IntOffset.Zero else IntOffset(0, OffscreenOffsetPx)
+                                    }.graphicsLayer { alpha = fullLyricsAlpha },
                         )
                     }
                 }
@@ -2417,26 +2501,41 @@ fun BottomSheetPlayer(
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = shrinkVertically(shrinkTowards = Alignment.Top) + slideOutVertically(targetOffsetY = { it }) + fadeOut(),
         ) {
-            Queue(
-                state = queueSheetState,
-                playerBottomSheetState = state,
-                background =
-                    if (useBlackBackground) {
-                        Color.Black
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer
+            val queueContent: @Composable () -> Unit = {
+                Queue(
+                    state = queueSheetState,
+                    playerBottomSheetState = state,
+                    background =
+                        if (useCardLayout) {
+                            cardAlbumColor
+                        } else if (useBlackBackground) {
+                            Color.Black
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        },
+                    panelColor = if (useCardLayout) lerp(cardAlbumColor, Color.Black, 0.15f) else null,
+                    onBackgroundColor = onBackgroundColor,
+                    TextBackgroundColor = TextBackgroundColor,
+                    textButtonColor = textButtonColor,
+                    iconButtonColor = iconButtonColor,
+                    pureBlack = pureBlack,
+                    showInlineLyrics = showInlineLyrics,
+                    playerBackground = playerBackground,
+                    onToggleLyrics = {
+                        showInlineLyrics = !showInlineLyrics
                     },
-                onBackgroundColor = onBackgroundColor,
-                TextBackgroundColor = TextBackgroundColor,
-                textButtonColor = textButtonColor,
-                iconButtonColor = iconButtonColor,
-                pureBlack = pureBlack,
-                showInlineLyrics = showInlineLyrics,
-                playerBackground = playerBackground,
-                onToggleLyrics = {
-                    showInlineLyrics = !showInlineLyrics
-                },
-            )
+                )
+            }
+            if (useCardLayout) {
+                // On the album color the queue uses the dark palette (white text), like the lyrics.
+                MaterialTheme(colorScheme = MusicardDarkColorScheme) {
+                    Box(Modifier.graphicsLayer { alpha = queueFade.value }) {
+                        queueContent()
+                    }
+                }
+            } else {
+                queueContent()
+            }
         }
     }
 }
@@ -2820,6 +2919,9 @@ private fun FullScreenLyrics(
     positionProvider: () -> Long,
     onClose: () -> Unit,
     controls: @Composable ColumnScope.() -> Unit,
+    // False while parked off screen: the lyrics keep tracking the song at a low rate.
+    visible: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle()
@@ -2827,8 +2929,16 @@ private fun FullScreenLyrics(
     var lastTouch by remember { mutableLongStateOf(0L) }
     var showSourceDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(controlsVisible, lastTouch) {
-        if (controlsVisible) {
+    // Each time it opens, the controls show again for their usual time.
+    LaunchedEffect(visible) {
+        if (visible) {
+            controlsVisible = true
+            lastTouch = System.currentTimeMillis()
+        }
+    }
+
+    LaunchedEffect(controlsVisible, lastTouch, visible) {
+        if (controlsVisible && visible) {
             delay(ControlsAutoHideMillis)
             controlsVisible = false
         }
@@ -2844,7 +2954,7 @@ private fun FullScreenLyrics(
 
     Box(
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize()
                 .background(albumBackgroundBrush(backgroundColor))
                 // Any touch (tap or scroll) brings the controls back and restarts their timer.
@@ -2914,7 +3024,8 @@ private fun FullScreenLyrics(
             }
             Lyrics(
                 sliderPositionProvider = positionProvider,
-                showLyrics = true,
+                showLyrics = visible,
+                liveUpdates = visible,
                 accentOverride = Color.White,
                 onPullDownAtTop = onClose,
                 onProviderClick = { showSourceDialog = true },
@@ -2956,6 +3067,9 @@ private fun FullScreenLyrics(
 
 private const val ControlsAutoHideMillis = 3000L
 private const val CardExpandMillis = 380
+private const val TitleHeaderScale = 16f / 22f
+// Moves the hidden full-screen lyrics well below the screen so they take no touches.
+private const val OffscreenOffsetPx = 100_000
 private const val FullViewFadeMillis = 200
 // px/s; a faster flick opens (or keeps closed) the card regardless of how far it was dragged.
 private const val CardFlingVelocity = 1000f

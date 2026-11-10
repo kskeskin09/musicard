@@ -390,33 +390,24 @@ private fun NewMiniPlayer(
                         indication = LocalIndication.current,
                         onClick = onClick
                     )
-                    // Thin, display-only progress line along the bottom of the pill, kept clear of
-                    // the rounded ends. Progress is read while drawing, so it never recomposes.
+                    // Thin, display-only progress line hugging the bottom edge of the pill. No track
+                    // is drawn, so at 0 the pill looks plain. Progress is read while drawing only.
                     .drawWithContent {
                         drawContent()
-                        val inset = 30.dp.toPx()
-                        val y = size.height - 4.dp.toPx()
-                        val stroke = 2.dp.toPx()
+                        val progress = progressState.progress
+                        if (progress <= 0f) return@drawWithContent
+                        val inset = 32.dp.toPx()
+                        val stroke = 2.5.dp.toPx()
                         val end = size.width - inset
-                        if (end > inset) {
-                            drawLine(
-                                color = onSurfaceColor.copy(alpha = 0.14f),
-                                start = Offset(inset, y),
-                                end = Offset(end, y),
-                                strokeWidth = stroke,
-                                cap = StrokeCap.Round,
-                            )
-                            val progress = progressState.progress
-                            if (progress > 0f) {
-                                drawLine(
-                                    color = onSurfaceColor.copy(alpha = 0.9f),
-                                    start = Offset(inset, y),
-                                    end = Offset(inset + (end - inset) * progress, y),
-                                    strokeWidth = stroke,
-                                    cap = StrokeCap.Round,
-                                )
-                            }
-                        }
+                        if (end <= inset) return@drawWithContent
+                        val y = size.height - stroke / 2f
+                        drawLine(
+                            color = onSurfaceColor.copy(alpha = 0.85f),
+                            start = Offset(inset, y),
+                            end = Offset(inset + (end - inset) * progress, y),
+                            strokeWidth = stroke,
+                            cap = StrokeCap.Round,
+                        )
                     },
         ) {
             when (miniPlayerBackground) {

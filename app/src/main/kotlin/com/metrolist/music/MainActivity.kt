@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -181,6 +182,10 @@ import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.AccountSettingsDialog
 import com.metrolist.music.ui.component.AppNavigationBar
+import com.metrolist.music.ui.component.ProfilePictureDialog
+import com.metrolist.music.ui.component.TopLevelHeader
+import com.metrolist.music.constants.ProfileImageUrlKey
+import com.metrolist.music.constants.TopLevelHeaderHeight
 import com.metrolist.music.ui.component.AppNavigationRail
 import com.metrolist.music.ui.component.BottomSheetMenu
 import com.metrolist.music.ui.component.BottomSheetPage
@@ -861,12 +866,14 @@ class MainActivity : FragmentActivity() {
                 val playerReady by playerReadyState
                 val activePlayerConnection = if (playerReady) playerConnection else null
 
+                var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
                         shouldShowNavigationBar,
                         playerBottomSheetState.isDismissed,
                         showRail,
+                        shouldShowTopBar,
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
@@ -875,7 +882,7 @@ class MainActivity : FragmentActivity() {
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                            .add(WindowInsets(top = AppBarHeight, bottom = bottom))
+                            .add(WindowInsets(top = if (shouldShowTopBar) TopLevelHeaderHeight else AppBarHeight, bottom = bottom))
                     }
                 appBarScrollBehavior(
                     canScroll = {
@@ -968,8 +975,6 @@ class MainActivity : FragmentActivity() {
                     }
                 }
 
-                var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
-
                 LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
                     val currentRoute = navBackStackEntry?.destination?.route
                     val isListenTogetherScreen =
@@ -1024,6 +1029,8 @@ class MainActivity : FragmentActivity() {
                     }
 
                 var showAccountDialog by remember { mutableStateOf(false) }
+                var showProfilePictureDialog by remember { mutableStateOf(false) }
+                val (profileImageUrl, setProfileImageUrl) = rememberPreference(ProfileImageUrlKey, defaultValue = "")
 
                 val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
                 val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
@@ -1061,73 +1068,49 @@ class MainActivity : FragmentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                Row {
-                                    TopAppBar(
-                                        title = {
-                                            Text(
-                                                text = currentTitleRes?.let { stringResource(it) } ?: "",
-                                                style = MaterialTheme.typography.titleLarge,
-                                            )
-                                        },
-                                        actions = {
-                                            if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.history),
-                                                        contentDescription = stringResource(R.string.history),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
+                                // Main tabs: large page name, profile picture and a search pill, on the
+                                // page background (below the status bar).
+                                TopLevelHeader(
+                                    title = currentTitleRes?.let { stringResource(it) } ?: "",
+                                    profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
+                                    showBadge = latestVersionName != BuildConfig.BASE_VERSION_NAME,
+                                    onProfileClick = { showAccountDialog = true },
+                                    onProfileLongClick = { showProfilePictureDialog = true },
+                                    onSearchClick = {
+                                        navController.navigate(Screens.Search.route) { launchSingleTop = true }
+                                    },
+                                    actions = {
+                                        if (showHistoryButton) {
+                                            IconButton(onClick = { navController.navigate("history") }) {
                                                 Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
+                                                    painter = painterResource(R.drawable.history),
+                                                    contentDescription = stringResource(R.string.history),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
-                                                    )
-                                                }
+                                        }
+                                        IconButton(onClick = { navController.navigate("stats") }) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.stats),
+                                                contentDescription = stringResource(R.string.stats),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        if (listenTogetherInTopBar) {
+                                            IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.group_outlined),
+                                                    contentDescription = stringResource(R.string.together),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
                                             }
-                                            IconButton(onClick = { showAccountDialog = true }) {
-                                                BadgedBox(badge = {
-                                                    if (latestVersionName != BuildConfig.BASE_VERSION_NAME) {
-                                                        Badge()
-                                                    }
-                                                }) {
-                                                    if (accountImageUrl != null) {
-                                                        AsyncImage(
-                                                            model = accountImageUrl,
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier =
-                                                                Modifier
-                                                                    .size(24.dp)
-                                                                    .clip(CircleShape),
-                                                        )
-                                                    } else {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.account),
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier = Modifier.size(24.dp),
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        scrollBehavior = topAppBarScrollBehavior,
-                                        colors =
-                                            TopAppBarDefaults.topAppBarColors(
-                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                titleContentColor = MaterialTheme.colorScheme.onSurface,
-                                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            ),
-                                        modifier =
-                                            Modifier.windowInsetsPadding(
+                                        }
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background)
+                                            .windowInsetsPadding(WindowInsets.statusBars)
+                                            .windowInsetsPadding(
                                                 if (showRail) {
                                                     WindowInsets(left = NavigationBarHeight)
                                                         .add(cutoutInsets.only(WindowInsetsSides.Start))
@@ -1135,8 +1118,7 @@ class MainActivity : FragmentActivity() {
                                                     cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
                                                 },
                                             ),
-                                    )
-                                }
+                                )
                             }
                         },
                         bottomBar = {
@@ -1414,6 +1396,17 @@ class MainActivity : FragmentActivity() {
                         state = LocalBottomSheetPageState.current,
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
+
+                    if (showProfilePictureDialog) {
+                        ProfilePictureDialog(
+                            initialUrl = profileImageUrl,
+                            onDismiss = { showProfilePictureDialog = false },
+                            onSave = {
+                                setProfileImageUrl(it.trim())
+                                showProfilePictureDialog = false
+                            },
+                        )
+                    }
 
                     if (showAccountDialog) {
                         AccountSettingsDialog(

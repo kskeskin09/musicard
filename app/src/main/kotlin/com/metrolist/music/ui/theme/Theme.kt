@@ -23,6 +23,9 @@ import com.materialkolor.score.Score
 val DefaultThemeColor = Color(0xFFED5564)
 
 // Fixed palettes: near-black / grouped-grey surfaces with a monochrome accent.
+/** The fixed dark palette, also used on album-colored surfaces in the light theme. */
+val MusicardDarkColorScheme: ColorScheme get() = MusicardDarkColors
+
 private val MusicardDarkColors =
     darkColorScheme(
         primary = Color(0xFFFFFFFF),

@@ -158,6 +158,8 @@ fun Queue(
     showInlineLyrics: Boolean,
     playerBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.DEFAULT,
     onToggleLyrics: () -> Unit = {},
+    // Header and bottom bar color; set in the card layout to a shade of the album color.
+    panelColor: Color? = null,
 ) {
     val navController = LocalNavController.current
     val context = LocalContext.current
@@ -1038,7 +1040,7 @@ fun Queue(
                         interactionSource = remember { MutableInteractionSource() },
                     ) { }
                     .background(
-                        if (pureBlack) {
+                        panelColor ?: if (pureBlack) {
                             Color.Black
                         } else {
                             MaterialTheme.colorScheme
@@ -1154,7 +1156,7 @@ fun Queue(
             modifier =
                 Modifier
                     .background(
-                        if (pureBlack) {
+                        panelColor ?: if (pureBlack) {
                             Color.Black
                         } else {
                             MaterialTheme.colorScheme

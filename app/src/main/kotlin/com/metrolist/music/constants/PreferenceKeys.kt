@@ -719,3 +719,6 @@ val CountryCodeToName =
         "YE" to "Yemen",
         "ZW" to "Zimbabwe",
     )
+
+// Profile picture shown at the top right of the main tabs: an image URL kept on the device.
+val ProfileImageUrlKey = stringPreferencesKey("profileImageUrl")

@@ -164,7 +164,11 @@ fun ExperimentalLyrics(
     onProviderClick: (() -> Unit)? = null,
     // Side padding for the lines (and the instrumental dots); null keeps the default per alignment.
     horizontalPadding: androidx.compose.ui.unit.Dp? = null,
+    // False while the lyrics are kept around off screen: the position is followed a few times a
+    // second instead of every frame, so they stay on the current line at little cost.
+    liveUpdates: Boolean = true,
 ) {
+    val latestLiveUpdates by rememberUpdatedState(liveUpdates)
     val playerConnection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
     val density = LocalDensity.current
@@ -358,7 +362,7 @@ fun ExperimentalLyrics(
         var lastUpdateTime = System.currentTimeMillis()
         
         while (isActive) {
-            withFrameNanos { _ -> }
+            if (latestLiveUpdates) withFrameNanos { _ -> } else delay(250L)
             val now = System.currentTimeMillis()
             val sliderPosition = sliderPositionProvider()
             isSeeking = sliderPosition != null
