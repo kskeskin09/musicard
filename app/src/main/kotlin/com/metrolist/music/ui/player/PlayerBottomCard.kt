@@ -56,6 +56,8 @@ import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.models.MediaMetadata
 import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.alpha
+import androidx.compose.animation.animateColorAsState
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.constants.RespectAgentPositioningKey
 import androidx.compose.ui.text.withStyle
@@ -140,13 +142,11 @@ fun PlayerBottomCard(
 
             Spacer(Modifier.weight(1f))
 
-            val iconColors =
-                IconButtonDefaults.iconButtonColors(
-                    contentColor = contentColor,
-                    disabledContentColor = contentColor.copy(alpha = 0.38f),
-                )
             if (pagerState.currentPage == LyricsPage) {
-                IconButton(onClick = onLyricsMenuClick, colors = iconColors) {
+                IconButton(
+                    onClick = onLyricsMenuClick,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = contentColor),
+                ) {
                     Icon(
                         painter = painterResource(R.drawable.more_horiz),
                         contentDescription = stringResource(R.string.more_options),
@@ -155,14 +155,13 @@ fun PlayerBottomCard(
                 }
             } else {
                 UpNextActions(
-                    iconColors = iconColors,
                     contentColor = contentColor,
                     isListenTogetherGuest = isListenTogetherGuest,
                     sleepTimerEnabled = sleepTimerEnabled,
                     onSleepTimerClick = onSleepTimerClick,
-                    onOpenFullQueue = onOpenFullQueue,
                     onMoreClick = onMoreClick,
                 )
+                Spacer(Modifier.width(10.dp))
             }
         }
 
@@ -226,92 +225,93 @@ fun PlayerBottomCard(
 
 @Composable
 private fun UpNextActions(
-    iconColors: androidx.compose.material3.IconButtonColors,
     contentColor: Color,
     isListenTogetherGuest: Boolean,
     sleepTimerEnabled: Boolean,
     onSleepTimerClick: () -> Unit,
-    onOpenFullQueue: () -> Unit,
     onMoreClick: () -> Unit,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        CardIconButton(
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PlayerPillButton(
             icon = R.drawable.shuffle,
             contentDescription = stringResource(R.string.shuffle),
             active = shuffleModeEnabled,
             enabled = !isListenTogetherGuest,
             contentColor = contentColor,
-            iconColors = iconColors,
             onClick = { playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled },
         )
-        CardIconButton(
+        PlayerPillButton(
             icon = if (repeatMode == Player.REPEAT_MODE_ONE) R.drawable.repeat_one else R.drawable.repeat,
             contentDescription = null,
             active = repeatMode != Player.REPEAT_MODE_OFF,
             enabled = !isListenTogetherGuest,
             contentColor = contentColor,
-            iconColors = iconColors,
             onClick = { playerConnection.player.toggleRepeatMode() },
         )
-        CardIconButton(
+        PlayerPillButton(
             icon = R.drawable.bedtime,
             contentDescription = stringResource(R.string.sleep_timer),
             active = sleepTimerEnabled,
             enabled = !isListenTogetherGuest,
             contentColor = contentColor,
-            iconColors = iconColors,
             onClick = onSleepTimerClick,
         )
-        CardIconButton(
-            icon = R.drawable.queue_music,
-            contentDescription = stringResource(R.string.open_full_queue),
-            active = false,
-            enabled = true,
-            contentColor = contentColor,
-            iconColors = iconColors,
-            onClick = onOpenFullQueue,
-        )
-        CardIconButton(
-            icon = R.drawable.more_vert,
+        PlayerPillButton(
+            icon = R.drawable.more_horiz,
             contentDescription = stringResource(R.string.more_options),
             active = false,
             enabled = true,
             contentColor = contentColor,
-            iconColors = iconColors,
             onClick = onMoreClick,
         )
     }
 }
 
+/**
+ * Apple Music style toggle: a small rounded pill. Inactive it is a faint tint of [contentColor];
+ * active it is filled with [contentColor] and the icon takes the background color.
+ */
 @Composable
-private fun CardIconButton(
+fun PlayerPillButton(
     icon: Int,
     contentDescription: String?,
     active: Boolean,
     enabled: Boolean,
     contentColor: Color,
-    iconColors: androidx.compose.material3.IconButtonColors,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    activeIconColor: Color = Color.Black.copy(alpha = 0.75f),
 ) {
-    IconButton(
-        onClick = onClick,
-        enabled = enabled,
-        colors = iconColors,
+    val background by animateColorAsState(
+        targetValue = if (active) contentColor.copy(alpha = 0.92f) else contentColor.copy(alpha = 0.12f),
+        label = "pillBackground",
+    )
+    val iconColor by animateColorAsState(
+        targetValue = if (active) activeIconColor else contentColor,
+        label = "pillIcon",
+    )
+    Box(
+        contentAlignment = Alignment.Center,
         modifier =
-            Modifier
-                .size(40.dp)
-                .padding(2.dp)
-                .clip(RoundedCornerShape(50))
-                .background(if (active) contentColor.copy(alpha = 0.18f) else Color.Transparent),
+            modifier
+                .size(width = 44.dp, height = 32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(background)
+                .clickable(enabled = enabled, onClick = onClick)
+                .alpha(if (enabled) 1f else 0.4f),
     ) {
         Icon(
             painter = painterResource(icon),
             contentDescription = contentDescription,
-            modifier = Modifier.size(20.dp),
+            tint = iconColor,
+            modifier = Modifier.size(18.dp),
         )
     }
 }
@@ -462,7 +462,7 @@ fun CompactLyrics(
             while (isActive) {
                 position = positionProvider() + lyricsOffset
                 if (!isPlaying) break
-                delay(if (hasWordTimings) 50L else 150L)
+                delay(if (hasWordTimings) 32L else 150L)
             }
         }
     }
@@ -506,8 +506,10 @@ fun CompactLyrics(
                     text =
                         buildAnnotatedString {
                             words.forEach { word ->
-                                val sung = positionSec >= word.startTime
-                                withStyle(SpanStyle(color = color.copy(alpha = if (sung) 1f else dimAlpha))) {
+                                // Fades each word in over its own duration, like the full lyrics view.
+                                val duration = (word.endTime - word.startTime).coerceAtLeast(0.08)
+                                val progress = ((positionSec - word.startTime) / duration).coerceIn(0.0, 1.0).toFloat()
+                                withStyle(SpanStyle(color = color.copy(alpha = dimAlpha + (1f - dimAlpha) * progress))) {
                                     append(word.text)
                                 }
                                 if (word.hasTrailingSpace) append(" ")

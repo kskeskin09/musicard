@@ -21,6 +21,7 @@ fun Lyrics(
     lyricsViewModel: LyricsViewModel = hiltViewModel(),
     accentOverride: androidx.compose.ui.graphics.Color? = null,
     onPullDownAtTop: (() -> Unit)? = null,
+    onProviderClick: (() -> Unit)? = null,
 ) {
     val (experimentalLyrics, _) = rememberPreference(key = ExperimentalLyricsKey, defaultValue = true)
 
@@ -32,6 +33,7 @@ fun Lyrics(
             lyricsViewModel = lyricsViewModel,
             accentOverride = accentOverride,
             onPullDownAtTop = onPullDownAtTop,
+            onProviderClick = onProviderClick,
         )
     } else {
         OriginalLyrics(

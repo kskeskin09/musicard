@@ -80,6 +80,11 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -131,9 +136,10 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val LYRICS_ANCHOR_RATIO = 0.35f
+private val LYRICS_TOP_PADDING_DP = 40.dp
 private val LYRICS_ITEM_FALLBACK_HEIGHT_DP = 68.dp
 private val LYRICS_ITEM_GAP_DP = 16.dp
-private val LYRICS_FADE_TOP_DP = 130.dp
+private val LYRICS_FADE_TOP_DP = 40.dp
 private val LYRICS_FADE_BOTTOM_DP = 160.dp
 private const val LYRICS_STAGGER_DELAY_PER_DISTANCE = 20
 private const val LYRICS_STAGGER_DELAY_MAX_MS = 200
@@ -154,6 +160,8 @@ fun ExperimentalLyrics(
     accentOverride: Color? = null,
     // Called when the user pulls down again after the lyrics are already at the top.
     onPullDownAtTop: (() -> Unit)? = null,
+    // When set, the "Lyrics from ..." source under the last line is a button.
+    onProviderClick: (() -> Unit)? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
@@ -500,7 +508,8 @@ fun ExperimentalLyrics(
         modifier = modifier.fillMaxSize().padding(bottom = 12.dp)
     ) {
         val maxHeightPx = constraints.maxHeight.toFloat()
-        val anchorY = maxHeightPx * LYRICS_ANCHOR_RATIO
+        val baseAnchorY = maxHeightPx * LYRICS_ANCHOR_RATIO
+        val topPaddingPx = with(density) { LYRICS_TOP_PADDING_DP.toPx() }
         val lineHeightPx = with(density) { LYRICS_ITEM_FALLBACK_HEIGHT_DP.toPx() }
         val indicatorHeightPx = with(density) { 72.dp.toPx() }
         
@@ -532,7 +541,10 @@ fun ExperimentalLyrics(
             map
         }
 
-        val minOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, anchorY) {
+        // Near the start the first line sits at the top instead of leaving empty space above it.
+        val anchorY = minOf(baseAnchorY, topPaddingPx - (positions[0] ?: 0f))
+
+        val minOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, maxHeightPx, anchorY) {
             if (mergedLyricsList.isEmpty() || activeListIndex == -1) return@remember 0f
             val totalBelow = (activeListIndex until mergedLyricsList.size - 1).sumOf { i ->
                 val currentItem = mergedLyricsList[i]
@@ -543,7 +555,8 @@ fun ExperimentalLyrics(
             }.toFloat()
             val lastItem = mergedLyricsList.last()
             val lastHeight = itemHeights[mergedLyricsList.size - 1]?.toFloat() ?: (if (lastItem is LyricsListItem.Indicator) indicatorHeightPx else constraintLineHeightPx)
-            with(density) { 100.dp.toPx() } - anchorY - totalBelow - lastHeight
+            // The last lines can be scrolled up to the middle, leaving room for the source below.
+            maxHeightPx * 0.5f - anchorY - totalBelow - lastHeight
         }
 
         val maxOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, maxHeightPx, anchorY) {
@@ -554,7 +567,8 @@ fun ExperimentalLyrics(
                 val noGap = (item as? LyricsListItem.Line)?.entry?.isBackground == true || item is LyricsListItem.Indicator
                 (height + if (noGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() }).toDouble()
             }.toFloat()
-            maxHeightPx - with(density) { 150.dp.toPx() } - anchorY + totalAbove
+            // Scrolling up stops with the first line at the top.
+            topPaddingPx - anchorY + totalAbove
         }
 
         // Clamp to real content bounds only. minOffset/maxOffset already use conservative height
@@ -718,8 +732,11 @@ fun ExperimentalLyrics(
                 val lyricsOffsetVal = (currentSong?.song?.lyricsOffset ?: 0).toLong()
                 val currentEffectivePosition = currentPositionState + lyricsOffsetVal
                 
-                if (isLyricsProviderShown) {
-                    val targetProviderBase = anchorY + (positions[0] ?: 0f) - with(density) { 32.dp.toPx() }
+                if (isLyricsProviderShown && mergedLyricsList.isNotEmpty()) {
+                    val lastIndex = mergedLyricsList.lastIndex
+                    val lastHeight = itemHeights[lastIndex]?.toFloat() ?: lineHeightPx
+                    val targetProviderBase =
+                        anchorY + (positions[lastIndex] ?: 0f) + lastHeight + with(density) { 28.dp.toPx() }
                     val animatedProviderBase by animateFloatAsState(
                         targetValue = targetProviderBase,
                         animationSpec = if (isInitialLayout || !isAutoScrollEnabled) snap()
@@ -728,11 +745,26 @@ fun ExperimentalLyrics(
                         },
                         label = "lyricsProviderOffset"
                     )
-                    Text(
-                        text = stringResource(R.string.lyrics_from_provider, lyricsEntity.provider),
-                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth().offset { IntOffset(0, (animatedProviderBase + userManualOffset).roundToInt()) }.padding(horizontal = 24.dp, vertical = 4.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset { IntOffset(0, (animatedProviderBase + userManualOffset).roundToInt()) }
+                            .padding(horizontal = 18.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.lyrics_from_provider, lyricsEntity.provider),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = expressiveAccent.copy(alpha = 0.85f),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(expressiveAccent.copy(alpha = 0.12f))
+                                .then(
+                                    if (onProviderClick != null) Modifier.clickable(onClick = onProviderClick) else Modifier
+                                )
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
+                    }
                 }
 
                 mergedLyricsList.forEachIndexed { listIndex, listItem ->

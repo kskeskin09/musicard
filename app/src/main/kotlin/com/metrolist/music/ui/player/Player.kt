@@ -2247,6 +2247,7 @@ fun BottomSheetPlayer(
                             backgroundColor = cardAlbumColor,
                             positionProvider = { effectivePosition },
                             onClose = { showFullLyrics = false },
+                            controls = { mediaMetadata?.let { controlsContent(it) } },
                         )
                     }
                 }
@@ -2528,6 +2529,8 @@ private fun albumBackgroundBrush(color: Color): Brush =
 /**
  * Full-screen lyrics opened from the lyrics card. Closes with the back button, the close
  * button, or by pulling down again once the lyrics are scrolled to the top.
+ * The player controls show at the bottom when it opens and after any touch, and hide again
+ * after [ControlsAutoHideMillis] so the lyrics can use the whole screen.
  */
 @Composable
 private fun FullScreenLyrics(
@@ -2535,12 +2538,44 @@ private fun FullScreenLyrics(
     backgroundColor: Color,
     positionProvider: () -> Long,
     onClose: () -> Unit,
+    controls: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle()
+    var controlsVisible by remember { mutableStateOf(true) }
+    var lastTouch by remember { mutableLongStateOf(0L) }
+    var showSourceDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(controlsVisible, lastTouch) {
+        if (controlsVisible) {
+            delay(ControlsAutoHideMillis)
+            controlsVisible = false
+        }
+    }
+
+    if (showSourceDialog && mediaMetadata != null) {
+        com.metrolist.music.ui.menu.LyricsSourceDialog(
+            mediaMetadata = mediaMetadata,
+            currentProvider = currentLyrics?.provider,
+            onDismiss = { showSourceDialog = false },
+        )
+    }
+
+    Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(albumBackgroundBrush(backgroundColor))
+                // Any touch (tap or scroll) brings the controls back and restarts their timer.
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            controlsVisible = true
+                            lastTouch = System.currentTimeMillis()
+                        }
+                    }
+                }
                 // Keeps taps from reaching the player underneath.
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -2548,61 +2583,91 @@ private fun FullScreenLyrics(
                     onClick = {},
                 ),
     ) {
-        Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 8.dp, bottom = 4.dp),
-        ) {
-            AsyncImage(
-                model = mediaMetadata?.thumbnailUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
+        Column(modifier = Modifier.fillMaxSize()) {
+            Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(10.dp)),
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = mediaMetadata?.title.orEmpty(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = mediaMetadata?.artists?.joinToString { it.name }.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            IconButton(
-                onClick = onClose,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 8.dp, bottom = 4.dp),
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.expand_more),
-                    contentDescription = stringResource(R.string.close),
+                AsyncImage(
+                    model = mediaMetadata?.thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(10.dp)),
                 )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = mediaMetadata?.title.orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = mediaMetadata?.artists?.joinToString { it.name }.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                IconButton(
+                    onClick = onClose,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.expand_more),
+                        contentDescription = stringResource(R.string.close),
+                    )
+                }
+            }
+            Lyrics(
+                sliderPositionProvider = positionProvider,
+                showLyrics = true,
+                accentOverride = Color.White,
+                onPullDownAtTop = onClose,
+                onProviderClick = { showSourceDialog = true },
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+            )
+            Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()))
+        }
+
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = slideInVertically(initialOffsetY = { it / 3 }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it / 3 }) + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            val bottomColor = lerp(backgroundColor, Color.Black, 0.18f)
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        // Solid panel so the lyrics behind it are hidden while the controls show.
+                        .background(
+                            Brush.verticalGradient(
+                                0f to bottomColor.copy(alpha = 0f),
+                                0.12f to bottomColor,
+                                1f to bottomColor,
+                            ),
+                        ).padding(top = 32.dp, bottom = 12.dp)
+                        .windowInsetsPadding(WindowInsets.navigationBars),
+            ) {
+                controls()
             }
         }
-        Lyrics(
-            sliderPositionProvider = positionProvider,
-            showLyrics = true,
-            accentOverride = Color.White,
-            onPullDownAtTop = onClose,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-        )
-        Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()))
     }
 }
+
+private const val ControlsAutoHideMillis = 2000L
