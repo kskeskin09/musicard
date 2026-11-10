@@ -997,4 +997,7 @@
     <string name="up_next">Up next</string>
     <string name="up_next_empty">Nothing up next</string>
     <string name="open_full_queue">Open full queue</string>
+    <string name="explore">Explore</string>
+    <string name="explore_coming_soon">Coming soon</string>
+    <string name="open_artist">Open artist</string>
 </resources>

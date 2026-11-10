@@ -122,6 +122,9 @@ import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.metrolist.music.ui.theme.PlayerColorExtractor
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.metrolist.music.LocalNavController
 
 /**
  * Stable wrapper for progress state - reads values only during draw phase
@@ -386,7 +389,35 @@ private fun NewMiniPlayer(
                         interactionSource = interactionSource,
                         indication = LocalIndication.current,
                         onClick = onClick
-                    ),
+                    )
+                    // Thin, display-only progress line along the bottom of the pill, kept clear of
+                    // the rounded ends. Progress is read while drawing, so it never recomposes.
+                    .drawWithContent {
+                        drawContent()
+                        val inset = 30.dp.toPx()
+                        val y = size.height - 4.dp.toPx()
+                        val stroke = 2.dp.toPx()
+                        val end = size.width - inset
+                        if (end > inset) {
+                            drawLine(
+                                color = onSurfaceColor.copy(alpha = 0.14f),
+                                start = Offset(inset, y),
+                                end = Offset(end, y),
+                                strokeWidth = stroke,
+                                cap = StrokeCap.Round,
+                            )
+                            val progress = progressState.progress
+                            if (progress > 0f) {
+                                drawLine(
+                                    color = onSurfaceColor.copy(alpha = 0.9f),
+                                    start = Offset(inset, y),
+                                    end = Offset(inset + (end - inset) * progress, y),
+                                    strokeWidth = stroke,
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                        }
+                    },
         ) {
             when (miniPlayerBackground) {
                 MiniPlayerBackgroundStyle.BLUR -> {
@@ -427,9 +458,9 @@ private fun NewMiniPlayer(
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxSize().padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             ) {
-                // Play button with progress - isolated composable
+                // Album art: tap to play / pause - isolated composable
                 NewMiniPlayerPlayButton(
                     progressState = progressState,
                     playbackState = playbackState,
@@ -442,7 +473,7 @@ private fun NewMiniPlayer(
                     listenTogetherManager = listenTogetherManager,
                 )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Song info - isolated composable
                 NewMiniPlayerSongInfo(
@@ -465,18 +496,15 @@ private fun NewMiniPlayer(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
 
-// Subscribe button - isolated composable
-                mediaMetadata?.artists?.firstOrNull()?.id?.let { artistId ->
-                    SubscribeButton(
+// Artist button: opens the artist's page
+                mediaMetadata?.artists?.firstOrNull { it.id != null }?.id?.let { artistId ->
+                    ArtistButton(
                         artistId = artistId,
-                        metadata = mediaMetadata!!,
-                        primaryColor = primaryColor,
-                        outlineColor = outlineColor,
                         onSurfaceColor = onSurfaceColor,
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
 
 // Favorite button - isolated composable
                 mediaMetadata?.let { FavoriteButton(
@@ -513,55 +541,22 @@ private fun NewMiniPlayerPlayButton(
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
 
-    val trackColor = outlineColor.copy(alpha = 0.2f)
-    val strokeWidth = 3.dp
+    val haptic = LocalHapticFeedback.current
+    val artShape = RoundedCornerShape(10.dp)
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .size(48.dp)
-                .drawWithContent {
-                    drawContent()
-                    // Draw progress arc - this reads progressState.progress during draw phase only
-                    val progress = progressState.progress
-                    val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
-                    val startAngle = -90f
-                    val sweepAngle = 360f * progress
-                    val diameter = size.minDimension
-                    val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
-
-                    // Draw track
-                    drawArc(
-                        color = trackColor,
-                        startAngle = 0f,
-                        sweepAngle = 360f,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = Size(diameter, diameter),
-                        style = stroke,
-                    )
-                    // Draw progress
-                    drawArc(
-                        color = primaryColor,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = Size(diameter, diameter),
-                        style = stroke,
-                    )
-                },
+        modifier = Modifier.size(46.dp),
     ) {
         // Thumbnail with play/pause overlay
         Box(
             contentAlignment = Alignment.Center,
             modifier =
                 Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .border(1.dp, outlineColor.copy(alpha = 0.3f), CircleShape)
+                    .fillMaxSize()
+                    .clip(artShape)
                     .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         if (isListenTogetherGuest) {
                             playerConnection.toggleMute()
                             return@clickable
@@ -585,11 +580,11 @@ private fun NewMiniPlayerPlayButton(
                     model = thumbnailUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    modifier = Modifier.fillMaxSize().clip(artShape),
                 )
             }
 
-            // Overlay for paused state or muted (guest)
+            // Paused (or muted guest): the art dims and shows the play icon
             if (isListenTogetherGuest && isMuted ||
                 (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == Player.STATE_ENDED))
             ) {
@@ -597,7 +592,7 @@ private fun NewMiniPlayerPlayButton(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.4f), CircleShape),
+                            .background(Color.Black.copy(alpha = 0.5f), artShape),
                 )
                 Icon(
                     painter =
@@ -607,12 +602,12 @@ private fun NewMiniPlayerPlayButton(
                             } else if (playbackState == Player.STATE_ENDED) {
                                 R.drawable.replay
                             } else {
-                                R.drawable.play
+                                R.drawable.player_play
                             },
                         ),
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
@@ -1097,26 +1092,47 @@ private fun FavoriteButton(
     val isEpisode = librarySong?.song?.isEpisode == true
     val isLiked = if (isEpisode) librarySong?.song?.inLibrary != null else librarySong?.song?.liked == true
 
+    val haptic = LocalHapticFeedback.current
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
-                .size(40.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .border(
-                    width = 1.dp,
-                    color = if (isLiked) errorColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.3f),
-                    shape = CircleShape,
-                ).background(
-                    color = if (isLiked) errorColor.copy(alpha = 0.1f) else Color.Transparent,
-                    shape = CircleShape,
-                ).clickable { playerConnection.service.toggleLike() },
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    playerConnection.service.toggleLike()
+                },
     ) {
+        // Liked songs show a filled heart in the text color, like in the player.
         Icon(
             painter = painterResource(if (isLiked) R.drawable.favorite else R.drawable.favorite_border),
             contentDescription = null,
-            tint = if (isLiked) errorColor else onSurfaceColor.copy(alpha = 0.7f),
-            modifier = Modifier.size(20.dp),
+            tint = if (isLiked) onSurfaceColor else onSurfaceColor.copy(alpha = 0.8f),
+            modifier = Modifier.size(26.dp),
+        )
+    }
+}
+
+@Composable
+private fun ArtistButton(
+    artistId: String,
+    onSurfaceColor: Color,
+) {
+    val navController = LocalNavController.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .clickable { navController.navigate("artist/$artistId") { launchSingleTop = true } },
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.artist),
+            contentDescription = stringResource(R.string.open_artist),
+            tint = onSurfaceColor.copy(alpha = 0.8f),
+            modifier = Modifier.size(26.dp),
         )
     }
 }

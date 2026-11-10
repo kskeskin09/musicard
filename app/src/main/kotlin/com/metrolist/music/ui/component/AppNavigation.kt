@@ -7,7 +7,27 @@ package com.metrolist.music.ui.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -139,15 +159,30 @@ fun AppNavigationBar(
     onSearchLongClick: (() -> Unit)? = null,
     onHomeLongHold: (() -> Unit)? = null,
 ) {
-    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-    val contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    val containerColor = MaterialTheme.colorScheme.surfaceContainer
+    val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val selectedColor = MaterialTheme.colorScheme.onSurface
+    val selectedBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
-    NavigationBar(
-        modifier = modifier,
-        containerColor = containerColor,
-        contentColor = contentColor
+    // Floating pill: the bar itself is transparent, the rounded pill sits inside it with side margins.
+    val pillShape = RoundedCornerShape(50)
+    Box(modifier = modifier.fillMaxWidth()) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 16.dp)
+                .padding(top = 6.dp)
+                .widthIn(max = 520.dp)
+                .fillMaxWidth()
+                .height(if (slimNav) 52.dp else 66.dp)
+                .clip(pillShape)
+                .background(containerColor)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), pillShape)
+                .padding(4.dp),
     ) {
         navigationItems.forEach { screen ->
             val isSelected = remember(currentRoute, screen.route) {
@@ -188,31 +223,46 @@ fun AppNavigationBar(
                 }
             }
 
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    if (!isSearchItem && !isHomeHoldItem) {
-                        onItemClick(screen, currentIsSelected)
-                    }
-                    // Long presses are handled via InteractionSource
-                },
-                interactionSource = interactionSource,
-                icon = {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = stringResource(screen.titleId)
+            val itemColor = if (isSelected) selectedColor else contentColor
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(pillShape)
+                        .background(if (isSelected) selectedBackground else Color.Transparent)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            role = Role.Tab,
+                            onClick = {
+                                // Long presses are handled via InteractionSource
+                                if (!isSearchItem && !isHomeHoldItem) {
+                                    onItemClick(screen, currentIsSelected)
+                                }
+                            },
+                        ),
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = stringResource(screen.titleId),
+                    tint = itemColor,
+                    modifier = Modifier.size(24.dp),
+                )
+                if (!slimNav) {
+                    Text(
+                        text = stringResource(screen.titleId),
+                        color = itemColor,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                },
-                label = if (!slimNav) {
-                    {
-                        Text(
-                            text = stringResource(screen.titleId),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                } else null
-            )
+                }
+            }
         }
+    }
     }
 }

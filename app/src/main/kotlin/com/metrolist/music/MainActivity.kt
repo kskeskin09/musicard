@@ -774,6 +774,7 @@ class MainActivity : FragmentActivity() {
                     remember {
                         listOf(
                             Screens.Home.route,
+                            Screens.Explore.route,
                             Screens.Library.route,
                             Screens.ListenTogether.route,
                             "settings",
@@ -1014,6 +1015,7 @@ class MainActivity : FragmentActivity() {
                     remember(navBackStackEntry) {
                         when (navBackStackEntry?.destination?.route) {
                             Screens.Home.route -> R.string.home
+                            Screens.Explore.route -> R.string.explore
                             Screens.Search.route -> R.string.search
                             Screens.Library.route -> R.string.filter_library
                             Screens.ListenTogether.route -> R.string.together
@@ -1030,7 +1032,8 @@ class MainActivity : FragmentActivity() {
                         !(pauseListenHistory && eventCount == 0)
                     }
 
-                val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+                // The strip under the floating nav pill matches the page background.
+                val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
                 val artistNameAliases by ArtistNameAliases.aliases.collectAsStateWithLifecycle()
 
                 CompositionLocalProvider(

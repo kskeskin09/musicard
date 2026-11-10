@@ -9,6 +9,9 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.res.painterResource
+import com.metrolist.music.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,39 +57,37 @@ fun Material3SettingsGroup(
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 20.dp, bottom = 8.dp, top = 8.dp)
             )
         }
 
-        // Settings items
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        // Settings items: one rounded card for the whole group, rows separated by thin lines
+        // that start after the icon.
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (!useLowContrast) {
+                    MaterialTheme.colorScheme.surfaceContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerLow
+                }
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             items.forEachIndexed { index, item ->
-                val shape = when {
-                    items.size == 1 -> RoundedCornerShape(24.dp)
-                    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 6.dp, bottomEnd = 6.dp)
-                    index == items.size - 1 -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-                    else -> RoundedCornerShape(6.dp)
-                }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .animateContentSize(),
-                    shape = shape,
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (!useLowContrast) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerLow
-                        }
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Material3SettingsItemRow(item = item)
+                Material3SettingsItemRow(item = item)
+                if (index < items.size - 1) {
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        modifier = Modifier.padding(
+                            start = if (item.icon != null || item.leadingContent != null) 64.dp else 20.dp
+                        )
+                    )
                 }
             }
         }
@@ -107,7 +108,7 @@ private fun Material3SettingsItemRow(
                 enabled = item.enabled && item.onClick != null,
                 onClick = { item.onClick?.invoke() }
             )
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Custom leading content or Icon with background
@@ -115,15 +116,9 @@ private fun Material3SettingsItemRow(
             item.leadingContent.invoke()
             Spacer(modifier = Modifier.width(16.dp))
         } else if (item.icon != null) {
+            // Plain icon, no tinted box behind it
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        MaterialTheme.colorScheme.primary.copy(
-                            alpha = if (item.isHighlighted) 0.15f else 0.1f
-                        )
-                    ),
+                modifier = Modifier.size(28.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (item.showBadge) {
@@ -139,10 +134,8 @@ private fun Material3SettingsItemRow(
                             contentDescription = null,
                             tint = if (!item.enabled)
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            else if (item.isHighlighted)
-                                MaterialTheme.colorScheme.primary
                             else
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -152,10 +145,8 @@ private fun Material3SettingsItemRow(
                         contentDescription = null,
                         tint = if (!item.enabled)
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        else if (item.isHighlighted)
-                            MaterialTheme.colorScheme.primary
                         else
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                            MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -197,9 +188,18 @@ private fun Material3SettingsItemRow(
         }
 
         // Trailing content
-        item.trailingContent?.let { trailing ->
+        if (item.trailingContent != null) {
             Spacer(modifier = Modifier.width(8.dp))
-            trailing()
+            item.trailingContent.invoke()
+        } else if (item.onClick != null) {
+            // Rows that open something get a chevron
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                painter = painterResource(R.drawable.navigate_next),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (item.enabled) 0.7f else 0.38f),
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
