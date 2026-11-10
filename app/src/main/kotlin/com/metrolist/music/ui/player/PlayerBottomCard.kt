@@ -46,6 +46,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
@@ -56,6 +57,18 @@ import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.models.MediaMetadata
 import kotlinx.coroutines.launch
+import com.metrolist.music.lyrics.WordTimestamp
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.alpha
 import androidx.compose.animation.animateColorAsState
 import com.metrolist.music.utils.rememberPreference
@@ -290,6 +303,9 @@ fun PlayerPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     activeIconColor: Color = Color.Black.copy(alpha = 0.75f),
+    width: Dp = 40.dp,
+    height: Dp = 32.dp,
+    iconSize: Dp = 18.dp,
 ) {
     val background by animateColorAsState(
         targetValue = if (active) contentColor.copy(alpha = 0.92f) else contentColor.copy(alpha = 0.12f),
@@ -303,7 +319,7 @@ fun PlayerPillButton(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
-                .size(width = 40.dp, height = 32.dp)
+                .size(width = width, height = height)
                 .clip(RoundedCornerShape(10.dp))
                 .background(background)
                 .clickable(enabled = enabled, onClick = onClick)
@@ -313,7 +329,7 @@ fun PlayerPillButton(
             painter = painterResource(icon),
             contentDescription = contentDescription,
             tint = iconColor,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(iconSize),
         )
     }
 }
@@ -503,23 +519,13 @@ fun CompactLyrics(
             val dimAlpha = if (line.isBackground) 0.4f else 0.5f
             val words = line.words
             if (active && !words.isNullOrEmpty()) {
-                val positionSec = position / 1000.0
-                Text(
-                    text =
-                        buildAnnotatedString {
-                            words.forEach { word ->
-                                // Fades each word in over its own duration, like the full lyrics view.
-                                val duration = (word.endTime - word.startTime).coerceAtLeast(0.08)
-                                val progress = ((positionSec - word.startTime) / duration).coerceIn(0.0, 1.0).toFloat()
-                                withStyle(SpanStyle(color = color.copy(alpha = dimAlpha + (1f - dimAlpha) * progress))) {
-                                    append(word.text)
-                                }
-                                if (word.hasTrailingSpace) append(" ")
-                            }
-                        },
+                SweepingWordsLine(
+                    words = words,
+                    positionMsProvider = { position },
+                    color = color,
+                    dimAlpha = dimAlpha,
                     style = baseStyle,
                     textAlign = textAlign,
-                    modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 Text(
@@ -533,3 +539,95 @@ fun CompactLyrics(
         }
     }
 }
+
+/**
+ * One word-timed line. The dim text is drawn first, then the bright text is revealed across
+ * each word from left to right in step with the word's own duration, with a soft leading edge
+ * (the same sweep the full-screen lyrics use). The position is read only while drawing, so
+ * playback progress redraws the line without recomposing it.
+ */
+@Composable
+private fun SweepingWordsLine(
+    words: List<WordTimestamp>,
+    positionMsProvider: () -> Long,
+    color: Color,
+    dimAlpha: Float,
+    style: TextStyle,
+    textAlign: TextAlign,
+) {
+    val built =
+        remember(words) {
+            val sb = StringBuilder()
+            val ranges =
+                words.map { word ->
+                    val start = sb.length
+                    sb.append(word.text)
+                    val end = sb.length
+                    if (word.hasTrailingSpace) sb.append(' ')
+                    start until end
+                }
+            sb.toString() to ranges
+        }
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val edgeWidthPx = with(LocalDensity.current) { SweepEdgeWidth.toPx() }
+
+    Text(
+        text = built.first,
+        style = style,
+        color = color.copy(alpha = dimAlpha),
+        textAlign = textAlign,
+        onTextLayout = { layout = it },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .drawWithContent {
+                    drawContent()
+                    val textLayout = layout ?: return@drawWithContent
+                    val positionSec = positionMsProvider() / 1000.0
+                    val sungPath = Path()
+                    words.forEachIndexed { index, word ->
+                        val range = built.second[index]
+                        if (range.isEmpty()) return@forEachIndexed
+                        val duration = (word.endTime - word.startTime).coerceAtLeast(0.05)
+                        val progress = ((positionSec - word.startTime) / duration).coerceIn(0.0, 1.0).toFloat()
+                        if (progress <= 0f) return@forEachIndexed
+                        val firstLine = textLayout.getLineForOffset(range.first)
+                        val lastLine = textLayout.getLineForOffset(range.last)
+                        if (progress >= 1f || firstLine != lastLine) {
+                            // Fully sung (or wrapped across lines): reveal character by character.
+                            val revealed = if (progress >= 1f) range.count() else (range.count() * progress).toInt()
+                            for (offset in range.first until range.first + revealed) {
+                                val box = textLayout.getBoundingBox(offset)
+                                val line = textLayout.getLineForOffset(offset)
+                                sungPath.addRect(
+                                    Rect(box.left, textLayout.getLineTop(line), box.right, textLayout.getLineBottom(line)),
+                                )
+                            }
+                        } else {
+                            val left = textLayout.getBoundingBox(range.first).left
+                            val right = textLayout.getBoundingBox(range.last).right
+                            val fillX = left + (right - left) * progress
+                            val wordRect =
+                                Rect(left, textLayout.getLineTop(firstLine), right, textLayout.getLineBottom(firstLine))
+                            clipRect(wordRect.left, wordRect.top, wordRect.right, wordRect.bottom) {
+                                drawText(
+                                    textLayoutResult = textLayout,
+                                    brush =
+                                        Brush.horizontalGradient(
+                                            0f to color,
+                                            1f to color.copy(alpha = 0f),
+                                            startX = fillX - edgeWidthPx / 2f,
+                                            endX = fillX + edgeWidthPx / 2f,
+                                        ),
+                                )
+                            }
+                        }
+                    }
+                    clipPath(sungPath) {
+                        drawText(textLayoutResult = textLayout, color = color)
+                    }
+                },
+    )
+}
+
+private val SweepEdgeWidth = 14.dp
