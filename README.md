@@ -1,3 +1,9 @@
+> [!NOTE]
+> **Musicard** is a fork of [Metrolist](https://github.com/MetrolistGroup/Metrolist), licensed under the [GPL-3.0](LICENSE).
+> It uses its own application ID (`com.kskeskin09.musicard`) so it can be installed alongside Metrolist,
+> and its builds are published on the [Musicard releases page](https://github.com/kskeskin09/musicard/releases).
+> Everything below is the original Metrolist README.
+
 <div align="center">
 
 <img src="fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" />
