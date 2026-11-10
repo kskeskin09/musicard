@@ -39,9 +39,13 @@ object Updater {
     private var cachedAllReleases: List<ReleaseInfo> = emptyList()
     
     private const val CHECK_INTERVAL_MILLIS = 2 * 60 * 60 * 1000L // 2 hours
-    private const val GITHUB_API_BASE = "https://api.github.com/repos/MetrolistGroup/Metrolist"
+    private const val GITHUB_API_BASE = "https://api.github.com/repos/kskeskin09/musicard"
     private const val KMP_LATEST_RELEASE_URL = "https://api.github.com/repos/MetrolistGroup/Metrolist-KMP/releases/latest"
     private const val KMP_APK_NAME = "Metrolist.apk"
+
+    // The Metrolist KMP migration prompt points to an upstream app with a
+    // different package name, so it is disabled in Musicard.
+    private const val KMP_MIGRATION_ENABLED = false
 
     /**
      * Compares two version strings.
@@ -98,8 +102,8 @@ object Updater {
             
             // Parse architecture and variant from filename
             val (arch, variant) = when {
-                name == "Metrolist.apk" -> "universal" to "foss"
-                name == "Metrolist-with-Google-Cast.apk" -> "universal" to "gms"
+                name == "Musicard.apk" || name == "Metrolist.apk" -> "universal" to "foss"
+                name == "Musicard-with-Google-Cast.apk" || name == "Metrolist-with-Google-Cast.apk" -> "universal" to "gms"
                 name.startsWith("app-") && name.endsWith("-release.apk") -> {
                     val arch = name.removePrefix("app-").removeSuffix("-release.apk")
                     arch to "foss"
@@ -211,6 +215,7 @@ object Updater {
     suspend fun getLatestKmpRelease(): Result<ReleaseInfo?> =
         withContext(Dispatchers.IO) {
             runCatching {
+                if (!KMP_MIGRATION_ENABLED) return@runCatching null
                 parseKmpRelease(client.get(KMP_LATEST_RELEASE_URL).bodyAsText())
             }
         }

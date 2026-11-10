@@ -1,4 +1,4 @@
-name: Bump to new version
+name: Release
 on:
   push:
     branches:
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   check-version:
     if: "!contains(github.ref, 'refs/tags')"
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
       version_changed: ${{ steps.check_version.outputs.version_changed }}
@@ -86,7 +86,7 @@ jobs:
   build:
     needs: check-version
     if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       matrix:
@@ -118,13 +118,29 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Check signing secrets
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in KEYSTORE KEY_ALIAS KEYSTORE_PASSWORD KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+
       # No `clean`: the runner is ephemeral, so there is nothing to clean and
       # it only discards restored cache entries.
       - name: Build Release APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
-          METROLIST_APPLICATION_ID: com.metrolist.music
-          METROLIST_APP_NAME: Metrolist
+          METROLIST_APPLICATION_ID: com.kskeskin09.musicard
+          METROLIST_APP_NAME: Musicard
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
@@ -154,11 +170,11 @@ jobs:
           fi
 
           if [ "${{ matrix.variant }}" = "gms" ]; then
-            TARGET_NAME="Metrolist-with-Google-Cast.apk"
+            TARGET_NAME="Musicard-with-Google-Cast.apk"
           elif [ "${{ matrix.variant }}" = "izzy" ]; then
-            TARGET_NAME="Metrolist-izzy.apk"
+            TARGET_NAME="Musicard-izzy.apk"
           else
-            TARGET_NAME="Metrolist.apk"
+            TARGET_NAME="Musicard.apk"
           fi
 
           mv "$SIGNED_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
@@ -169,7 +185,7 @@ jobs:
       - name: Upload Signed APKs
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.variant == 'gms' && 'Metrolist-with-Google-Cast' || matrix.variant == 'izzy' && 'Metrolist-izzy' || 'Metrolist' }}
+          name: ${{ matrix.variant == 'gms' && 'Musicard-with-Google-Cast' || matrix.variant == 'izzy' && 'Musicard-izzy' || 'Musicard' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
 
   create-release:
@@ -177,7 +193,7 @@ jobs:
     if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -232,7 +248,13 @@ jobs:
             cat release_notes.md
           } > attributed_release_notes.md
 
+          if gh release view "v${{ needs.check-version.outputs.new_version }}" > /dev/null 2>&1; then
+            echo "::error::Release v${{ needs.check-version.outputs.new_version }} already exists. Bump versionName in app/build.gradle.kts or delete the existing release."
+            exit 1
+          fi
+
           gh release create "v${{ needs.check-version.outputs.new_version }}" \
+            --target "$GITHUB_SHA" \
             --title "${{ needs.check-version.outputs.new_version }}" \
             --notes-file attributed_release_notes.md \
             --latest \
