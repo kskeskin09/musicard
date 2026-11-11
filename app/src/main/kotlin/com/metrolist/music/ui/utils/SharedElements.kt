@@ -22,6 +22,7 @@ import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable as navComposable
 
 /** The shared-transition area around the app's pages (set around the NavHost). */
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
@@ -74,7 +75,7 @@ fun NavGraphBuilder.composable(
     popExitTransition: (AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition?)? = exitTransition,
     content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
 ) {
-    androidx.navigation.compose.composable(
+    navComposable(
         route = route,
         arguments = arguments,
         deepLinks = deepLinks,
@@ -82,7 +83,7 @@ fun NavGraphBuilder.composable(
         exitTransition = exitTransition,
         popEnterTransition = popEnterTransition,
         popExitTransition = popExitTransition,
-    ) { entry ->
+    ) { entry: NavBackStackEntry ->
         CompositionLocalProvider(LocalNavAnimatedScope provides this) {
             content(entry)
         }
