@@ -596,35 +596,9 @@ private fun TopPlaylistHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Shuffle Button - Smaller secondary button
-            androidx.compose.material3.Surface(
-                onClick = {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = name,
-                            items = songs.shuffled().map { it.toMediaItem() },
-                        ),
-                    )
-                },
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.shuffle),
-                        contentDescription = stringResource(R.string.shuffle),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
             // Play Button - Larger primary circular button
             Surface(
                 onClick = {
@@ -651,6 +625,34 @@ private fun TopPlaylistHeader(
                     )
                 }
             }
+
+            // Shuffle Button - Smaller secondary button
+            androidx.compose.material3.Surface(
+                onClick = {
+                    playerConnection.playQueue(
+                        ListQueue(
+                            title = name,
+                            items = songs.shuffled().map { it.toMediaItem() },
+                        ),
+                    )
+                },
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.shuffle),
+                        contentDescription = stringResource(R.string.shuffle),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
 
             // Menu Button - Smaller secondary button
             androidx.compose.material3.Surface(

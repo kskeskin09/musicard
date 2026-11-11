@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -685,11 +687,19 @@ fun CompactLyrics(
         if (scrollTarget < 0 || followPaused) return@LaunchedEffect
         val visible = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollTarget }
         if (visible != null) {
-            // A visible slide (a little slower than the default), like the full lyrics view.
-            listState.animateScrollBy(
-                (visible.offset - appliedAnchor[0]).toFloat(),
-                tween(LineScrollMillis, easing = FastOutSlowInEasing),
-            )
+            // A visible slide (a little slower than the default), like the full lyrics view. The
+            // lines grow and shrink while it runs, so each frame aims at where the line is now.
+            listState.scroll {
+                var done = 0f
+                Animatable(0f).animateTo(1f, tween(LineScrollMillis, easing = FastOutSlowInEasing)) {
+                    val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollTarget }
+                    if (item != null && done < 1f) {
+                        val remaining = (item.offset - appliedAnchor[0]).toFloat()
+                        scrollBy(remaining * ((value - done) / (1f - done)))
+                    }
+                    done = value
+                }
+            }
         } else {
             listState.animateScrollToItem(scrollTarget, -appliedAnchor[0])
         }
@@ -806,11 +816,17 @@ fun CompactLyrics(
                             1f -> TextAlign.End
                             else -> TextAlign.Center
                         }
+                    // The line that becomes current grows and brightens smoothly (and the previous
+                    // one shrinks back), instead of switching size at once.
+                    val activeness by animateFloatAsState(
+                        targetValue = if (active) 1f else 0f,
+                        animationSpec = tween(LineScrollMillis, easing = FastOutSlowInEasing),
+                        label = "lineActiveness",
+                    )
                     val compactStyle =
                         when {
                             line.isBackground -> compactStyles.background
-                            active -> compactStyles.active
-                            else -> compactStyles.inactive
+                            else -> lerp(compactStyles.inactive, compactStyles.active, activeness)
                         }
                     val style =
                         if (fraction == 0f) {
@@ -879,7 +895,7 @@ fun CompactLyrics(
                             Text(
                                 text = line.text,
                                 style = style,
-                                color = color.copy(alpha = if (active || !synced) 1f else dimAlpha),
+                                color = color.copy(alpha = if (!synced) 1f else dimAlpha + (1f - dimAlpha) * activeness),
                                 textAlign = textAlign,
                                 modifier = textModifier,
                             )
@@ -1069,19 +1085,31 @@ private fun SweepingWordsLine(
                             val left = textLayout.getBoundingBox(range.first).left
                             val right = textLayout.getBoundingBox(range.last).right
                             val fillX = left + (right - left) * progress
-                            val wordRect =
-                                Rect(left, textLayout.getLineTop(firstLine), right, textLayout.getLineBottom(firstLine))
-                            clipRect(wordRect.left, wordRect.top, wordRect.right, wordRect.bottom) {
-                                drawText(
-                                    textLayoutResult = textLayout,
-                                    brush =
-                                        Brush.horizontalGradient(
-                                            0f to color,
-                                            1f to color.copy(alpha = 0f),
-                                            startX = fillX - edgeWidthPx / 2f,
-                                            endX = fillX + edgeWidthPx / 2f,
-                                        ),
-                                )
+                            val top = textLayout.getLineTop(firstLine)
+                            val bottom = textLayout.getLineBottom(firstLine)
+                            // The whole word brightens as it is sung (like the full lyrics view), so the
+                            // end of the word never jumps from dim to bright.
+                            val wordAlpha = dimAlpha + (1f - dimAlpha) * progress
+                            clipRect(left, top, right, bottom) {
+                                drawText(textLayout, color = color.copy(alpha = wordAlpha))
+                            }
+                            // The sung part is fully bright, with a soft edge drawn as thin strips.
+                            val edgeStart = (fillX - edgeWidthPx / 2f).coerceAtLeast(left)
+                            val edgeEnd = (fillX + edgeWidthPx / 2f).coerceAtMost(right)
+                            if (edgeStart > left) {
+                                clipRect(left, top, edgeStart, bottom) {
+                                    drawText(textLayout, color = color)
+                                }
+                            }
+                            if (edgeEnd > edgeStart) {
+                                val strips = 8
+                                val stripWidth = (edgeEnd - edgeStart) / strips
+                                for (i in 0 until strips) {
+                                    val stripAlpha = 1f - (i + 0.5f) / strips
+                                    clipRect(edgeStart + stripWidth * i, top, edgeStart + stripWidth * (i + 1), bottom) {
+                                        drawText(textLayout, color = color.copy(alpha = stripAlpha))
+                                    }
+                                }
                             }
                         }
                     }

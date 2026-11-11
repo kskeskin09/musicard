@@ -71,6 +71,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.exoplayer.offline.Download
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.metrolist.music.extensions.toMediaItem
+import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
@@ -291,9 +293,67 @@ fun AlbumScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // Play Button - Larger primary circular button
+                        Surface(
+                            onClick = {
+                                if (!isListenTogetherGuest) {
+                                    playerConnection.service.getAutomix(playlistId)
+                                    playerConnection.playQueue(
+                                        LocalAlbumRadio(albumWithSongs),
+                                    )
+                                }
+                            },
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                            modifier = Modifier.size(72.dp),
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.play),
+                                    contentDescription = stringResource(R.string.play),
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(32.dp),
+                                )
+                            }
+                        }
+
+                        // Shuffle Button: plays the songs in a random order.
+                        Surface(
+                            onClick = {
+                                if (!isListenTogetherGuest && albumWithSongs.songs.isNotEmpty()) {
+                                    playerConnection.playQueue(
+                                        ListQueue(
+                                            title = albumWithSongs.album.title,
+                                            items = albumWithSongs.songs.shuffled().map { it.toMediaItem() },
+                                        ),
+                                    )
+                                }
+                            },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.shuffle),
+                                    contentDescription = stringResource(R.string.shuffle),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.weight(1f))
+
                         // Like Button - Smaller secondary button
                         Surface(
                             onClick = {
@@ -328,33 +388,6 @@ fun AlbumScreen(
                                             MaterialTheme.colorScheme.onSurfaceVariant
                                         },
                                     modifier = Modifier.size(24.dp),
-                                )
-                            }
-                        }
-
-                        // Play Button - Larger primary circular button
-                        Surface(
-                            onClick = {
-                                if (!isListenTogetherGuest) {
-                                    playerConnection.service.getAutomix(playlistId)
-                                    playerConnection.playQueue(
-                                        LocalAlbumRadio(albumWithSongs),
-                                    )
-                                }
-                            },
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape,
-                            modifier = Modifier.size(72.dp),
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.play),
-                                    contentDescription = stringResource(R.string.play),
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(32.dp),
                                 )
                             }
                         }

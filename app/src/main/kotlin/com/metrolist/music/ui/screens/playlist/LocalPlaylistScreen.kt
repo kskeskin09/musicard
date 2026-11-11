@@ -1401,7 +1401,7 @@ fun LocalPlaylistHeader(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Play: the player's play icon in a circle. With shuffle on it starts from a random
@@ -1457,6 +1457,8 @@ fun LocalPlaylistHeader(
                     )
                 }
             }
+
+            Spacer(Modifier.weight(1f))
 
             // Menu Button - Smaller secondary button
             Surface(

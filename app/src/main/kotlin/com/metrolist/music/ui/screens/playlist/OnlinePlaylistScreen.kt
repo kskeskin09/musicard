@@ -80,6 +80,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.music.extensions.toMediaItem
+import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalNavController
@@ -617,9 +619,71 @@ private fun OnlinePlaylistHeader(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Play Button - Larger primary circular button
+            Surface(
+                onClick = {
+                    if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                        playerConnection.playQueue(
+                            YouTubePlaylistQueue(
+                                playlistId = playlist.id,
+                                playlistTitle = playlist.title,
+                                initialSongs = songs,
+                                initialContinuation = continuation,
+                            ),
+                        )
+                    }
+                },
+                color = MaterialTheme.colorScheme.primary,
+                shape = CircleShape,
+                modifier = Modifier.size(72.dp),
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = stringResource(R.string.play),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(32.dp),
+                    )
+                }
+            }
+
+            // Shuffle Button: plays the songs in a random order.
+            Surface(
+                onClick = {
+                    if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                        playerConnection.playQueue(
+                            ListQueue(
+                                title = playlist.title,
+                                items = songs.shuffled().map { it.toMediaItem() },
+                            ),
+                        )
+                    }
+                },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.shuffle),
+                        contentDescription = stringResource(R.string.shuffle),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
             // Like Button - Smaller secondary button
             Surface(
                 onClick = {
@@ -679,37 +743,6 @@ private fun OnlinePlaylistHeader(
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
                         modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-
-            // Play Button - Larger primary circular button
-            Surface(
-                onClick = {
-                    if (!isListenTogetherGuest && songs.isNotEmpty()) {
-                        playerConnection.playQueue(
-                            YouTubePlaylistQueue(
-                                playlistId = playlist.id,
-                                playlistTitle = playlist.title,
-                                initialSongs = songs,
-                                initialContinuation = continuation,
-                            ),
-                        )
-                    }
-                },
-                color = MaterialTheme.colorScheme.primary,
-                shape = CircleShape,
-                modifier = Modifier.size(72.dp),
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play),
-                        contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(32.dp),
                     )
                 }
             }

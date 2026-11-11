@@ -80,21 +80,22 @@ fun <E> ChipsRow(
 ) {
     if (chips.isEmpty()) return
     val pill = RoundedCornerShape(50)
+    // The pill always spans the same width; when the choices don't fit, they scroll inside it.
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .then(if (fillWidth) Modifier else Modifier.horizontalScroll(rememberScrollState()))
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = 20.dp, vertical = 4.dp),
+                .padding(horizontal = 20.dp, vertical = 4.dp)
+                .clip(pill)
+                .background(containerColor),
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             modifier =
                 Modifier
-                    .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
-                    .clip(pill)
-                    .background(containerColor)
+                    .fillMaxWidth()
+                    .then(if (fillWidth) Modifier else Modifier.horizontalScroll(rememberScrollState()))
                     .padding(3.dp),
         ) {
             chips.forEach { (value, label) ->
