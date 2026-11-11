@@ -195,6 +195,8 @@
     <string name="set_quick_picks">Set quick picks</string>
     <string name="last_song_listened">Based on the last song you listened to</string>
     <string name="app_language">App language</string>
+    <string name="lyrics_provider">Lyrics provider</string>
+    <string name="lyrics_provider_desc">Turn providers on or off, and hold one to drag it. Higher ones are tried first</string>
     <string name="lyrics_provider_priority">Lyrics provider priority</string>
     <string name="lyrics_provider_priority_desc">Drag to reorder providers by preference. Higher position means higher priority</string>
     <string name="experimental_lyrics">Experimental lyrics</string>
@@ -923,7 +925,7 @@
     <!-- Android Auto settings -->
     <string name="android_auto">Android Auto</string>
     <string name="android_auto_visible_sections">Visible sections</string>
-    <string name="android_auto_reorder_hint">Tap a section to enable or disable it.\nLong-press the drag handle to reorder. The first section will be shown by default</string>
+    <string name="android_auto_reorder_hint">Tap a section to turn it on or off. Hold one and drag it to reorder. The first section is shown by default</string>
     <string name="android_auto_youtube_playlists">Show YouTube suggested playlists</string>
     <string name="android_auto_youtube_playlists_desc">Show YouTube Music recommended playlists in the playlists section while browsing with Android Auto</string>
     <string name="android_auto_target_playlist">Quick-add destination</string>
