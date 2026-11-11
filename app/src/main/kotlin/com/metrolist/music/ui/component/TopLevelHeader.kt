@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.metrolist.music.R
 import com.metrolist.music.constants.TopLevelHeaderHeight
+import com.metrolist.music.constants.TopLevelSearchHeight
 
 /**
  * Header of the main tabs: the page name in large type with a round profile picture on the
@@ -62,13 +63,15 @@ fun TopLevelHeader(
     showProfile: Boolean = true,
     // Tapping the page name, e.g. to go back to the top of the page.
     onTitleClick: (() -> Unit)? = null,
+    // The search pill under the page name (left out on the Profile tab).
+    showSearch: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(TopLevelHeaderHeight)
+                .height(if (showSearch) TopLevelHeaderHeight else TopLevelHeaderHeight - TopLevelSearchHeight)
                 .padding(horizontal = 20.dp),
     ) {
         Row(
@@ -133,6 +136,7 @@ fun TopLevelHeader(
             }
             }
         }
+        if (showSearch) {
         Spacer(Modifier.height(10.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -158,6 +162,7 @@ fun TopLevelHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
+        }
         }
     }
 }

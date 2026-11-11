@@ -27,6 +27,9 @@ val AppBarHeight = 64.dp
 // Large title, search pill and profile picture on the main tabs (below the status bar).
 val TopLevelHeaderHeight = 132.dp
 
+// The search bar and the gap above it in the main tabs' header.
+val TopLevelSearchHeight = 58.dp
+
 val ListItemHeight = 64.dp
 val SuggestionItemHeight = 56.dp
 val SearchFilterHeight = 48.dp

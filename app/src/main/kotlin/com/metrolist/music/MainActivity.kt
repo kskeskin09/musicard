@@ -198,6 +198,7 @@ import com.metrolist.music.constants.ProfileImageOffsetXKey
 import com.metrolist.music.constants.ProfileImageOffsetYKey
 import com.metrolist.music.ui.component.ProfileCrop
 import com.metrolist.music.constants.TopLevelHeaderHeight
+import com.metrolist.music.constants.TopLevelSearchHeight
 import com.metrolist.music.ui.component.AppNavigationRail
 import com.metrolist.music.ui.component.BottomSheetMenu
 import com.metrolist.music.ui.component.BottomSheetPage
@@ -880,6 +881,7 @@ class MainActivity : FragmentActivity() {
                 val activePlayerConnection = if (playerReady) playerConnection else null
 
                 var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
+                val onProfileTab = currentRoute == Screens.Profile.route
                 // The main tabs' header scrolls away with the page: first the page name, then the
                 // search bar; scrolling back brings it back the same way.
                 val headerMaxPx = with(density) { TopLevelHeaderHeight.toPx() }
@@ -907,6 +909,7 @@ class MainActivity : FragmentActivity() {
                         playerBottomSheetState.isDismissed,
                         showRail,
                         shouldShowTopBar,
+                        onProfileTab,
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
@@ -915,7 +918,18 @@ class MainActivity : FragmentActivity() {
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                            .add(WindowInsets(top = if (shouldShowTopBar) TopLevelHeaderHeight else AppBarHeight, bottom = bottom))
+                            .add(
+                                WindowInsets(
+                                    top =
+                                        when {
+                                            !shouldShowTopBar -> AppBarHeight
+                                            // The Profile tab's header has no search bar.
+                                            onProfileTab -> TopLevelHeaderHeight - TopLevelSearchHeight
+                                            else -> TopLevelHeaderHeight
+                                        },
+                                    bottom = bottom,
+                                ),
+                            )
                     }
                 appBarScrollBehavior(
                     canScroll = {
@@ -1134,6 +1148,7 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onProfileLongClick = { showProfilePictureDialog = true },
                                     showProfile = false,
+                                    showSearch = !onProfileTab,
                                     // Tapping the page name works like tapping its tab again.
                                     onTitleClick = {
                                         navController.currentBackStackEntry?.savedStateHandle?.set("scrollToTop", true)
