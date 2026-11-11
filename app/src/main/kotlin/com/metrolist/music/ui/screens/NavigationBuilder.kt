@@ -99,6 +99,9 @@ fun NavGraphBuilder.navigationBuilder(
         LibraryScreen()
     }
 
+    composable(Screens.Profile.route) {
+        ProfileScreen(navController = navController, latestVersionName = latestVersionName)
+    }
     composable(Screens.Explore.route) {
         ExploreScreen()
     }

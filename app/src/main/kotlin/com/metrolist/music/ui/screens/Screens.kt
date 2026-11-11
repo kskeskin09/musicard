@@ -53,7 +53,15 @@ sealed class Screens(
         route = "library"
     )
 
+    // Profile picture, history, stats, Listen Together and the account settings.
+    object Profile : Screens(
+        titleId = R.string.profile_tab,
+        iconIdInactive = R.drawable.person,
+        iconIdActive = R.drawable.person,
+        route = "profile_tab"
+    )
+
     companion object {
-        val MainScreens = listOf(Home, Explore, ListenTogether, Library, Search)
+        val MainScreens = listOf(Home, Search, ListenTogether, Library, Profile)
     }
 }

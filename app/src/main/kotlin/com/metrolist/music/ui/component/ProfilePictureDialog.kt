@@ -31,6 +31,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,17 +72,63 @@ data class ProfileCrop(
 
 const val ProfileMaxZoom = 3f
 
+/** How far the picture can move each way (px) in a [boxPx] square, for its [aspect] (width / height) and [zoom]. */
+fun profileTravel(
+    boxPx: Float,
+    aspect: Float,
+    zoom: Float,
+): Pair<Float, Float> {
+    val width = if (aspect >= 1f) boxPx * aspect else boxPx
+    val height = if (aspect >= 1f) boxPx else boxPx / aspect
+    return ((width * zoom - boxPx) / 2f).coerceAtLeast(0f) to ((height * zoom - boxPx) / 2f).coerceAtLeast(0f)
+}
+
 /**
- * Applies [crop] to a picture filling a round box. Put it on the image; the box around it clips.
- * At the largest shift the picture's edge meets the circle's edge, so the circle is never empty.
+ * The profile picture framed by [crop] in a square box (clipped by its parent, e.g. to a circle).
+ * The whole picture is laid out at its own shape, covering the box, so a tall or wide photo can
+ * be moved even without zooming in. [onAspect] reports the picture's width / height once loaded.
  */
-fun Modifier.profileCrop(crop: ProfileCrop): Modifier =
-    graphicsLayer {
-        scaleX = crop.zoom
-        scaleY = crop.zoom
-        translationX = crop.offsetX * (crop.zoom - 1f) * size.width / 2f
-        translationY = crop.offsetY * (crop.zoom - 1f) * size.height / 2f
+@Composable
+fun CroppedProfileImage(
+    url: String,
+    crop: ProfileCrop,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    onAspect: (Float) -> Unit = {},
+) {
+    var aspect by remember(url) { mutableFloatStateOf(1f) }
+    BoxWithConstraints(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.clipToBounds(),
+    ) {
+        val boxPx = constraints.maxWidth.toFloat()
+        val density = LocalDensity.current
+        val widthDp = with(density) { (if (aspect >= 1f) boxPx * aspect else boxPx).toDp() }
+        val heightDp = with(density) { (if (aspect >= 1f) boxPx else boxPx / aspect).toDp() }
+        AsyncImage(
+            model = url,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.FillBounds,
+            onSuccess = { state ->
+                val size = state.painter.intrinsicSize
+                if (size.width > 0f && size.height > 0f) {
+                    aspect = size.width / size.height
+                    onAspect(aspect)
+                }
+            },
+            modifier =
+                Modifier
+                    .requiredSize(widthDp, heightDp)
+                    .graphicsLayer {
+                        val (travelX, travelY) = profileTravel(boxPx, aspect, crop.zoom)
+                        scaleX = crop.zoom
+                        scaleY = crop.zoom
+                        translationX = crop.offsetX * travelX
+                        translationY = crop.offsetY * travelY
+                    },
+        )
     }
+}
 
 /**
  * Sets the profile picture and frames it like a photo crop: pick a photo from the gallery (or
@@ -101,6 +151,7 @@ fun ProfilePictureDialog(
     var zoom by remember { mutableFloatStateOf(initialCrop.zoom) }
     var offsetX by remember { mutableFloatStateOf(initialCrop.offsetX) }
     var offsetY by remember { mutableFloatStateOf(initialCrop.offsetY) }
+    var aspect by remember { mutableFloatStateOf(1f) }
     var showLinkField by remember { mutableStateOf(initialUrl.isNotBlank() && !initialUrl.startsWith("file:")) }
     val pickPhoto =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -133,22 +184,18 @@ fun ProfilePictureDialog(
                             }.pointerInput(Unit) {
                                 detectTransformGestures { _, pan, gestureZoom, _ ->
                                     zoom = (zoom * gestureZoom).coerceIn(1f, ProfileMaxZoom)
-                                    val travelX = (zoom - 1f) * size.width / 2f
-                                    val travelY = (zoom - 1f) * size.height / 2f
+                                    val (travelX, travelY) = profileTravel(size.width.toFloat(), aspect, zoom)
                                     offsetX = if (travelX > 0f) (offsetX + pan.x / travelX).coerceIn(-1f, 1f) else 0f
                                     offsetY = if (travelY > 0f) (offsetY + pan.y / travelY).coerceIn(-1f, 1f) else 0f
                                 }
                             },
                 ) {
                     if (url.isNotBlank()) {
-                        AsyncImage(
-                            model = url.trim(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .profileCrop(ProfileCrop(zoom, offsetX, offsetY)),
+                        CroppedProfileImage(
+                            url = url.trim(),
+                            crop = ProfileCrop(zoom, offsetX, offsetY),
+                            onAspect = { aspect = it },
+                            modifier = Modifier.fillMaxSize(),
                         )
                         // Darkens everything outside the round frame, like a crop screen.
                         Canvas(

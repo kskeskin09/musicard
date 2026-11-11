@@ -785,6 +785,7 @@ class MainActivity : FragmentActivity() {
                         listOf(
                             Screens.Home.route,
                             Screens.Explore.route,
+                            Screens.Profile.route,
                             Screens.Library.route,
                             Screens.ListenTogether.route,
                             "settings",
@@ -1026,6 +1027,7 @@ class MainActivity : FragmentActivity() {
                         when (navBackStackEntry?.destination?.route) {
                             Screens.Home.route -> R.string.home
                             Screens.Explore.route -> R.string.explore
+                            Screens.Profile.route -> R.string.profile_tab
                             Screens.Search.route -> R.string.search
                             Screens.Library.route -> R.string.filter_library
                             Screens.ListenTogether.route -> R.string.together
@@ -1092,46 +1094,20 @@ class MainActivity : FragmentActivity() {
                                     profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
                                     profileCrop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
                                     showBadge = latestVersionName != BuildConfig.BASE_VERSION_NAME,
-                                    onProfileClick = { showAccountDialog = true },
+                                    // History, stats, Listen Together and the account settings are on the
+                                    // Profile tab now.
+                                    onProfileClick = {
+                                        if (currentRoute != Screens.Profile.route) {
+                                            navController.navigate(Screens.Profile.route) {
+                                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        }
+                                    },
                                     onProfileLongClick = { showProfilePictureDialog = true },
                                     onSearchClick = {
                                         navController.navigate(Screens.Search.route) { launchSingleTop = true }
-                                    },
-                                    actions = {
-                                        if (showHistoryButton) {
-                                            IconButton(
-                                            colors = headerButtonColors,
-                                            onClick = { navController.navigate("history") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.history),
-                                                    contentDescription = stringResource(R.string.history),
-                                                    tint = MaterialTheme.colorScheme.onSurface,
-                                                    modifier = Modifier.size(22.dp),
-                                                )
-                                            }
-                                        }
-                                        IconButton(
-                                            colors = headerButtonColors,
-                                            onClick = { navController.navigate("stats") }) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.stats),
-                                                contentDescription = stringResource(R.string.stats),
-                                                tint = MaterialTheme.colorScheme.onSurface,
-                                                    modifier = Modifier.size(22.dp),
-                                            )
-                                        }
-                                        if (listenTogetherInTopBar) {
-                                            IconButton(
-                                            colors = headerButtonColors,
-                                            onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.group_outlined),
-                                                    contentDescription = stringResource(R.string.together),
-                                                    tint = MaterialTheme.colorScheme.onSurface,
-                                                    modifier = Modifier.size(22.dp),
-                                                )
-                                            }
-                                        }
                                     },
                                     modifier =
                                         Modifier
@@ -1247,6 +1223,23 @@ class MainActivity : FragmentActivity() {
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
                                         onHomeLongHold = { showAccountDialog = true },
+                                        onProfileLongClick = { showProfilePictureDialog = true },
+                                        profileIcon = { size ->
+                                            val avatarUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl
+                                            if (avatarUrl != null) {
+                                                com.metrolist.music.ui.component.CroppedProfileImage(
+                                                    url = avatarUrl,
+                                                    crop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                                                    modifier = Modifier.size(size).clip(CircleShape),
+                                                )
+                                            } else {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.person),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(size),
+                                                )
+                                            }
+                                        },
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)

@@ -45,6 +45,18 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -509,8 +521,11 @@ private fun KindSegments(
     }
 }
 
-/** Swiping a row to the right pins it to the top (or unpins it); the row springs back. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Swiping a row to the right pins it to the top (or unpins it); the row springs back. Past the
+ * trigger point the phone ticks and the label shows. The offset is plain state (nothing saved),
+ * so a row that moves between the pinned and other sections can't come back half swiped.
+ */
 @Composable
 private fun PinSwipe(
     pinned: Boolean,
@@ -518,25 +533,42 @@ private fun PinSwipe(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val state = rememberSwipeToDismissBoxState(positionalThreshold = { it * 0.3f })
-    LaunchedEffect(state.currentValue) {
-        if (state.currentValue == SwipeToDismissBoxValue.StartToEnd) {
-            // Settle first: the row moves between the pinned and other sections, and a state
-            // left "swiped" would be restored there and pin/unpin it again and again.
-            state.snapTo(SwipeToDismissBoxValue.Settled)
-            onToggle()
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val latestOnToggle by rememberUpdatedState(onToggle)
+    val offset = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val thresholdPx = with(density) { 110.dp.toPx() }
+    val maxPx = with(density) { 160.dp.toPx() }
+    var armed by remember { mutableStateOf(false) }
+    val dragState =
+        rememberDraggableState { delta ->
+            val next = (offset.value + delta).coerceIn(0f, maxPx)
+            scope.launch { offset.snapTo(next) }
+            val nowArmed = next >= thresholdPx
+            if (nowArmed != armed) {
+                armed = nowArmed
+                if (nowArmed) view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            }
         }
-    }
-    SwipeToDismissBox(
-        state = state,
-        enableDismissFromEndToStart = false,
-        modifier = modifier,
-        backgroundContent = {
+    Box(
+        modifier =
+            modifier.draggable(
+                orientation = Orientation.Horizontal,
+                state = dragState,
+                onDragStopped = {
+                    if (offset.value >= thresholdPx) latestOnToggle()
+                    armed = false
+                    offset.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
+                },
+            ),
+    ) {
+        if (offset.value > 0f) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
-                        .fillMaxSize()
+                        .matchParentSize()
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .padding(start = 24.dp),
             ) {
@@ -546,16 +578,21 @@ private fun PinSwipe(
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(22.dp),
                 )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = stringResource(if (pinned) R.string.unpin else R.string.pin),
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                if (armed) {
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(if (pinned) R.string.unpin else R.string.pin),
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
-        },
-    ) {
-        Box(Modifier.background(MaterialTheme.colorScheme.background)) { content() }
+        }
+        Box(
+            Modifier
+                .offset { IntOffset(offset.value.roundToInt(), 0) }
+                .background(MaterialTheme.colorScheme.background),
+        ) { content() }
     }
 }
 

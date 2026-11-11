@@ -512,6 +512,8 @@ fun OnlineSearchResult(
                             item(key = "top_card") {
                                 TopResultCard(
                                     item = topItem,
+                                    isActive = topItem is SongItem && topItem.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
                                     onClick = { openYtItem(topItem) },
                                     onLongClick = {
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -662,6 +664,8 @@ private fun isExactMatch(
 @Composable
 private fun TopResultCard(
     item: YTItem,
+    isActive: Boolean,
+    isPlaying: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
@@ -696,15 +700,43 @@ private fun TopResultCard(
                 ).combinedClickable(onClick = onClick, onLongClick = onLongClick)
                 .padding(18.dp),
     ) {
-        AsyncImage(
-            model = item.thumbnail,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+        Box(
+            contentAlignment = Alignment.Center,
             modifier =
                 Modifier
                     .size(120.dp)
                     .clip(if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp)),
-        )
+        ) {
+            AsyncImage(
+                model = item.thumbnail,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            // The playing song shows the same moving bars as in the lists, sized for this cover.
+            if (isActive) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                )
+                if (isPlaying) {
+                    com.metrolist.music.ui.component.PlayingIndicator(
+                        color = Color.White,
+                        barWidth = 10.dp,
+                        cornerRadius = 3.dp,
+                        modifier = Modifier.height(52.dp),
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp),
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -735,7 +767,14 @@ private fun TopResultCard(
                         .clickable(onClick = onClick),
             ) {
                 Icon(
-                    painter = painterResource(if (item is SongItem) R.drawable.player_play else R.drawable.navigate_next),
+                    painter =
+                        painterResource(
+                            when {
+                                item !is SongItem -> R.drawable.navigate_next
+                                isActive && isPlaying -> R.drawable.player_pause
+                                else -> R.drawable.player_play
+                            },
+                        ),
                     contentDescription = null,
                     tint = Color.Black,
                     modifier = Modifier.size(28.dp),

@@ -21,11 +21,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Icon
@@ -160,6 +162,8 @@ fun AppNavigationBar(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null,
     onHomeLongHold: (() -> Unit)? = null,
+    onProfileLongClick: (() -> Unit)? = null,
+    profileIcon: (@Composable (Dp) -> Unit)? = null,
 ) {
     val containerColor = MaterialTheme.colorScheme.surfaceContainer
     val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -199,10 +203,11 @@ fun AppNavigationBar(
 
             val isSearchItem = screen == Screens.Search && onSearchLongClick != null
             val isHomeHoldItem = screen == Screens.Home && onHomeLongHold != null
+            val isProfileItem = screen == Screens.Profile && onProfileLongClick != null
             val interactionSource = remember { MutableInteractionSource() }
 
             // Long press detection using InteractionSource
-            if (isSearchItem || isHomeHoldItem) {
+            if (isSearchItem || isHomeHoldItem || isProfileItem) {
                 LaunchedEffect(interactionSource) {
                     var isLongClick = false
                     interactionSource.interactions.collectLatest { interaction ->
@@ -212,7 +217,11 @@ fun AppNavigationBar(
                                 delay(if (isHomeHoldItem) 15_000L else viewConfiguration.longPressTimeoutMillis)
                                 isLongClick = true
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (isHomeHoldItem) onHomeLongHold.invoke() else onSearchLongClick?.invoke()
+                                when {
+                                    isHomeHoldItem -> onHomeLongHold.invoke()
+                                    isProfileItem -> onProfileLongClick.invoke()
+                                    else -> onSearchLongClick?.invoke()
+                                }
                             }
                             is PressInteraction.Release -> {
                                 if (!isLongClick) {
@@ -243,18 +252,36 @@ fun AppNavigationBar(
                             role = Role.Tab,
                             onClick = {
                                 // Long presses are handled via InteractionSource
-                                if (!isSearchItem && !isHomeHoldItem) {
+                                if (!isSearchItem && !isHomeHoldItem && !isProfileItem) {
                                     onItemClick(screen, currentIsSelected)
                                 }
                             },
                         ),
             ) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = stringResource(screen.titleId),
-                    tint = itemColor,
-                    modifier = Modifier.size(24.dp),
-                )
+                if (screen == Screens.Profile && profileIcon != null) {
+                    // The profile picture, with a ring when the tab is open.
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier =
+                            Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = if (isSelected) 2.dp else 0.dp,
+                                    color = if (isSelected) selectedColor else Color.Transparent,
+                                    shape = CircleShape,
+                                ),
+                    ) {
+                        profileIcon(if (isSelected) 21.dp else 26.dp)
+                    }
+                } else {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = stringResource(screen.titleId),
+                        tint = itemColor,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
                 if (!slimNav) {
                     Text(
                         text = stringResource(screen.titleId),

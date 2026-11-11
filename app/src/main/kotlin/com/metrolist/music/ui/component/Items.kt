@@ -49,6 +49,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
@@ -1816,6 +1820,12 @@ fun BoxScope.AlbumPlayButton(
     }
 }
 
+/**
+ * Swipe a song right to play it next, left to add it to the queue. A pill grows out of the
+ * uncovered side: first only its icon, then (once far enough to trigger) its label too. The
+ * phone ticks when the swipe passes that point. Play next is a solid pill in the text color,
+ * add to queue a softer gray one; both flip for the light theme.
+ */
 @Composable
 fun SwipeToSongBox(
     modifier: Modifier = Modifier,
@@ -1825,12 +1835,27 @@ fun SwipeToSongBox(
     val ctx = LocalContext.current
     val player = LocalPlayerConnection.current
     val scope = rememberCoroutineScope()
+    val view = androidx.compose.ui.platform.LocalView.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
     val offset = remember { mutableFloatStateOf(0f) }
-    val threshold = 300f
+    val threshold = with(density) { 150.dp.toPx() }
+    val maxDrag = with(density) { 190.dp.toPx() }
+    val gapPx = with(density) { 12.dp.toPx() }
+    var armed by remember { mutableStateOf(false) }
 
     val dragState = rememberDraggableState { delta ->
-        offset.floatValue = (offset.floatValue + delta).coerceIn(-threshold, threshold)
+        offset.floatValue = (offset.floatValue + delta).coerceIn(-maxDrag, maxDrag)
+        val nowArmed = kotlin.math.abs(offset.floatValue) >= threshold
+        if (nowArmed != armed) {
+            armed = nowArmed
+            if (nowArmed) view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+        }
     }
+
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val surface = MaterialTheme.colorScheme.surface
+    val playNextColor = onSurface
+    val queueColor = androidx.compose.ui.graphics.lerp(onSurface, surface, 0.4f)
 
     Box(
         modifier = modifier
@@ -1843,60 +1868,74 @@ fun SwipeToSongBox(
                         offset.floatValue >= threshold -> {
                             player?.playNext(listOf(mediaItem))
                             Toast.makeText(ctx, R.string.play_next, Toast.LENGTH_SHORT).show()
-                            reset(offset, scope)
                         }
 
                         offset.floatValue <= -threshold -> {
                             player?.addToQueue(listOf(mediaItem))
                             Toast.makeText(ctx, R.string.add_to_queue, Toast.LENGTH_SHORT).show()
-                            reset(offset, scope)
                         }
-
-                        else -> reset(offset, scope)
                     }
+                    armed = false
+                    reset(offset, scope)
                 }
             )
     ) {
-        if (offset.floatValue != 0f) {
-            val (iconRes, bg, tint, align) = if (offset.floatValue > 0)
-                Quadruple(
-                    R.drawable.playlist_play,
-                    MaterialTheme.colorScheme.secondary,
-                    MaterialTheme.colorScheme.onSecondary,
-                    Alignment.CenterStart
-                ) else
-                Quadruple(
-                    R.drawable.queue_music,
-                    MaterialTheme.colorScheme.primary,
-                    MaterialTheme.colorScheme.onPrimary,
-                    Alignment.CenterEnd
-                )
-
+        val value = offset.floatValue
+        if (value != 0f) {
+            val playNext = value > 0
+            val pillWidthPx = (kotlin.math.abs(value) - gapPx * 2).coerceAtLeast(0f)
+            val showLabel = kotlin.math.abs(value) >= threshold * 0.8f
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .align(Alignment.Center)
-                    .background(bg),
-                contentAlignment = align
+                    .matchParentSize()
+                    .padding(horizontal = 12.dp),
+                contentAlignment = if (playNext) Alignment.CenterStart else Alignment.CenterEnd,
             ) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = null,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
-                        .padding(horizontal = 24.dp)
-                        .size(30.dp)
-                        .alpha(0.9f),
-                    tint = tint
-                )
+                        .width(with(density) { pillWidthPx.toDp() })
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(if (playNext) playNextColor else queueColor),
+                ) {
+                    if (pillWidthPx > with(density) { 28.dp.toPx() }) {
+                        Icon(
+                            painter = painterResource(if (playNext) R.drawable.playlist_play else R.drawable.queue_music),
+                            contentDescription = null,
+                            tint = surface,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    androidx.compose.animation.AnimatedVisibility(visible = showLabel) {
+                        Text(
+                            text = stringResource(if (playNext) R.string.play_next else R.string.add_to_queue),
+                            color = surface,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
             }
         }
 
+        // The row slides away with rounded corners on the side it uncovers.
+        val corner = with(density) { (kotlin.math.abs(value) / 4f).coerceAtMost(28.dp.toPx()).toDp() }
         Box(
             modifier = Modifier
-                .offset { IntOffset(offset.floatValue.roundToInt(), 0) }
+                .offset { IntOffset(value.roundToInt(), 0) }
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface),
+                .clip(
+                    if (value > 0) {
+                        RoundedCornerShape(topStart = corner, bottomStart = corner)
+                    } else {
+                        RoundedCornerShape(topEnd = corner, bottomEnd = corner)
+                    },
+                )
+                .background(if (value != 0f) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface),
             content = content
         )
     }

@@ -1023,4 +1023,6 @@
     <string name="search_exact_matches">Exact matches</string>
     <string name="search_kind_song">Song</string>
     <string name="profile_username">Username</string>
+    <string name="profile_tab">Profile</string>
+    <string name="profile_change_photo">Change photo</string>
 </resources>

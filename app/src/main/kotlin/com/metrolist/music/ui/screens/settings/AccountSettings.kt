@@ -77,7 +77,9 @@ import com.metrolist.music.viewmodels.HomeViewModel
 fun AccountSettings(
     navController: NavController,
     onClose: () -> Unit,
-    latestVersionName: String
+    latestVersionName: String,
+    // On the Profile tab: no title row, no own scrolling and no card background.
+    embedded: Boolean = false,
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -107,12 +109,17 @@ fun AccountSettings(
     val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+        modifier =
+            if (embedded) {
+                Modifier.padding(horizontal = 16.dp)
+            } else {
+                Modifier
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            }
     ) {
-        Row(
+        if (!embedded) Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 8.dp, end = 8.dp),

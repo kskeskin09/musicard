@@ -95,11 +95,11 @@ fun TopLevelHeader(
                             .combinedClickable(onClick = onProfileClick, onLongClick = onProfileLongClick),
                 ) {
                     if (profileImageUrl != null) {
-                        AsyncImage(
-                            model = profileImageUrl,
+                        CroppedProfileImage(
+                            url = profileImageUrl,
+                            crop = profileCrop,
                             contentDescription = stringResource(R.string.account),
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(44.dp).profileCrop(profileCrop),
+                            modifier = Modifier.size(44.dp),
                         )
                     } else {
                         Icon(
