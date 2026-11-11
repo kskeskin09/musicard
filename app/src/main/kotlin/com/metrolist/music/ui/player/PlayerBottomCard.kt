@@ -134,6 +134,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.foundation.interaction.DragInteraction
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.drop
 
 internal const val LyricsPage = 0
 internal const val UpNextPage = 1
@@ -1341,6 +1342,14 @@ private fun CompactLyricsTranslations(lines: List<LyricsEntry>) {
                     database = database,
                     systemPrompt = aiSystemPrompt,
                 )
+            }
+        }
+    }
+    // Problems (no key, network, a refused request) are shown instead of failing silently.
+    LaunchedEffect(Unit) {
+        com.metrolist.music.lyrics.LyricsTranslationHelper.status.drop(1).collect { status ->
+            if (status is com.metrolist.music.lyrics.LyricsTranslationHelper.TranslationStatus.Error) {
+                android.widget.Toast.makeText(context, status.message, android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }

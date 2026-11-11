@@ -119,6 +119,9 @@ fun LyricsMenu(
     // Observe the authoritative translation-active state from the singleton; this persists
     // correctly across menu open/close cycles and avoids the lyricsProvider() race condition.
     val hasTranslations by LyricsTranslationHelper.hasActiveTranslations.collectAsStateWithLifecycle()
+    val translationStatus by LyricsTranslationHelper.status.collectAsStateWithLifecycle()
+    // The switch turns on right away and stays on while the translation is being made.
+    val translationOn = hasTranslations || translationStatus is LyricsTranslationHelper.TranslationStatus.Translating
 
     var showEditDialog by rememberSaveable {
         mutableStateOf(false)
@@ -486,7 +489,10 @@ fun LyricsMenu(
                                     )
                                 },
                                 onClick = {
-                                    if (hasTranslations) {
+                                    if (translationOn && !hasTranslations) {
+                                        LyricsTranslationHelper.cancelTranslation()
+                                        LyricsTranslationHelper.triggerClearTranslations()
+                                    } else if (hasTranslations) {
                                         // Remove translations
                                         lyricsProvider()?.let { lyrics ->
                                             val clearedLyrics = LyricsTranslationHelper.clearTranslations(lyrics)
@@ -503,9 +509,13 @@ fun LyricsMenu(
                                 },
                                 trailingContent = {
                                     Switch(
-                                        checked = hasTranslations,
+                                        checked = translationOn,
                                         onCheckedChange = { newCheckedState ->
-                                            if (newCheckedState) {
+                                            if (!newCheckedState && !hasTranslations) {
+                                                // Still translating: stop it.
+                                                LyricsTranslationHelper.cancelTranslation()
+                                                LyricsTranslationHelper.triggerClearTranslations()
+                                            } else if (newCheckedState) {
                                                 // Enable translations – hasActiveTranslations updates when done
                                                 LyricsTranslationHelper.triggerManualTranslation()
                                             } else {
@@ -522,7 +532,7 @@ fun LyricsMenu(
                                         thumbContent = {
                                             Icon(
                                                 painter = painterResource(
-                                                    id = if (hasTranslations) R.drawable.check else R.drawable.close
+                                                    id = if (translationOn) R.drawable.check else R.drawable.close
                                                 ),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(SwitchDefaults.IconSize)
