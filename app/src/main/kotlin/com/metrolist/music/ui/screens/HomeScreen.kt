@@ -1509,6 +1509,41 @@ fun HomeScreen(
                     }
                 }
 
+                // Albums for You: albums of the songs the user plays, mixed with YouTube's suggestions.
+                val forYouAlbums = albumsForYou.orEmpty()
+                if (selectedChip == null && forYouAlbums.isNotEmpty()) {
+                    item(key = "albums_for_you_title") {
+                        NavigationTitle(title = stringResource(R.string.albums_for_you))
+                    }
+                    item(key = "albums_for_you_row") {
+                        LazyRow(
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            items(forYouAlbums, key = { "for_you_${it.id}" }) { album ->
+                                HomeCoverCard(
+                                    title = album.title,
+                                    subtitle =
+                                        album.artists?.joinToString { it.name }?.takeIf { it.isNotBlank() }
+                                            ?: stringResource(R.string.library_kind_album),
+                                    onClick = { navController.navigate("album/${album.id}") },
+                                ) { size, shape ->
+                                    AsyncImage(
+                                        model = album.thumbnail,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier =
+                                            Modifier
+                                                .size(size)
+                                                .clip(shape)
+                                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (selectedChip == null && recentSongs.isNotEmpty()) {
                     item(key = "recents_title") {
                         NavigationTitle(title = stringResource(R.string.home_recents))
@@ -1663,41 +1698,6 @@ fun HomeScreen(
                                         },
                                     ),
                             )
-                        }
-                    }
-                }
-
-                // Albums for You: albums of the songs the user plays, mixed with YouTube's suggestions.
-                val forYouAlbums = albumsForYou.orEmpty()
-                if (selectedChip == null && forYouAlbums.isNotEmpty()) {
-                    item(key = "albums_for_you_title") {
-                        NavigationTitle(title = stringResource(R.string.albums_for_you))
-                    }
-                    item(key = "albums_for_you_row") {
-                        LazyRow(
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        ) {
-                            items(forYouAlbums, key = { "for_you_${it.id}" }) { album ->
-                                HomeCoverCard(
-                                    title = album.title,
-                                    subtitle =
-                                        album.artists?.joinToString { it.name }?.takeIf { it.isNotBlank() }
-                                            ?: stringResource(R.string.library_kind_album),
-                                    onClick = { navController.navigate("album/${album.id}") },
-                                ) { size, shape ->
-                                    AsyncImage(
-                                        model = album.thumbnail,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier =
-                                            Modifier
-                                                .size(size)
-                                                .clip(shape)
-                                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                    )
-                                }
-                            }
                         }
                     }
                 }
