@@ -1322,8 +1322,10 @@ private fun SweepingWordsLine(
                         val box = letter.box
                         withTransform({
                             translate(top = -box.height * LiftRise * letter.amount)
+                            val grow = 1f + LiftGrow * letter.amount
                             scale(
-                                scale = 1f + LiftGrow * letter.amount,
+                                scaleX = grow,
+                                scaleY = grow,
                                 pivot = Offset(box.center.x, box.bottom - box.height * 0.22f),
                             )
                             clipRect(box.left, box.top, box.right, box.bottom)
