@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.collapsingTitleAnchor
 import com.metrolist.music.ui.component.ExpandingSearchField
 import com.metrolist.music.ui.component.ListPlayButton
 import androidx.compose.foundation.background
@@ -492,6 +493,7 @@ fun AutoPlaylistScreen(
     }
 
     val state = rememberLazyListState()
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(state)
 
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
@@ -503,7 +505,7 @@ fun AutoPlaylistScreen(
     val tint =
         if (playlistType == PlaylistType.LIKE) {
             com.metrolist.music.ui.theme.pageTintFor(
-                androidx.compose.ui.graphics.Color(0xFFF0455A),
+                androidx.compose.ui.graphics.lerp(androidx.compose.ui.graphics.Color(0xFFF0455A), androidx.compose.ui.graphics.Color.White, 0.45f),
                 MaterialTheme.colorScheme.background,
             )
         } else {
@@ -543,6 +545,7 @@ fun AutoPlaylistScreen(
                     } else {
                         if (!isSearching) {
                             item(key = "playlist_header") {
+                                com.metrolist.music.ui.component.ProvideCollapsingTitle(titleState) {
                                 AutoPlaylistHeader(
                                     name = playlist,
                                     songs = songs!!,
@@ -552,6 +555,7 @@ fun AutoPlaylistScreen(
                                     menuState = menuState,
                                     modifier = Modifier.animateItem(),
                                 )
+                                }
                             }
                         }
 
@@ -751,8 +755,8 @@ fun AutoPlaylistScreen(
 )
                         }
 
-                        // The page shows the name; the bar stays empty.
-                        else -> {}
+                        // The page shows the name; the bar shows it once it has scrolled away.
+                        else -> com.metrolist.music.ui.component.CollapsingTopBarTitle(playlist, titleState)
                     }
                 },
                 navigationIcon = {
@@ -872,7 +876,7 @@ private fun AutoPlaylistHeader(
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 32.dp),
+            modifier = Modifier.padding(horizontal = 32.dp).collapsingTitleAnchor(),
         )
 
         Spacer(modifier = Modifier.height(12.dp))

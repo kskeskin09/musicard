@@ -118,9 +118,9 @@ fun ListPlayButton(
             modifier = Modifier.padding(start = 18.dp, end = 22.dp),
         ) {
             Icon(
-                painter = painterResource(if (showPause) R.drawable.pause else R.drawable.play),
+                painter = painterResource(if (showPause) R.drawable.player_pause else R.drawable.player_play),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(20.dp),
             )
             androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
             androidx.compose.material3.Text(

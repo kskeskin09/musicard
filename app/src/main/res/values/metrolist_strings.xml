@@ -1054,4 +1054,10 @@
     <string name="like_icon_color_red">Red</string>
     <string name="play_list_button">Play</string>
     <string name="pause_list_button">Pause</string>
+    <string name="playlist_title_label">Playlist title</string>
+    <string name="playlist_title_hint">Name your playlist</string>
+    <string name="playlist_description_label">Playlist description</string>
+    <string name="playlist_description_hint">What is it about?</string>
+    <string name="playlist_cover_remove">Remove cover</string>
+    <string name="playlist_cover_link_title">Cover image link</string>
 </resources>

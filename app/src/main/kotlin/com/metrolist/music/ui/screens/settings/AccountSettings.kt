@@ -319,7 +319,6 @@ fun AccountSettings(
                     )
                 } else null,
             ),
-            useLowContrast = true
         )
 
         Spacer(Modifier.height(8.dp))
@@ -365,7 +364,7 @@ fun AccountSettings(
                             }
                         )
                     },
-                    enabled = isLoggedIn
+                    onClick = if (isLoggedIn) null else { { onClose(); navController.navigate("login") } },
                 ),
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.yt_sync)) },
@@ -386,10 +385,9 @@ fun AccountSettings(
                             }
                         )
                     },
-                    enabled = isLoggedIn
+                    onClick = if (isLoggedIn) null else { { onClose(); navController.navigate("login") } },
                 )
             ),
-            useLowContrast = true
         )
 
         Spacer(Modifier.height(12.dp))
@@ -435,7 +433,6 @@ fun AccountSettings(
                     }
                 }
             },
-            useLowContrast = true
         )
     }
 }

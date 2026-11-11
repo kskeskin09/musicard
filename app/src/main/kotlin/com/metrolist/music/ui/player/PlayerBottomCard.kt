@@ -655,6 +655,8 @@ fun CompactLyrics(
             }
         }
     val hasWordTimings = remember(lines) { lines.any { !it.words.isNullOrEmpty() } }
+    // AI translation (the switch in the lyrics menu) works on these lines too.
+    CompactLyricsTranslations(lines)
 
     var position by remember { mutableLongStateOf(positionProvider() + lyricsOffset) }
     val activeGap by remember(gaps) {
@@ -953,6 +955,20 @@ fun CompactLyrics(
                             )
                         }
                     }
+                    val translated by line.translatedTextFlow.collectAsStateWithLifecycle()
+                    translated?.takeIf { it.isNotBlank() }?.let { text ->
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = lerp(14f, 18f, fraction).sp),
+                            color = color.copy(alpha = if (active) 0.75f else 0.5f),
+                            textAlign = textAlign,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentWidth(BiasAlignment.Horizontal(bias))
+                                    .padding(bottom = lerp(4.dp, 8.dp, fraction)),
+                        )
+                    }
                 }
             }
         }
@@ -1173,3 +1189,85 @@ private fun SweepingWordsLine(
 }
 
 private val SweepEdgeWidth = 14.dp
+
+/**
+ * Hooks the card's lyric lines up to the AI translation: loads saved translations, translates when
+ * the switch in the lyrics menu is turned on and clears them when it is turned off.
+ */
+@Composable
+private fun CompactLyricsTranslations(lines: List<LyricsEntry>) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val database = com.metrolist.music.LocalDatabase.current
+    val scope = rememberCoroutineScope()
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    val lyricsEntity by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
+    val openRouterApiKey by rememberPreference(com.metrolist.music.constants.OpenRouterApiKey, "")
+    val deeplApiKey by rememberPreference(com.metrolist.music.constants.DeeplApiKey, "")
+    val aiProvider by rememberPreference(com.metrolist.music.constants.AiProviderKey, "OpenRouter")
+    val openRouterBaseUrl by rememberPreference(
+        com.metrolist.music.constants.OpenRouterBaseUrlKey,
+        com.metrolist.music.constants.OpenRouterDefaultBaseUrl,
+    )
+    val openRouterModel by rememberPreference(
+        com.metrolist.music.constants.OpenRouterModelKey,
+        com.metrolist.music.constants.OpenRouterDefaultModel,
+    )
+    val translateLanguage by rememberPreference(com.metrolist.music.constants.TranslateLanguageKey, "en")
+    val translateMode by rememberPreference(com.metrolist.music.constants.TranslateModeKey, "Literal")
+    val deeplFormality by rememberPreference(com.metrolist.music.constants.DeeplFormalityKey, "default")
+    val aiSystemPrompt by rememberPreference(com.metrolist.music.constants.AiSystemPromptKey, "")
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.metrolist.music.lyrics.LyricsTranslationHelper.setCompositionActive(true)
+        onDispose {
+            com.metrolist.music.lyrics.LyricsTranslationHelper.setCompositionActive(false)
+        }
+    }
+    LaunchedEffect(lines, lyricsEntity, translateLanguage, translateMode) {
+        if (lines.isNotEmpty() && lyricsEntity != null) {
+            com.metrolist.music.lyrics.LyricsTranslationHelper.loadTranslationsFromDatabase(
+                lyrics = lines,
+                lyricsEntity = lyricsEntity,
+                targetLanguage = translateLanguage,
+                mode = translateMode,
+            )
+        }
+    }
+    LaunchedEffect(
+        lines, aiProvider, openRouterApiKey, deeplApiKey, openRouterBaseUrl, openRouterModel,
+        translateLanguage, translateMode, deeplFormality, aiSystemPrompt, currentSong?.id,
+    ) {
+        com.metrolist.music.lyrics.LyricsTranslationHelper.manualTrigger.collect {
+            val effectiveApiKey = if (aiProvider == "DeepL") deeplApiKey else openRouterApiKey
+            if (effectiveApiKey.isBlank()) {
+                android.widget.Toast
+                    .makeText(context, context.getString(R.string.ai_api_key_required), android.widget.Toast.LENGTH_SHORT)
+                    .show()
+            } else if (lines.isNotEmpty()) {
+                com.metrolist.music.lyrics.LyricsTranslationHelper.translateLyrics(
+                    lyrics = lines,
+                    targetLanguage = translateLanguage,
+                    apiKey = openRouterApiKey,
+                    baseUrl = openRouterBaseUrl,
+                    model = openRouterModel,
+                    mode = translateMode,
+                    scope = scope,
+                    context = context,
+                    provider = aiProvider,
+                    deeplApiKey = deeplApiKey,
+                    deeplFormality = deeplFormality,
+                    useStreaming = true,
+                    songId = currentSong?.id ?: "",
+                    database = database,
+                    systemPrompt = aiSystemPrompt,
+                )
+            }
+        }
+    }
+    LaunchedEffect(lines) {
+        com.metrolist.music.lyrics.LyricsTranslationHelper.clearTranslationsTrigger.collect {
+            lines.forEach { it.translatedTextFlow.value = null }
+        }
+    }
+}

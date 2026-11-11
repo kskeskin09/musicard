@@ -10,6 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -171,78 +173,136 @@ fun AddToPlaylistDialog(
         }
     }
 
-    if (isVisible) {
-        ListDialog(
-            onDismiss = onDismiss,
-        ) {
-            item {
-                val interactionSource = remember { MutableInteractionSource() }
-                val isPressed by interactionSource.collectIsPressedAsState()
-                val scale by animateFloatAsState(
-                    targetValue = if (isPressed) 0.7f else 1f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    ),
-                    label = "buttonScale"
-                )
-                FilledTonalButton(
-                    onClick = { showCreatePlaylistDialog = true},
-                    shape = RoundedCornerShape(50),
-                    interactionSource = interactionSource,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.onSurface,
-                        contentColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .graphicsLayer { scaleX = scale; scaleY = scale }
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.add),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(20.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.create_playlist),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+    // What the user ticked or unticked; nothing changes until Save.
+    var selection by remember { mutableStateOf<Set<String>?>(null) }
+    LaunchedEffect(isVisible) { if (!isVisible) selection = null }
+    val selected = selection ?: playlistsContainingSong
+
+    suspend fun removeSongs(targetPlaylist: Playlist, ids: List<String>) {
+        val browseId = targetPlaylist.playlist.browseId
+        ids.distinct().forEach { songId ->
+            while (true) {
+                val map = database.playlistSongMaps(songId).firstOrNull { it.playlistId == targetPlaylist.id } ?: break
+                database.transaction {
+                    move(map.playlistId, map.position, Int.MAX_VALUE)
+                    delete(map.copy(position = Int.MAX_VALUE))
+                }
+                if (browseId != null) {
+                    val setVideoId = map.setVideoId
+                    syncUtils.scheduleRemoveFromPlaylist(browseId, songId, targetPlaylist.id) { setVideoId }
                 }
             }
+        }
+    }
 
-            items(playlists) { playlist ->
-                val containsSong = playlist.id in playlistsContainingSong
-                val rowBg by animateColorAsState(
-                    targetValue = if (containsSong)
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                    else Color.Transparent,
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "playlistBg"
-                )
-                PlaylistListItem(
-                    playlist = playlist,
-                    modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(rowBg)
-                    .clickable {
-                        selectedPlaylist = playlist
-                        coroutineScope.launch(Dispatchers.IO) {
-                            songIds = onGetSong()
-                            duplicates = database.playlistDuplicatesBatched(playlist.id, songIds!!)
-                            if (duplicates.isNotEmpty()) {
-                                showDuplicateDialog = true
-                            } else {
-                                addSongsAndSync(playlist, songIds!!)
-                                withContext(Dispatchers.Main) { onDismiss() }
+    if (isVisible) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = onDismiss,
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                modifier =
+                    Modifier
+                        .padding(horizontal = 24.dp, vertical = 48.dp)
+                        .fillMaxWidth(),
+            ) {
+                androidx.compose.foundation.layout.Column(Modifier.padding(top = 22.dp, bottom = 16.dp)) {
+                    Text(
+                        text = stringResource(R.string.add_to_playlist),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    )
+                    androidx.compose.material3.Surface(
+                        onClick = { showCreatePlaylistDialog = true },
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                .height(48.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.add),
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp).size(20.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.create_playlist),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                    ) {
+                        items(playlists, key = { it.id }) { playlist ->
+                            val checked = playlist.id in selected
+                            PlaylistListItem(
+                                playlist = playlist,
+                                trailingContent = { SelectCircle(checked) },
+                                modifier =
+                                    Modifier
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable {
+                                            selection = if (checked) selected - playlist.id else selected + playlist.id
+                                        },
+                            )
+                        }
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                    ) {
+                        androidx.compose.material3.Surface(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.weight(1f).height(48.dp),
+                        ) {
+                            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                                Text(stringResource(R.string.cancel), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        androidx.compose.material3.Surface(
+                            onClick = {
+                                val added = playlists.filter { it.id in selected && it.id !in playlistsContainingSong }
+                                val removed = playlists.filter { it.id !in selected && it.id in playlistsContainingSong }
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    val ids = songIds ?: onGetSong()
+                                    if (added.isNotEmpty()) {
+                                        // Songs are written to the database by onGetSong before they are added.
+                                        val toAdd = onGetSong()
+                                        added.forEach { target ->
+                                            val already = database.playlistDuplicatesBatched(target.id, toAdd)
+                                            addSongsAndSync(target, toAdd.filter { it !in already })
+                                        }
+                                    }
+                                    removed.forEach { removeSongs(it, ids) }
+                                    withContext(Dispatchers.Main) { onDismiss() }
+                                }
+                            },
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            contentColor = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.weight(1f).height(48.dp),
+                        ) {
+                            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                                Text(stringResource(R.string.save), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
-                )
+                }
             }
         }
     }
@@ -326,3 +386,35 @@ internal suspend fun DatabaseDao.playlistDuplicatesBatched(
             .chunked(MAX_PLAYLIST_DUPLICATES_BATCH_SIZE)
             .flatMap { playlistDuplicates(playlistId, it) }
     }
+
+/** A round tick box: filled with a check when [checked]. */
+@Composable
+private fun SelectCircle(checked: Boolean) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val fill by animateColorAsState(if (checked) onSurface else Color.Transparent, label = "selectFill")
+    androidx.compose.foundation.layout.Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .padding(end = 8.dp)
+                .size(24.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(fill)
+                .then(
+                    if (checked) {
+                        Modifier
+                    } else {
+                        Modifier.border(2.dp, onSurface.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape)
+                    },
+                ),
+    ) {
+        if (checked) {
+            Icon(
+                painter = painterResource(R.drawable.check),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}

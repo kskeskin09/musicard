@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens
 
+import com.metrolist.music.ui.component.collapsingTitleAnchor
 import com.metrolist.music.ui.utils.albumCoverSharedElement
 import com.metrolist.music.ui.utils.AlbumCoverPreviewCache
 import com.metrolist.music.ui.component.ListPlayButton
@@ -207,7 +208,10 @@ fun AlbumScreen(
                 .background(tint),
     ) {
     TintedPageColors(tint) {
+            val albumListState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(albumListState)
             LazyColumn(
+                state = albumListState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
                 val albumWithSongs = albumWithSongs
@@ -254,7 +258,7 @@ fun AlbumScreen(
                                 textAlign = TextAlign.Center,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 32.dp),
+                                modifier = Modifier.padding(horizontal = 32.dp).collapsingTitleAnchor(titleState),
                             )
 
                             Spacer(modifier = Modifier.height(4.dp))
@@ -547,12 +551,7 @@ fun AlbumScreen(
                     if (inSelectMode) {
                         Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
                     } else {
-                        Text(
-                            text = albumWithSongs?.album?.title.orEmpty(),
-                            style = MaterialTheme.typography.titleLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        com.metrolist.music.ui.component.CollapsingTopBarTitle(albumWithSongs?.album?.title.orEmpty(), titleState)
                     }
                 },
                 navigationIcon = {

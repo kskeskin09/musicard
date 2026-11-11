@@ -774,7 +774,7 @@ private fun LibraryRow(
 private fun AutoPlaylistCover(auto: AutoPlaylist) {
     // Liked stands out: filled with the text color, heart in the background color.
     // Liked: the light tile takes on a soft red.
-    val background = if (auto.highlighted) androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.onSurface, androidx.compose.ui.graphics.Color(0xFFF0455A), 0.28f) else MaterialTheme.colorScheme.surfaceContainerHigh
+    val background = if (auto.highlighted) androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.onSurface, androidx.compose.ui.graphics.Color(0xFFF0455A), 0.14f) else MaterialTheme.colorScheme.surfaceContainerHigh
     val tint = if (auto.highlighted) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
     Box(
         contentAlignment = Alignment.Center,

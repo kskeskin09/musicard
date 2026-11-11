@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.collapsingTitleAnchor
 import com.metrolist.music.ui.component.ExpandingSearchField
 import com.metrolist.music.ui.component.ListPlayButton
 import com.metrolist.music.ui.component.FourCoverArt
@@ -258,6 +259,7 @@ fun TopPlaylistScreen(
     }
 
     val state = rememberLazyListState()
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(state)
 
     // Tinted with the color of the most played song's cover, like the other playlist pages.
     val pageBackground = MaterialTheme.colorScheme.background
@@ -291,6 +293,7 @@ fun TopPlaylistScreen(
                     } else {
                         if (!isSearching) {
                             item(key = "playlist_header") {
+                                com.metrolist.music.ui.component.ProvideCollapsingTitle(titleState) {
                                 TopPlaylistHeader(
                                     name = name,
                                     songs = songs!!,
@@ -300,6 +303,7 @@ fun TopPlaylistScreen(
                                     menuState = menuState,
                                     modifier = Modifier.animateItem()
                                 )
+                                }
                             }
                         }
 
@@ -453,8 +457,8 @@ fun TopPlaylistScreen(
     focusRequester = focusRequester,
 )
                         }
-                        // The page shows the name; the bar stays empty.
-                        else -> {}
+                        // The page shows the name; the bar shows it once it has scrolled away.
+                        else -> com.metrolist.music.ui.component.CollapsingTopBarTitle(name, titleState)
                     }
                 },
                 navigationIcon = {
@@ -571,7 +575,7 @@ private fun TopPlaylistHeader(
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 32.dp)
+            modifier = Modifier.padding(horizontal = 32.dp).collapsingTitleAnchor()
         )
 
         Spacer(modifier = Modifier.height(12.dp))

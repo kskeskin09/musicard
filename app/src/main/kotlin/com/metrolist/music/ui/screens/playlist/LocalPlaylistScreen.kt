@@ -160,6 +160,9 @@ import com.metrolist.music.ui.component.OverlayEditButton
 import com.metrolist.music.ui.component.SongListItem
 import com.metrolist.music.ui.component.SortHeader
 import com.metrolist.music.ui.component.TextFieldDialog
+import com.metrolist.music.ui.component.PlaylistEditorSheet
+import com.metrolist.music.ui.component.collapsingTitleAnchor
+import com.metrolist.music.utils.rememberPlaylistDescription
 import com.metrolist.music.ui.menu.CustomThumbnailMenu
 import com.metrolist.music.ui.menu.LocalPlaylistMenu
 import com.metrolist.music.ui.menu.SelectionSongMenu
@@ -313,31 +316,30 @@ fun LocalPlaylistScreen(
 
     if (showEditDialog) {
         playlist?.playlist?.let { playlistEntity ->
-            TextFieldDialog(
-                icon = {
-                    Icon(
-                        painter = painterResource(R.drawable.edit),
-                        contentDescription = null,
-                    )
-                },
-                title = { Text(text = stringResource(R.string.edit_playlist)) },
+            val editContext = LocalContext.current
+            val isLocalOnly = playlistEntity.browseId == null
+            PlaylistEditorSheet(
                 onDismiss = { showEditDialog = false },
-                initialTextFieldValue =
-                    TextFieldValue(
-                        playlistEntity.name,
-                        TextRange(playlistEntity.name.length),
-                    ),
-                onDone = { name ->
+                initialName = playlistEntity.name,
+                initialDescription = com.metrolist.music.utils.PlaylistDescriptions.get(editContext, playlistEntity.id).orEmpty(),
+                initialCoverUrl = playlistEntity.thumbnailUrl.takeIf { isLocalOnly },
+                isNew = false,
+                showCover = isLocalOnly,
+                onSubmit = { name, description, coverUrl, _ ->
+                    com.metrolist.music.utils.PlaylistDescriptions.set(editContext, playlistEntity.id, description)
                     database.query {
                         update(
                             playlistEntity.copy(
                                 name = name,
+                                thumbnailUrl = if (isLocalOnly) coverUrl else playlistEntity.thumbnailUrl,
                                 lastUpdateTime = LocalDateTime.now(),
                             ),
                         )
                     }
-                    viewModel.viewModelScope.launch(Dispatchers.IO) {
-                        playlistEntity.browseId?.let { YouTube.renamePlaylist(it, name) }
+                    if (name != playlistEntity.name) {
+                        viewModel.viewModelScope.launch(Dispatchers.IO) {
+                            playlistEntity.browseId?.let { YouTube.renamePlaylist(it, name) }
+                        }
                     }
                 },
             )
@@ -489,11 +491,7 @@ fun LocalPlaylistScreen(
         }
     }
 
-    val showTopBarTitle by remember {
-        derivedStateOf {
-            lazyListState.firstVisibleItemIndex > 0
-        }
-    }
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
 
     // The page is tinted with the cover's color, fading into the normal background further down.
     val pageBackground = MaterialTheme.colorScheme.background
@@ -530,6 +528,7 @@ fun LocalPlaylistScreen(
                     } else {
                         if (!isSearching) {
                             item(key = "playlist_header") {
+                                com.metrolist.music.ui.component.ProvideCollapsingTitle(titleState) {
                                 LocalPlaylistHeader(
                                     playlist = playlist,
                                     songs = songs,
@@ -541,6 +540,7 @@ fun LocalPlaylistScreen(
                                     snackbarHostState = snackbarHostState,
                                     modifier = Modifier.animateItem(),
                                 )
+                                }
                             }
                         }
 
@@ -836,8 +836,8 @@ fun LocalPlaylistScreen(
     onValueChange = { query = it },
     focusRequester = focusRequester,
 )
-                    } else if (showTopBarTitle) {
-                        Text(playlist?.playlist?.name.orEmpty())
+                    } else {
+                        com.metrolist.music.ui.component.CollapsingTopBarTitle(playlist?.playlist?.name.orEmpty(), titleState)
                     }
                 },
                 navigationIcon = {
@@ -1318,10 +1318,22 @@ fun LocalPlaylistHeader(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 32.dp),
+            modifier = Modifier.padding(horizontal = 32.dp).collapsingTitleAnchor(),
         )
 
         Spacer(modifier = Modifier.height(4.dp))
+
+        // The description, when there is one, sits between the name and who made it.
+        val description = rememberPlaylistDescription(playlist.playlist.id) ?: onlinePlaylist?.description?.takeIf { it.isNotBlank() }
+        if (description != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            ExpandableText(
+                text = description,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                collapsedMaxLines = 3,
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
 
         // Who made the playlist: the YouTube author, or your own name for playlists made here
         // (set next to the profile picture; the same name is used in Listen Together).
@@ -1360,17 +1372,6 @@ fun LocalPlaylistHeader(
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
         )
-
-        val description = onlinePlaylist?.description
-        if (!description.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-
-            ExpandableText(
-                text = description,
-                modifier = Modifier.padding(horizontal = 32.dp),
-                collapsedMaxLines = 3,
-            )
-        }
 
         Spacer(modifier = Modifier.height(24.dp))
 

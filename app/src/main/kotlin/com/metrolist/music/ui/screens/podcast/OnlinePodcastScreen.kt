@@ -1,6 +1,7 @@
 package com.metrolist.music.ui.screens.podcast
 
 import com.metrolist.music.ui.component.ExpandingSearchField
+import com.metrolist.music.ui.component.collapsingTitleAnchor
 
 
 import androidx.activity.compose.BackHandler
@@ -111,6 +112,7 @@ fun OnlinePodcastScreen(
     val libraryPodcast by viewModel.libraryPodcast.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
 
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
@@ -173,6 +175,7 @@ fun OnlinePodcastScreen(
                     if (!isSearching) {
                         item(key = "podcast_header") {
                             val context = LocalContext.current
+                            com.metrolist.music.ui.component.ProvideCollapsingTitle(titleState) {
                             PodcastHeader(
                                 podcast = podcastItem,
                                 episodeCount = episodes.size,
@@ -185,6 +188,7 @@ fun OnlinePodcastScreen(
                                     }
                                 }
                             )
+                            }
                         }
                     }
 
@@ -245,8 +249,8 @@ fun OnlinePodcastScreen(
     onValueChange = { query = it },
     focusRequester = focusRequester,
 )
-                } else if (lazyListState.firstVisibleItemIndex > 0) {
-                    Text(podcast?.title ?: "")
+                } else {
+                    com.metrolist.music.ui.component.CollapsingTopBarTitle(podcast?.title ?: "", titleState)
                 }
             },
             navigationIcon = {
@@ -319,7 +323,8 @@ private fun PodcastHeader(
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.collapsingTitleAnchor(),
         )
 
         podcast.author?.name?.let { authorName ->

@@ -10,7 +10,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -72,14 +72,13 @@ fun YouTubeBrowseScreen(
 
     val allItems = browseResult?.items?.flatMap { it.items } ?: emptyList()
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp),
+    androidx.compose.foundation.lazy.LazyColumn(
         contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
     ) {
         if (browseResult == null) {
             items(8) {
                 ShimmerHost {
-                    GridItemPlaceHolder(fillMaxWidth = true)
+                    com.metrolist.music.ui.component.shimmer.ListItemPlaceHolder()
                 }
             }
         }
@@ -88,7 +87,7 @@ fun YouTubeBrowseScreen(
             items = allItems.distinctBy { it.id },
             key = { "yt_browse_${it.id}" },
         ) { item ->
-            YouTubeGridItem(
+            com.metrolist.music.ui.component.YouTubeListItem(
                 item = item,
                 isActive =
                     when (item) {
@@ -97,8 +96,6 @@ fun YouTubeBrowseScreen(
                         else -> false
                     },
                 isPlaying = isPlaying,
-                fillMaxWidth = true,
-                coroutineScope = coroutineScope,
                 modifier =
                     Modifier
                         .combinedClickable(

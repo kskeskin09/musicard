@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.collapsingTitleAnchor
 import com.metrolist.music.ui.component.ExpandingSearchField
 import com.metrolist.music.ui.component.ListPlayButton
 import com.metrolist.music.ui.theme.pageRaisedColor
@@ -144,6 +145,7 @@ fun OnlinePlaylistScreen(
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
 
     val lazyListState = rememberLazyListState()
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
     val snackbarHostState = remember { SnackbarHostState() }
 
     var isSearching by rememberSaveable { mutableStateOf(false) }
@@ -256,6 +258,7 @@ fun OnlinePlaylistScreen(
                 playlist?.let { playlist ->
                     if (!isSearching) {
                         item(key = "playlist_header") {
+                            com.metrolist.music.ui.component.ProvideCollapsingTitle(titleState) {
                             OnlinePlaylistHeader(
                                 playlist = playlist,
                                 songs = songs,
@@ -265,6 +268,7 @@ fun OnlinePlaylistScreen(
                                 isPodcastPlaylist = isPodcastPlaylist,
                                 modifier = Modifier.animateItem(),
                             )
+                            }
                         }
                     }
 
@@ -384,8 +388,8 @@ fun OnlinePlaylistScreen(
     onValueChange = { query = it },
     focusRequester = focusRequester,
 )
-                } else if (lazyListState.firstVisibleItemIndex > 0) {
-                    Text(playlist?.title ?: "")
+                } else {
+                    com.metrolist.music.ui.component.CollapsingTopBarTitle(playlist?.title ?: "", titleState)
                 }
             },
             navigationIcon = {
@@ -521,7 +525,7 @@ private fun OnlinePlaylistHeader(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 32.dp),
+            modifier = Modifier.padding(horizontal = 32.dp).collapsingTitleAnchor(),
         )
 
         Spacer(modifier = Modifier.height(8.dp))

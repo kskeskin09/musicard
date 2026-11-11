@@ -405,7 +405,20 @@ private fun SearchBrowsePage(
     viewModel: MoodAndGenresViewModel = hiltViewModel(),
 ) {
     val navController = LocalNavController.current
-    val sections by viewModel.moodAndGenres.collectAsStateWithLifecycle()
+    val rawSections by viewModel.moodAndGenres.collectAsStateWithLifecycle()
+    // Genres come first, then moods.
+    val sections =
+        remember(rawSections) {
+            rawSections?.let { list ->
+                val genreWords = listOf("genre", "tür", "genre", "género", "gênero", "genere", "жанр")
+                val genreIndex = list.indexOfFirst { s -> genreWords.any { s.title.contains(it, ignoreCase = true) } }
+                when {
+                    genreIndex > 0 -> listOf(list[genreIndex]) + list.filterIndexed { i, _ -> i != genreIndex }
+                    genreIndex == -1 && list.size == 2 -> list.reversed()
+                    else -> list
+                }
+            }
+        }
     val bottomPadding =
         LocalPlayerAwareWindowInsets.current
             .only(WindowInsetsSides.Bottom)

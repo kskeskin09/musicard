@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.artist
 
+import com.metrolist.music.ui.component.collapsingTitleAnchor
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -177,6 +178,7 @@ fun ArtistScreen(
             -(systemBarsTopPadding + AppBarHeight).roundToPx()
         }
 
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
     val transparentAppBar by remember {
         derivedStateOf {
             lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset < 100
@@ -358,7 +360,7 @@ fun ArtistScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     fontSize = 32.sp,
-                                    modifier = Modifier.padding(bottom = 16.dp),
+                                    modifier = Modifier.padding(bottom = 16.dp).collapsingTitleAnchor(titleState),
                                 )
 
                                 // Buttons Row
@@ -1013,7 +1015,7 @@ fun ArtistScreen(
     }
 
     TopAppBar(
-        title = { if (!transparentAppBar) Text(displayArtistName.orEmpty()) },
+        title = { com.metrolist.music.ui.component.CollapsingTopBarTitle(displayArtistName.orEmpty(), titleState) },
         navigationIcon = {
             IconButton(
                 onClick = navController::navigateUp,
