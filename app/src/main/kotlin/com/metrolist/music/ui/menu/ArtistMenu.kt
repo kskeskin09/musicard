@@ -97,7 +97,7 @@ fun ArtistMenu(
                                             painter = painterResource(R.drawable.play),
                                             contentDescription = null,
                                             modifier = Modifier.size(28.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = MaterialTheme.colorScheme.onSurface
                                         )
                                     },
                                     text = stringResource(R.string.play),
@@ -128,7 +128,7 @@ fun ArtistMenu(
                                             painter = painterResource(R.drawable.shuffle),
                                             contentDescription = null,
                                             modifier = Modifier.size(28.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = MaterialTheme.colorScheme.onSurface
                                         )
                                     },
                                     text = stringResource(R.string.shuffle),
@@ -162,7 +162,7 @@ fun ArtistMenu(
                                     painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             text = if (isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin),
@@ -195,7 +195,7 @@ fun ArtistMenu(
                                         painter = painterResource(R.drawable.share),
                                         contentDescription = null,
                                         modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = MaterialTheme.colorScheme.onSurface
                                     )
                                 },
                                 text = stringResource(R.string.share),

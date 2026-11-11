@@ -517,6 +517,21 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) { getAlbumsForYou(hideExplicit) }
 
+        // "My Top" replaces the old Weekly / Monthly Most playlists; remove them if they exist.
+        viewModelScope.launch(Dispatchers.IO) {
+            listOf(
+                com.metrolist.music.db.entities.PlaylistEntity.WEEKLY_MOST_PLAYLIST_ID,
+                com.metrolist.music.db.entities.PlaylistEntity.MONTHLY_MOST_PLAYLIST_ID,
+            ).forEach { id ->
+                if (database.playlist(id).first() != null) {
+                    database.withTransaction {
+                        clearPlaylist(id)
+                        delete(com.metrolist.music.db.entities.PlaylistEntity(id = id, name = ""))
+                    }
+                }
+            }
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             YouTube.explore().onSuccess { page ->
                 explorePage.value = page.copy(

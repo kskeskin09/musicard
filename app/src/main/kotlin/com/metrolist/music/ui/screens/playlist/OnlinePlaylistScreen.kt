@@ -80,6 +80,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.music.ui.component.ShuffleModeButton
+import com.metrolist.music.ui.component.shuffleAwareStartIndex
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.LocalDatabase
@@ -653,34 +655,8 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // Shuffle Button: plays the songs in a random order.
-            Surface(
-                onClick = {
-                    if (!isListenTogetherGuest && songs.isNotEmpty()) {
-                        playerConnection.playQueue(
-                            ListQueue(
-                                title = playlist.title,
-                                items = songs.shuffled().map { it.toMediaItem() },
-                            ),
-                        )
-                    }
-                },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.shuffle),
-                        contentDescription = stringResource(R.string.shuffle),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
+            // Shuffle on / off (the same switch as in Up next; it does not start playback).
+            ShuffleModeButton()
 
             Spacer(Modifier.weight(1f))
 

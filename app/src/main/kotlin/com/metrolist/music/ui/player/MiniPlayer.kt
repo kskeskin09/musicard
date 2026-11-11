@@ -14,6 +14,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -1084,6 +1085,7 @@ private fun SubscribeButton(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun FavoriteButton(
     songId: String,
@@ -1103,7 +1105,21 @@ private fun FavoriteButton(
     val scale = remember { androidx.compose.animation.core.Animatable(1f) }
     val rotation = remember { androidx.compose.animation.core.Animatable(0f) }
     var tapped by remember { mutableStateOf(false) }
+    var showAddToPlaylist by remember { mutableStateOf(false) }
+    val unlikeGuard = com.metrolist.music.ui.component.rememberUnlikeGuard(isLiked)
+    val crackShake = com.metrolist.music.ui.component.rememberCrackShake(unlikeGuard)
+    com.metrolist.music.ui.menu.AddToPlaylistDialog(
+        isVisible = showAddToPlaylist,
+        onGetSong = { listOf(songId) },
+        onGetSongIds = { listOf(songId) },
+        onDismiss = { showAddToPlaylist = false },
+    )
     LaunchedEffect(isLiked) {
+        if (!isLiked && tapped) {
+            // The like is removed: the heart pulls back in and settles.
+            scale.animateTo(0.7f, androidx.compose.animation.core.tween(120))
+            scale.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 400f))
+        }
         if (isLiked && tapped) {
             launch {
                 scale.animateTo(1.2f, androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing))
@@ -1128,18 +1144,28 @@ private fun FavoriteButton(
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .clickable(
+                .combinedClickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null,
+                    onLongClick = {
+                        // Holding the heart opens "Add to playlist".
+                        view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                        showAddToPlaylist = true
+                    },
                 ) {
-                    tapped = true
-                    view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                    playerConnection.service.toggleLike()
+                    if (unlikeGuard.onTap(isLiked)) {
+                        tapped = true
+                        view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        playerConnection.service.toggleLike()
+                    } else {
+                        // Re-Like Protection: the first tap only cracks the heart.
+                        view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    }
                 },
     ) {
         // Liked songs show a filled heart in the text color, like in the player.
         Icon(
-            painter = painterResource(if (isLiked) R.drawable.favorite else R.drawable.favorite_border),
+            painter = painterResource(unlikeGuard.icon(isLiked)),
             contentDescription = null,
             tint = if (isLiked) onSurfaceColor else onSurfaceColor.copy(alpha = 0.8f),
             modifier =
@@ -1148,7 +1174,7 @@ private fun FavoriteButton(
                     .graphicsLayer {
                         scaleX = scale.value
                         scaleY = scale.value
-                        rotationZ = rotation.value
+                        rotationZ = rotation.value + crackShake.value
                     },
         )
     }

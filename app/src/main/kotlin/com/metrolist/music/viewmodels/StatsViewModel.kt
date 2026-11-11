@@ -281,7 +281,9 @@ constructor(
                 val nowEpochMillis = System.currentTimeMillis()
                 val preferences = context.dataStore.data.first()
                 val hideVideoSongs = preferences[HideVideoSongsKey] ?: false
-                val shouldShowMostStatsPlaylists = preferences[ShowMostStatsPlaylistsKey] ?: true
+                // Musicard: "My Top" (with its own period choice) replaces the Weekly / Monthly Most
+                // playlists, so they are always removed.
+                val shouldShowMostStatsPlaylists = false && (preferences[ShowMostStatsPlaylistsKey] ?: true)
 
                 if (!shouldShowMostStatsPlaylists) {
                     clearMostPlaylists()

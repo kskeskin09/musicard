@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.ShuffleModeButton
+import com.metrolist.music.ui.component.shuffleAwareStartIndex
 import com.metrolist.music.utils.markPlaylistPlayed
 
 import com.metrolist.music.constants.ListenTogetherUsernameKey
@@ -992,7 +994,6 @@ fun LocalPlaylistHeader(
 
     val liked = playlist.playlist.bookmarkedAt != null
     val editable: Boolean = playlist.playlist.isEditable
-    var shuffleOn by rememberSaveable { mutableStateOf(false) }
 
     val overrideThumbnail = remember { mutableStateOf<String?>(null) }
     var isCustomThumbnail: Boolean =
@@ -1412,7 +1413,8 @@ fun LocalPlaylistHeader(
                     playerConnection.playQueue(
                         ListQueue(
                             title = playlist.playlist.name,
-                            items = (if (shuffleOn) songs.shuffled() else songs).map { it.song.toMediaItem() },
+                            items = songs.map { it.song.toMediaItem() },
+                            startIndex = shuffleAwareStartIndex(playerConnection.player.shuffleModeEnabled, songs.size),
                         ),
                     )
                 },
@@ -1433,30 +1435,8 @@ fun LocalPlaylistHeader(
                 }
             }
 
-            // Shuffle on / off for the play button.
-            Surface(
-                onClick = { shuffleOn = !shuffleOn },
-                shape = CircleShape,
-                color =
-                    if (shuffleOn) {
-                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
-                    } else {
-                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
-                    },
-                modifier = Modifier.size(48.dp),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.shuffle),
-                        contentDescription = stringResource(R.string.shuffle),
-                        tint = if (shuffleOn) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
+            // Shuffle on / off (the same switch as in Up next; it does not start playback).
+            ShuffleModeButton()
 
             Spacer(Modifier.weight(1f))
 

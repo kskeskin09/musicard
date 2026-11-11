@@ -649,6 +649,10 @@ fun OriginalLyrics(
                 if (!isAppMinimized) {
                     initialScrollDone = true
                 }
+            } else if (currentLineIndex == -1 && previousLineIndex > 0) {
+                // Went back before the first line (e.g. to the start of the song): go to the top
+                // right away instead of waiting for the first line to begin.
+                performSmoothPageScroll(0, 500)
             } else if (currentLineIndex != -1) {
                 deferredCurrentLineIndex = currentLineIndex
                 if (isSeeking) {

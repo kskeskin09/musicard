@@ -10,6 +10,23 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -49,6 +66,7 @@ fun SettingsScreen(
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     val hasAndroidAuto = remember {
         try {
             context.packageManager.getPackageInfo(
@@ -73,6 +91,40 @@ fun SettingsScreen(
                 )
             )
         )
+
+        // Search across all settings.
+        SettingsSearchField(query = searchQuery, onQueryChange = { searchQuery = it })
+        Spacer(Modifier.height(12.dp))
+
+        if (searchQuery.isNotBlank()) {
+            val results =
+                remember(searchQuery) {
+                    val q = searchQuery.trim()
+                    SettingsSearchIndex.filter { entry ->
+                        context.getString(entry.title).contains(q, ignoreCase = true) ||
+                            context.getString(entry.page).contains(q, ignoreCase = true)
+                    }.distinctBy { it.title to it.route }
+                }
+            if (results.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.no_results_found),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 24.dp),
+                )
+            } else {
+                Material3SettingsGroup(
+                    items =
+                        results.map { entry ->
+                            Material3SettingsItem(
+                                title = { Text(stringResource(entry.title)) },
+                                description = { Text(stringResource(entry.page)) },
+                                onClick = { navController.navigate(entry.route) },
+                            )
+                        },
+                )
+            }
+        } else {
 
         // User Interface Section
         Material3SettingsGroup(
@@ -266,6 +318,8 @@ fun SettingsScreen(
             ReleaseNotesCard()
         }
 
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 
@@ -283,4 +337,58 @@ fun SettingsScreen(
             }
         }
     )
+}
+
+@Composable
+private fun SettingsSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 16.dp),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.search),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            if (query.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.search_settings),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (query.isNotEmpty()) {
+            Icon(
+                painter = painterResource(R.drawable.close),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .clickable { onQueryChange("") },
+            )
+        }
+    }
 }

@@ -401,7 +401,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.edit),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.edit),
@@ -415,7 +415,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.cached),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.refetch),
@@ -430,7 +430,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.search),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.search),
@@ -444,7 +444,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.content_copy),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.copy),

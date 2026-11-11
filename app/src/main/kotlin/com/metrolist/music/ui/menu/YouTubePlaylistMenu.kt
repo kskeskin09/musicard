@@ -417,7 +417,7 @@ fun YouTubePlaylistMenu(
                                                 painter = painterResource(R.drawable.play),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                tint = MaterialTheme.colorScheme.onSurface,
                                             )
                                         },
                                         text = stringResource(R.string.play),
@@ -436,7 +436,7 @@ fun YouTubePlaylistMenu(
                                                 painter = painterResource(R.drawable.shuffle),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                tint = MaterialTheme.colorScheme.onSurface,
                                             )
                                         },
                                         text = stringResource(R.string.shuffle),
@@ -455,7 +455,7 @@ fun YouTubePlaylistMenu(
                                                 painter = painterResource(R.drawable.radio),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                tint = MaterialTheme.colorScheme.onSurface,
                                             )
                                         },
                                         text = stringResource(R.string.start_radio),

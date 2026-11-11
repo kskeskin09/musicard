@@ -5,6 +5,13 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import androidx.compose.foundation.background
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
+import com.metrolist.music.ui.theme.albumBackgroundColor
+import com.metrolist.music.ui.theme.rememberCoverColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -75,6 +82,8 @@ import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.metrolist.music.ui.component.ShuffleModeButton
+import com.metrolist.music.ui.component.shuffleAwareStartIndex
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
@@ -242,8 +251,28 @@ fun TopPlaylistScreen(
 
     val state = rememberLazyListState()
 
+    // Tinted with the color of the most played song's cover, like the other playlist pages.
+    val pageBackground = MaterialTheme.colorScheme.background
+    val darkTheme = pageBackground.luminance() < 0.5f
+    val coverColor = rememberCoverColor(songs?.firstOrNull()?.thumbnailUrl)
+    val tint by animateColorAsState(
+        targetValue =
+            coverColor?.let {
+                if (darkTheme) {
+                    lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
+                } else {
+                    lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
+                }
+            } ?: pageBackground,
+        animationSpec = tween(600),
+        label = "topPlaylistTint",
+    )
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(tint),
     ) {
         LazyColumn(
             state = state,
@@ -544,22 +573,36 @@ private fun TopPlaylistHeader(
         Box(
             modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)
         ) {
+            // The covers of the four most played songs of the chosen period, 2×2.
+            val covers = songs.take(4).map { it.thumbnailUrl }
             androidx.compose.material3.Surface(
-                modifier = Modifier
-                    .size(240.dp)
-                    .shadow(
-                        elevation = 24.dp,
-                        shape = RoundedCornerShape(3.dp),
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                    ),
-                shape = RoundedCornerShape(3.dp)
+                modifier = Modifier.size(240.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
-                AsyncImage(
-                    model = songs[0].thumbnailUrl,
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (covers.size >= 4) {
+                    Column(Modifier.fillMaxSize()) {
+                        listOf(0, 2).forEach { row ->
+                            Row(Modifier.weight(1f)) {
+                                listOf(row, row + 1).forEach { index ->
+                                    AsyncImage(
+                                        model = covers[index],
+                                        contentDescription = null,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier.weight(1f).fillMaxSize(),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    AsyncImage(
+                        model = covers.firstOrNull(),
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
 
@@ -606,6 +649,7 @@ private fun TopPlaylistHeader(
                         ListQueue(
                             title = name,
                             items = songs.map { it.toMediaItem() },
+                            startIndex = shuffleAwareStartIndex(playerConnection.player.shuffleModeEnabled, songs.size),
                         ),
                     )
                 },
@@ -626,31 +670,8 @@ private fun TopPlaylistHeader(
                 }
             }
 
-            // Shuffle Button - Smaller secondary button
-            androidx.compose.material3.Surface(
-                onClick = {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = name,
-                            items = songs.shuffled().map { it.toMediaItem() },
-                        ),
-                    )
-                },
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.shuffle),
-                        contentDescription = stringResource(R.string.shuffle),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+            // Shuffle on / off (the same switch as in Up next; it does not start playback).
+            ShuffleModeButton()
 
             Spacer(Modifier.weight(1f))
 

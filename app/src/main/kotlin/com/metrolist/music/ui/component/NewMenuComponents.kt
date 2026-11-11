@@ -43,8 +43,8 @@ private fun NewActionButton(
     onClick: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
-    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     val animatedBackground by animateColorAsState(
         targetValue = if (enabled) backgroundColor else backgroundColor.copy(alpha = 0.5f),
@@ -75,9 +75,9 @@ private fun NewActionButton(
             CardDefaults.cardColors(
                 containerColor = animatedBackground,
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         elevation =
-            CardDefaults.cardElevation(),
+            CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier =
@@ -138,7 +138,7 @@ fun NewActionGrid(
                             ) {
                                 action.backgroundColor
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant
+                                MaterialTheme.colorScheme.surfaceContainer
                             },
                         contentColor =
                             if (action.contentColor !=
@@ -146,7 +146,7 @@ fun NewActionGrid(
                             ) {
                                 action.contentColor
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MaterialTheme.colorScheme.onSurface
                             },
                     )
                 }

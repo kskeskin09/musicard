@@ -205,6 +205,8 @@ import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.listentogether.RoomRole
 import com.metrolist.music.models.MediaMetadata
+import com.metrolist.music.ui.component.rememberUnlikeGuard
+import com.metrolist.music.ui.component.rememberCrackShake
 import com.metrolist.music.ui.component.BottomSheet
 import com.metrolist.music.ui.component.BottomSheetState
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -688,8 +690,10 @@ fun BottomSheetPlayer(
             onDismissRequest = { showSleepTimerDialog = false },
             icon = {
                 Icon(
-                    painter = painterResource(R.drawable.bedtime),
+                    painter = painterResource(R.drawable.player_sleep),
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(28.dp),
                 )
             },
             title = { Text(stringResource(R.string.sleep_timer)) },
@@ -2299,8 +2303,29 @@ fun BottomSheetPlayer(
                         )
 
                         // Pushes art, title and progress bar down; the 16dp is taken back from the
-                        // gap above the play controls, so those stay where they were.
-                        Spacer(Modifier.height(16.dp))
+                        // gap above the play controls, so those stay where they were. It also holds
+                        // "Playing from <list>" when the song was started from a list.
+                        val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
+                        val playingFrom = queueTitle?.takeIf { it.isNotBlank() && it != mediaMetadata?.title }
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier =
+                                Modifier
+                                    .height(16.dp)
+                                    .padding(horizontal = PlayerHorizontalPadding)
+                                    .graphicsLayer { alpha = (1f - cardExpand * 3f).coerceIn(0f, 1f) },
+                        ) {
+                            if (playingFrom != null) {
+                                Text(
+                                    text = stringResource(R.string.playing_from) + " · " + playingFrom,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextBackgroundColor.copy(alpha = 0.75f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
 
                         run {
                             // Remember lambdas to prevent unnecessary recomposition
@@ -2848,7 +2873,14 @@ private fun PlayerLikeButton(
     val rotation = remember { Animatable(0f) }
     // Only a tap animates; a liked song that merely comes on screen shows the filled heart as is.
     var tapped by remember { mutableStateOf(false) }
+    val unlikeGuard = rememberUnlikeGuard(liked)
+    val crackShake = rememberCrackShake(unlikeGuard)
     LaunchedEffect(liked) {
+        if (!liked && tapped) {
+            // The like is removed: the heart pulls back in and settles.
+            scale.animateTo(0.7f, tween(120, easing = FastOutSlowInEasing))
+            scale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
+        }
         if (liked && tapped) {
             launch {
                 scale.animateTo(1.2f, tween(160, easing = FastOutSlowInEasing))
@@ -2868,13 +2900,18 @@ private fun PlayerLikeButton(
         tapped = false
     }
     PlayerCircleButton(
-        icon = if (liked) R.drawable.favorite else R.drawable.favorite_border,
+        icon = unlikeGuard.icon(liked),
         contentDescription = stringResource(R.string.action_like),
         contentColor = contentColor,
         onClick = {
-            tapped = true
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-            onClick()
+            if (unlikeGuard.onTap(liked)) {
+                tapped = true
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                onClick()
+            } else {
+                // First tap on a liked song: the heart cracks and shakes, the like stays.
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            }
         },
         onLongClick = onLongClick,
         modifier = modifier,
@@ -2882,7 +2919,7 @@ private fun PlayerLikeButton(
             Modifier.graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
-                rotationZ = rotation.value
+                rotationZ = rotation.value + crackShake.value
             },
     )
 }

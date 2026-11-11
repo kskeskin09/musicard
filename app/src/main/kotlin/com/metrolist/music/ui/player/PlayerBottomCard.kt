@@ -37,6 +37,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.wrapContentWidth
+import com.metrolist.music.ui.component.PlayingIndicatorBox
 import com.metrolist.music.ui.component.InterludeDots
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -454,17 +455,20 @@ private fun UpNextList(
     val playerConnection = LocalPlayerConnection.current ?: return
     val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
     val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
 
-    val upcoming =
+    // The last few played songs and the current one sit above the next song; the list opens
+    // with the next song at the top, and scrolling up shows the ones before it.
+    val hasCurrent = currentWindowIndex in queueWindows.indices
+    val historyStart = if (hasCurrent) (currentWindowIndex - UpNextHistoryCount).coerceAtLeast(0) else 0
+    val shown =
         remember(queueWindows, currentWindowIndex) {
-            if (currentWindowIndex in queueWindows.indices) {
-                queueWindows.subList(currentWindowIndex + 1, queueWindows.size)
-            } else {
-                queueWindows
-            }
+            if (hasCurrent) queueWindows.subList(historyStart, queueWindows.size) else queueWindows
         }
+    // Index (in [shown]) of the next song: everything above it is history plus the current song.
+    val nextIndex = if (hasCurrent) currentWindowIndex - historyStart + 1 else 0
 
-    if (upcoming.isEmpty()) {
+    if (shown.isEmpty()) {
         Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -481,9 +485,19 @@ private fun UpNextList(
         return
     }
 
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = nextIndex.coerceAtMost(shown.lastIndex))
+    // When the song changes, the new next song slides back to the top.
+    val appliedCurrent = remember { intArrayOf(currentWindowIndex) }
+    LaunchedEffect(currentWindowIndex, shown.size) {
+        if (appliedCurrent[0] == currentWindowIndex) return@LaunchedEffect
+        appliedCurrent[0] = currentWindowIndex
+        listState.animateScrollToItem(nextIndex.coerceIn(0, shown.lastIndex))
+    }
+
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val fraction = expandFraction().coerceIn(0f, 1f)
     LazyColumn(
+        state = listState,
         // Scrollable only once the card is fully opened; in the small card it just shows what's next.
         userScrollEnabled = fraction >= 1f,
         contentPadding =
@@ -497,14 +511,18 @@ private fun UpNextList(
         modifier = Modifier.fillMaxSize(),
     ) {
         itemsIndexed(
-            items = upcoming,
-            key = { index, window -> "${window.uid}_$index" },
-        ) { _, window ->
+            items = shown,
+            key = { index, window -> "${window.uid}_${historyStart + index}" },
+        ) { index, window ->
             val metadata = window.mediaItem.metadata ?: return@itemsIndexed
+            val isCurrent = hasCurrent && index == nextIndex - 1
             UpNextRow(
                 metadata = metadata,
                 contentColor = contentColor,
-                enabled = !isListenTogetherGuest,
+                enabled = !isListenTogetherGuest && !isCurrent,
+                isCurrent = isCurrent,
+                isPlaying = isPlaying,
+                played = hasCurrent && index < nextIndex - 1,
                 onClick = {
                     val castHandler = runCatching { playerConnection.service.castConnectionHandler }.getOrNull()
                     if (castHandler != null && castHandler.isCasting.value) {
@@ -520,12 +538,17 @@ private fun UpNextList(
     }
 }
 
+private const val UpNextHistoryCount = 5
+
 @Composable
 private fun UpNextRow(
     metadata: MediaMetadata,
     contentColor: Color,
     enabled: Boolean,
     onClick: () -> Unit,
+    isCurrent: Boolean = false,
+    isPlaying: Boolean = false,
+    played: Boolean = false,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -533,18 +556,37 @@ private fun UpNextRow(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
+                .then(if (isCurrent) Modifier.background(contentColor.copy(alpha = 0.08f)) else Modifier)
                 .clickable(enabled = enabled, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .alpha(if (played) 0.6f else 1f),
     ) {
-        AsyncImage(
-            model = metadata.thumbnailUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+        Box(
+            contentAlignment = Alignment.Center,
             modifier =
                 Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(8.dp)),
-        )
+        ) {
+            AsyncImage(
+                model = metadata.thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (isCurrent) {
+                // The same three moving bars as everywhere else a song is playing.
+                PlayingIndicatorBox(
+                    isActive = true,
+                    playWhenReady = isPlaying,
+                    color = Color.White,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                )
+            }
+        }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -622,9 +664,15 @@ fun CompactLyrics(
         LaunchedEffect(lines, isPlaying, lyricsOffset) {
             while (isActive) {
                 position = positionProvider() + lyricsOffset
-                if (!isPlaying) break
-                // Fast updates only while something moves smoothly (word sweep or the dots).
-                delay(if (hasWordTimings || activeGap != null) 32L else 150L)
+                // Fast updates only while something moves smoothly (word sweep or the dots); while
+                // paused it still notices a seek (for example back to the start).
+                delay(
+                    when {
+                        !isPlaying -> 250L
+                        hasWordTimings || activeGap != null -> 32L
+                        else -> 150L
+                    },
+                )
             }
         }
     }
@@ -638,6 +686,10 @@ fun CompactLyrics(
             val gap = activeGap
             if (gap != null) {
                 cardItems.indexOfFirst { it is CompactItem.Dots && it.gap == gap }
+            } else if (currentIndex < 0) {
+                // Before the first line (for example right after going back to the start): the
+                // top of the lyrics, without waiting for the first line to begin.
+                if (cardItems.isEmpty()) -1 else 0
             } else {
                 cardItems.indexOfFirst { it is CompactItem.Line && it.index == currentIndex }
             }

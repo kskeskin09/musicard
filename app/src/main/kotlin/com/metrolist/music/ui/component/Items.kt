@@ -655,7 +655,7 @@ fun ArtistListItem(
             Icon(
                 painter = painterResource(R.drawable.favorite),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
+                tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier
                     .size(18.dp)
                     .padding(end = 2.dp),
@@ -1967,7 +1967,7 @@ object Icon {
         Icon(
             painter = painterResource(R.drawable.favorite),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
+            tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier
                 .size(18.dp)
                 .padding(end = 2.dp)

@@ -19,6 +19,13 @@ import android.os.IBinder
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import kotlin.math.roundToInt
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -873,6 +880,26 @@ class MainActivity : FragmentActivity() {
                 val activePlayerConnection = if (playerReady) playerConnection else null
 
                 var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
+                // The main tabs' header scrolls away with the page: first the page name, then the
+                // search bar; scrolling back brings it back the same way.
+                val headerMaxPx = with(density) { TopLevelHeaderHeight.toPx() }
+                var headerCollapsePx by remember { mutableFloatStateOf(0f) }
+                val headerCollapseConnection =
+                    remember(headerMaxPx) {
+                        object : NestedScrollConnection {
+                            override fun onPostScroll(
+                                consumed: Offset,
+                                available: Offset,
+                                source: NestedScrollSource,
+                            ): Offset {
+                                if (consumed.y != 0f) {
+                                    headerCollapsePx = (headerCollapsePx - consumed.y).coerceIn(0f, headerMaxPx)
+                                }
+                                return Offset.Zero
+                            }
+                        }
+                    }
+                LaunchedEffect(currentRoute) { headerCollapsePx = 0f }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -1118,6 +1145,16 @@ class MainActivity : FragmentActivity() {
                                         Modifier
                                             .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background)
                                             .windowInsetsPadding(WindowInsets.statusBars)
+                                            .clipToBounds()
+                                            .layout { measurable, constraints ->
+                                                // Shorter by how far the page has scrolled, with the
+                                                // content moved up so its top part goes first.
+                                                val placeable = measurable.measure(constraints)
+                                                val cut = headerCollapsePx.roundToInt().coerceAtMost(placeable.height)
+                                                layout(placeable.width, placeable.height - cut) {
+                                                    placeable.place(0, -cut)
+                                                }
+                                            }
                                             .windowInsetsPadding(
                                                 if (showRail) {
                                                     WindowInsets(left = NavigationBarHeight)
@@ -1318,6 +1355,7 @@ class MainActivity : FragmentActivity() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
+                                .nestedScroll(headerCollapseConnection)
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
                         Row(Modifier.fillMaxSize()) {

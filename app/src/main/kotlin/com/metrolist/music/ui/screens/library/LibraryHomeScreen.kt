@@ -350,7 +350,8 @@ fun LibraryHomeScreen(
                 items(autoPlaylists, key = { it.key }) { auto ->
                     LibraryRow(
                         title = auto.title,
-                        subtitle = stringResource(R.string.library_kind_playlist),
+                        // The app's own lists: just their name, no "Playlist" under it.
+                        subtitle = "",
                         cover = { AutoPlaylistCover(auto) },
                         onClick = { navController.navigate(auto.route) },
                         modifier = Modifier.animateItem(),
@@ -694,8 +695,8 @@ private fun LibraryRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (subtitle.isNotEmpty() || pinned) Spacer(Modifier.height(2.dp))
+                if (subtitle.isNotEmpty() || pinned) Row(verticalAlignment = Alignment.CenterVertically) {
                     if (pinned) {
                         Icon(
                             painter = painterResource(R.drawable.ic_push_pin),

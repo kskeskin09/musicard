@@ -42,6 +42,7 @@ import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.PlaylistSortType
 import com.metrolist.music.db.DatabaseDao
 import com.metrolist.music.db.entities.Playlist
+import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.CreatePlaylistDialog
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.ListDialog
@@ -103,7 +104,15 @@ fun AddToPlaylistDialog(
         AddToPlaylistSortDescendingKey,
         false
     )
-    val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle()
+    val allPlaylists by viewModel.allPlaylists.collectAsStateWithLifecycle()
+    // The app's own lists (top, weekly / monthly most) can't take songs, so they aren't offered.
+    val playlists =
+        remember(allPlaylists) {
+            allPlaylists.filter {
+                it.id != com.metrolist.music.db.entities.PlaylistEntity.WEEKLY_MOST_PLAYLIST_ID &&
+                    it.id != com.metrolist.music.db.entities.PlaylistEntity.MONTHLY_MOST_PLAYLIST_ID
+            }
+        }
     val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
     val isLoggedIn = remember(innerTubeCookie) {
         "SAPISID" in parseCookieString(innerTubeCookie)
@@ -181,8 +190,8 @@ fun AddToPlaylistDialog(
                     shape = RoundedCornerShape(50),
                     interactionSource = interactionSource,
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = MaterialTheme.colorScheme.onSurface,
+                        contentColor = MaterialTheme.colorScheme.surface,
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -213,53 +222,35 @@ fun AddToPlaylistDialog(
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 4.dp),
                     ) {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            PlaylistSortType.entries.forEach { type ->
-                                val selected = sortType == type
-                                FilterChip(
-                                    selected = selected,
-                                    onClick = { onSortTypeChange(type) },
-                                    shape = RoundedCornerShape(50),
-                                    border = FilterChipDefaults.filterChipBorder(
-                                        enabled = true,
-                                        selected = selected,
-                                        borderWidth = 0.dp,
-                                        selectedBorderWidth = 0.dp,
-                                    ),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    ),
-                                    label = {
-                                        Text(
-                                            text = stringResource(when (type) {
-                                                PlaylistSortType.CREATE_DATE  -> R.string.sort_by_create_date
-                                                PlaylistSortType.NAME         -> R.string.sort_by_name
-                                                PlaylistSortType.SONG_COUNT   -> R.string.sort_by_song_count
+                        // The same pill as the other filters in the app.
+                        ChipsRow(
+                            chips =
+                                PlaylistSortType.entries.map { type ->
+                                    type to
+                                        stringResource(
+                                            when (type) {
+                                                PlaylistSortType.CREATE_DATE -> R.string.sort_by_create_date
+                                                PlaylistSortType.NAME -> R.string.sort_by_name
+                                                PlaylistSortType.SONG_COUNT -> R.string.sort_by_song_count
                                                 PlaylistSortType.LAST_UPDATED -> R.string.sort_by_last_updated
-                                            }),
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                            },
                                         )
-                                    }
-                                )
-                            }
-                        }
+                                },
+                            currentValue = sortType,
+                            onValueUpdate = onSortTypeChange,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.weight(1f).padding(start = 0.dp),
+                        )
 
                         val arrowBg by animateColorAsState(
-                            targetValue = if (sortDescending) MaterialTheme.colorScheme.tertiaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant,
+                            targetValue = if (sortDescending) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.surfaceContainerHighest,
                             animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                             label = "arrowBg"
                         )
                         val arrowFg by animateColorAsState(
-                            targetValue = if (sortDescending) MaterialTheme.colorScheme.onTertiaryContainer
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            targetValue = if (sortDescending) MaterialTheme.colorScheme.surface
+                            else MaterialTheme.colorScheme.onSurface,
                             animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                             label = "arrowFg"
                         )
@@ -290,7 +281,7 @@ fun AddToPlaylistDialog(
                 val containsSong = playlist.id in playlistsContainingSong
                 val rowBg by animateColorAsState(
                     targetValue = if (containsSong)
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                     else Color.Transparent,
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                     label = "playlistBg"

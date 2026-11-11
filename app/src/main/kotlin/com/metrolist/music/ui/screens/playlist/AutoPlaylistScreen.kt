@@ -91,6 +91,8 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.innertube.YouTube
+import com.metrolist.music.ui.component.ShuffleModeButton
+import com.metrolist.music.ui.component.shuffleAwareStartIndex
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
@@ -923,6 +925,7 @@ private fun AutoPlaylistHeader(
                         ListQueue(
                             title = name,
                             items = songs.map { it.toMediaItem() },
+                            startIndex = shuffleAwareStartIndex(playerConnection.player.shuffleModeEnabled, songs.size),
                         ),
                     )
                 },
@@ -943,31 +946,8 @@ private fun AutoPlaylistHeader(
                 }
             }
 
-            // Shuffle Button - Smaller secondary button
-            androidx.compose.material3.Surface(
-                onClick = {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = name,
-                            items = songs.shuffled().map { it.toMediaItem() },
-                        ),
-                    )
-                },
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.shuffle),
-                        contentDescription = stringResource(R.string.shuffle),
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
+            // Shuffle on / off (the same switch as in Up next; it does not start playback).
+            ShuffleModeButton()
 
             Spacer(Modifier.weight(1f))
 
