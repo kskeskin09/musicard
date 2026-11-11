@@ -2296,7 +2296,7 @@ fun BottomSheetPlayer(
                             modifier =
                                 Modifier
                                     .graphicsLayer { alpha = (1f - cardExpand * 3f).coerceIn(0f, 1f) }
-                                    .padding(vertical = 12.dp)
+                                    .padding(top = 12.dp)
                                     .size(width = 40.dp, height = 4.dp)
                                     .clip(RoundedCornerShape(2.dp))
                                     .background(TextBackgroundColor.copy(alpha = 0.35f)),
@@ -2305,18 +2305,29 @@ fun BottomSheetPlayer(
                         // Pushes art, title and progress bar down; the 16dp is taken back from the
                         // gap above the play controls, so those stay where they were. It also holds
                         // "Playing from <list>" when the song was started from a list.
+                        // Sits halfway between the handle and the cover; tapping it opens the list.
                         val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
-                        val playingFrom = queueTitle?.takeIf { it.isNotBlank() && it != mediaMetadata?.title }
+                        val sourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
+                        val playingFrom = queueTitle?.takeIf { it.isNotBlank() && sourceRoute != null }
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier =
                                 Modifier
-                                    .height(16.dp)
+                                    .height(28.dp)
                                     .padding(horizontal = PlayerHorizontalPadding)
                                     .graphicsLayer { alpha = (1f - cardExpand * 3f).coerceIn(0f, 1f) },
                         ) {
                             if (playingFrom != null) {
                                 Text(
+                                    modifier =
+                                        Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .clickable {
+                                                sourceRoute?.let { route ->
+                                                    state.collapseSoft()
+                                                    navController.navigate(route)
+                                                }
+                                            }.padding(horizontal = 10.dp, vertical = 2.dp),
                                     text = stringResource(R.string.playing_from) + " · " + playingFrom,
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,

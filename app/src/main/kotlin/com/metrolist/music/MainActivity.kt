@@ -754,6 +754,19 @@ class MainActivity : FragmentActivity() {
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
+                // Tell the player which page is open (with its arguments), so a queue started
+                // there remembers where it came from ("Playing from").
+                LaunchedEffect(navBackStackEntry, playerConnection) {
+                    val entry = navBackStackEntry ?: return@LaunchedEffect
+                    val pattern = entry.destination.route
+                    playerConnection?.currentScreenRoute =
+                        pattern?.let {
+                            Regex("""\{(\w+)\}""").replace(it) { match ->
+                                @Suppress("DEPRECATION")
+                                entry.arguments?.get(match.groupValues[1])?.toString().orEmpty()
+                            }
+                        }
+                }
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
                 val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)

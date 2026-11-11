@@ -235,7 +235,7 @@ fun AlbumScreen(
                         modifier = Modifier.padding(horizontal = 32.dp),
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     // Artist Names - Below the album name
                     ClickableArtistText(
@@ -249,43 +249,18 @@ fun AlbumScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    // Metadata - Year first, then song count • duration
+                    // Year · song count · length
                     val totalDuration = albumWithSongs.songs.sumOf { it.song.duration }
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        // Year
-                        if (albumWithSongs.album.year != null) {
-                            Text(
-                                text = albumWithSongs.album.year.toString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                            )
-                        }
-
-                        // Song Count • Duration
-                        Text(
-                            text =
-                                buildString {
-                                    append(
-                                        pluralStringResource(
-                                            R.plurals.n_song,
-                                            albumWithSongs.songs.size,
-                                            albumWithSongs.songs.size,
-                                        ),
-                                    )
-                                    if (totalDuration > 0) {
-                                        append(" ")
-                                        append(makeTimeString(totalDuration * 1000L))
-                                    }
-                                },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                        )
-                    }
+                    val nSongs = pluralStringResource(R.plurals.n_song, albumWithSongs.songs.size, albumWithSongs.songs.size)
+                    val durationText = if (totalDuration > 0) makeTimeString(totalDuration * 1000L) else null
+                    Text(
+                        text = listOfNotNull(albumWithSongs.album.year?.toString(), nSongs, durationText).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -359,7 +334,7 @@ fun AlbumScreen(
                                     contentDescription = null,
                                     tint =
                                         if (albumWithSongs.album.bookmarkedAt != null) {
-                                            MaterialTheme.colorScheme.error
+                                            MaterialTheme.colorScheme.onBackground
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
                                         },

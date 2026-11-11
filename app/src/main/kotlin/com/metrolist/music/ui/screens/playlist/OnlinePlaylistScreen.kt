@@ -714,7 +714,7 @@ private fun OnlinePlaylistHeader(
                         contentDescription = null,
                         tint =
                             if (dbPlaylist?.playlist?.bookmarkedAt != null) {
-                                MaterialTheme.colorScheme.error
+                                MaterialTheme.colorScheme.onBackground
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
