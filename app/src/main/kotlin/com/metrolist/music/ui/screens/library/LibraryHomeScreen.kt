@@ -564,7 +564,7 @@ private fun LibraryItemRow(
     item: LocalItem,
     pinned: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
 ) {
