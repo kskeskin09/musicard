@@ -121,6 +121,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import com.metrolist.music.constants.LyricStyle
 import com.metrolist.music.constants.LyricStyleKey
+import com.metrolist.music.constants.LyricsBlurKey
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.animation.core.animateDpAsState
 import com.metrolist.music.constants.LyricsTextPositionKey
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -722,6 +726,7 @@ fun CompactLyrics(
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val lyricsTextPosition by rememberEnumPreference(LyricsTextPositionKey, LyricsPosition.CENTER)
     val modern = rememberEnumPreference(LyricStyleKey, LyricStyle.CLASSIC).value == LyricStyle.MODERN
+    val lyricsBlur by rememberPreference(LyricsBlurKey, false)
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
     val allLines =
         remember(lyrics) {
@@ -1031,6 +1036,19 @@ fun CompactLyrics(
                                 }
                         }
                     val dimAlpha = lerp(compactDim, fullDim, fraction)
+                    // Lyrics blur: lines get softer the farther they are from the current one. It
+                    // switches off while the lyrics no longer follow the song (after a manual
+                    // scroll) and comes back once they are re-synced.
+                    val blurRadius by animateDpAsState(
+                        targetValue =
+                            if (lyricsBlur && synced && !followPaused && currentIndex >= 0) {
+                                LyricsBlurStep * abs(index - currentIndex).coerceAtMost(LyricsBlurMaxSteps)
+                            } else {
+                                0.dp
+                            },
+                        animationSpec = tween(LineScrollMillis, easing = FastOutSlowInEasing),
+                        label = "lineBlur",
+                    )
                     val words = line.words
                     val textModifier = Modifier.fillMaxWidth().wrapContentWidth(BiasAlignment.Horizontal(bias))
                     Box(
@@ -1045,6 +1063,12 @@ fun CompactLyrics(
                                                 playerConnection.player.seekTo((line.time - lyricsOffset).coerceAtLeast(0L))
                                                 followPaused = false
                                             }
+                                    } else {
+                                        Modifier
+                                    },
+                                ).then(
+                                    if (blurRadius > 0.dp) {
+                                        Modifier.blur(blurRadius, BlurredEdgeTreatment.Unbounded)
                                     } else {
                                         Modifier
                                     },
@@ -1429,6 +1453,8 @@ private fun liftedLetters(
 }
 
 private val SweepEdgeWidth = 14.dp
+private val LyricsBlurStep = 1.3.dp
+private const val LyricsBlurMaxSteps = 5
 
 /**
  * Hooks the card's lyric lines up to the AI translation: loads saved translations, translates when

@@ -440,6 +440,7 @@ enum class PlayerCardBackground {
 }
 
 val LyricStyleKey = stringPreferencesKey("lyricStyle")
+val LyricsBlurKey = booleanPreferencesKey("lyricsBlur")
 
 enum class LyricStyle {
     CLASSIC,

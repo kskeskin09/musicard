@@ -81,6 +81,7 @@ import com.metrolist.music.constants.LyricsLineSpacingKey
 import com.metrolist.music.constants.LyricsScrollKey
 import com.metrolist.music.constants.LyricStyle
 import com.metrolist.music.constants.LyricStyleKey
+import com.metrolist.music.constants.LyricsBlurKey
 import com.metrolist.music.constants.LyricsTextPositionKey
 import com.metrolist.music.constants.PlayerCardBackground
 import com.metrolist.music.constants.PlayerCardBackgroundKey
@@ -208,6 +209,7 @@ fun AppearanceSettings(
         rememberEnumPreference(PlayerCardBackgroundKey, defaultValue = PlayerCardBackground.CLASSIC)
     val (lyricStyle, onLyricStyleChange) =
         rememberEnumPreference(LyricStyleKey, defaultValue = LyricStyle.CLASSIC)
+    val (lyricsBlur, onLyricsBlurChange) = rememberPreference(LyricsBlurKey, defaultValue = false)
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -1226,6 +1228,28 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { showLyricStyleDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_blur)) },
+                        description = { Text(stringResource(R.string.lyrics_blur_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = lyricsBlur,
+                                onCheckedChange = onLyricsBlurChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (lyricsBlur) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onLyricsBlurChange(!lyricsBlur) },
                     ),
                 ),
         )
