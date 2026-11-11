@@ -343,6 +343,8 @@ fun AccountSettings(
                     }
                 ),
                 Material3SettingsItem(
+                    // Needs an account: shown faded until the user is logged in.
+                    enabled = isLoggedIn,
                     title = { Text(stringResource(R.string.more_content)) },
                     icon = painterResource(R.drawable.cached),
                     trailingContent = {
@@ -364,9 +366,9 @@ fun AccountSettings(
                             }
                         )
                     },
-                    onClick = if (isLoggedIn) null else { { onClose(); navController.navigate("login") } },
                 ),
                 Material3SettingsItem(
+                    enabled = isLoggedIn,
                     title = { Text(stringResource(R.string.yt_sync)) },
                     icon = painterResource(R.drawable.cached),
                     trailingContent = {
@@ -385,7 +387,6 @@ fun AccountSettings(
                             }
                         )
                     },
-                    onClick = if (isLoggedIn) null else { { onClose(); navController.navigate("login") } },
                 )
             ),
         )

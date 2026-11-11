@@ -1049,6 +1049,12 @@
     <string name="stats_minutes">%1$d min</string>
     <string name="stats_hours_minutes">%1$dh %2$dm</string>
     <string name="stats_empty">Nothing played in this period yet</string>
+    <string name="music_player_appearance">Music player appearance</string>
+    <string name="player_background">Player background</string>
+    <string name="lyric_style">Lyric style</string>
+    <string name="style_classic">Classic</string>
+    <string name="style_glass">Glass</string>
+    <string name="style_modern">Modern</string>
     <string name="like_icon_color">Like icon color</string>
     <string name="like_icon_color_white">White</string>
     <string name="like_icon_color_red">Red</string>

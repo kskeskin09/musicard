@@ -79,7 +79,11 @@ import com.metrolist.music.constants.LyricsClickKey
 import com.metrolist.music.constants.LyricsGlowEffectKey
 import com.metrolist.music.constants.LyricsLineSpacingKey
 import com.metrolist.music.constants.LyricsScrollKey
+import com.metrolist.music.constants.LyricStyle
+import com.metrolist.music.constants.LyricStyleKey
 import com.metrolist.music.constants.LyricsTextPositionKey
+import com.metrolist.music.constants.PlayerCardBackground
+import com.metrolist.music.constants.PlayerCardBackgroundKey
 import com.metrolist.music.constants.LyricsTextSizeKey
 import com.metrolist.music.constants.MiniPlayerBackgroundStyle
 import com.metrolist.music.constants.MiniPlayerBackgroundStyleKey
@@ -199,6 +203,51 @@ fun AppearanceSettings(
             PlayerBackgroundStyleKey,
             defaultValue = PlayerBackgroundStyle.DEFAULT,
         )
+
+    val (playerCardBackground, onPlayerCardBackgroundChange) =
+        rememberEnumPreference(PlayerCardBackgroundKey, defaultValue = PlayerCardBackground.CLASSIC)
+    val (lyricStyle, onLyricStyleChange) =
+        rememberEnumPreference(LyricStyleKey, defaultValue = LyricStyle.CLASSIC)
+    var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
+    var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showPlayerCardBackgroundDialog) {
+        EnumDialog(
+            onDismiss = { showPlayerCardBackgroundDialog = false },
+            onSelect = {
+                onPlayerCardBackgroundChange(it)
+                showPlayerCardBackgroundDialog = false
+            },
+            title = stringResource(R.string.player_background),
+            current = playerCardBackground,
+            values = PlayerCardBackground.entries,
+            valueText = {
+                when (it) {
+                    PlayerCardBackground.CLASSIC -> stringResource(R.string.style_classic)
+                    PlayerCardBackground.GLASS -> stringResource(R.string.style_glass)
+                }
+            },
+        )
+    }
+
+    if (showLyricStyleDialog) {
+        EnumDialog(
+            onDismiss = { showLyricStyleDialog = false },
+            onSelect = {
+                onLyricStyleChange(it)
+                showLyricStyleDialog = false
+            },
+            title = stringResource(R.string.lyric_style),
+            current = lyricStyle,
+            values = LyricStyle.entries,
+            valueText = {
+                when (it) {
+                    LyricStyle.CLASSIC -> stringResource(R.string.style_classic)
+                    LyricStyle.MODERN -> stringResource(R.string.style_modern)
+                }
+            },
+        )
+    }
 
     val (defaultOpenTab, onDefaultOpenTabChange) =
         rememberEnumPreference(
@@ -1147,6 +1196,41 @@ fun AppearanceSettings(
         Spacer(modifier = Modifier.height(27.dp))
 
         var showSensitivityDialog by rememberSaveable { mutableStateOf(false) }
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.music_player_appearance),
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.gradient),
+                        title = { Text(stringResource(R.string.player_background)) },
+                        description = {
+                            Text(
+                                when (playerCardBackground) {
+                                    PlayerCardBackground.CLASSIC -> stringResource(R.string.style_classic)
+                                    PlayerCardBackground.GLASS -> stringResource(R.string.style_glass)
+                                },
+                            )
+                        },
+                        onClick = { showPlayerCardBackgroundDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyric_style)) },
+                        description = {
+                            Text(
+                                when (lyricStyle) {
+                                    LyricStyle.CLASSIC -> stringResource(R.string.style_classic)
+                                    LyricStyle.MODERN -> stringResource(R.string.style_modern)
+                                },
+                            )
+                        },
+                        onClick = { showLyricStyleDialog = true },
+                    ),
+                ),
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
 
         Material3SettingsGroup(
             title = stringResource(R.string.player),

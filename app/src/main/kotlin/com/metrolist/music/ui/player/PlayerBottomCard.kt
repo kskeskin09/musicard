@@ -119,7 +119,11 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import com.metrolist.music.constants.LyricStyle
+import com.metrolist.music.constants.LyricStyleKey
 import com.metrolist.music.constants.LyricsTextPositionKey
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.drawscope.withTransform
 import com.metrolist.music.constants.PlayerHorizontalPadding
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import com.metrolist.music.utils.rememberEnumPreference
@@ -717,6 +721,7 @@ fun CompactLyrics(
     val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val lyricsTextPosition by rememberEnumPreference(LyricsTextPositionKey, LyricsPosition.CENTER)
+    val modern = rememberEnumPreference(LyricStyleKey, LyricStyle.CLASSIC).value == LyricStyle.MODERN
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
     val allLines =
         remember(lyrics) {
@@ -894,7 +899,7 @@ fun CompactLyrics(
             )
         }
     val preferredBias =
-        when (lyricsTextPosition) {
+        when (if (modern) LyricsPosition.LEFT else lyricsTextPosition) {
             LyricsPosition.LEFT -> -1f
             LyricsPosition.CENTER -> 0f
             LyricsPosition.RIGHT -> 1f
@@ -1014,6 +1019,8 @@ fun CompactLyrics(
                     val fullDim =
                         when {
                             line.isBackground -> 0.5f
+                            // Modern: every other line shares one soft gray.
+                            modern -> 0.34f
                             currentIndex < 0 -> 0.2f
                             else ->
                                 when (abs(index - currentIndex)) {
@@ -1044,7 +1051,7 @@ fun CompactLyrics(
                                 ).graphicsLayer {
                                     // The current line grows a touch in the opened lyrics (where all
                                     // lines share one size): noticeable, but not obvious.
-                                    val grow = 1f + 0.045f * activeness * fraction
+                                    val grow = if (modern) 1f else 1f + 0.045f * activeness * fraction
                                     scaleX = grow
                                     scaleY = grow
                                     transformOrigin = androidx.compose.ui.graphics.TransformOrigin((bias + 1f) / 2f, 0.5f)
@@ -1061,6 +1068,7 @@ fun CompactLyrics(
                                 dimAlpha = dimAlpha,
                                 style = style,
                                 textAlign = textAlign,
+                                liftSungPart = modern,
                                 modifier = textModifier,
                             )
                         } else {
@@ -1219,6 +1227,8 @@ private fun SweepingWordsLine(
     style: TextStyle,
     textAlign: TextAlign,
     modifier: Modifier = Modifier,
+    // Modern lyric style: the letters being sung right now rise and grow a little.
+    liftSungPart: Boolean = false,
 ) {
     val built =
         remember(words) {
@@ -1245,9 +1255,17 @@ private fun SweepingWordsLine(
         modifier =
             modifier
                 .drawWithContent {
-                    drawContent()
-                    val textLayout = layout ?: return@drawWithContent
+                    val textLayout = layout
+                    if (textLayout == null) {
+                        drawContent()
+                        return@drawWithContent
+                    }
                     val positionSec = positionMsProvider() / 1000.0
+                    val lifted = if (liftSungPart) liftedLetters(textLayout, words, built.second, positionSec) else emptyList()
+                    val liftedPath = Path()
+                    lifted.forEach { liftedPath.addRect(it.box) }
+                    clipPath(liftedPath, clipOp = ClipOp.Difference) {
+                    drawContent()
                     val sungPath = Path()
                     words.forEachIndexed { index, word ->
                         val range = built.second[index]
@@ -1298,8 +1316,114 @@ private fun SweepingWordsLine(
                     clipPath(sungPath) {
                         drawText(textLayoutResult = textLayout, color = color)
                     }
+                    }
+                    // The lifted letters are drawn on their own: dim first, then the sung part.
+                    lifted.forEach { letter ->
+                        val box = letter.box
+                        withTransform({
+                            translate(top = -box.height * LiftRise * letter.amount)
+                            scale(
+                                scale = 1f + LiftGrow * letter.amount,
+                                pivot = Offset(box.center.x, box.bottom - box.height * 0.22f),
+                            )
+                            clipRect(box.left, box.top, box.right, box.bottom)
+                        }) {
+                            drawText(textLayout, color = color.copy(alpha = dimAlpha))
+                            val edgeStart = (letter.fillX - edgeWidthPx).coerceAtLeast(letter.wordLeft)
+                            val brightEnd = edgeStart.coerceAtMost(box.right)
+                            if (brightEnd > box.left) {
+                                clipRect(box.left, box.top, brightEnd, box.bottom) {
+                                    drawText(textLayout, color = color)
+                                }
+                            }
+                            val edgeEnd = letter.fillX.coerceAtMost(letter.wordRight)
+                            if (edgeEnd > edgeStart && edgeStart < box.right && edgeEnd > box.left) {
+                                val strips = 8
+                                val stripWidth = (edgeEnd - edgeStart) / strips
+                                for (i in 0 until strips) {
+                                    val stripLeft = (edgeStart + stripWidth * i).coerceAtLeast(box.left)
+                                    val stripRight = (edgeStart + stripWidth * (i + 1)).coerceAtMost(box.right)
+                                    if (stripRight <= stripLeft) continue
+                                    clipRect(stripLeft, box.top, stripRight, box.bottom) {
+                                        drawText(textLayout, color = color.copy(alpha = 1f - (i + 0.5f) / strips))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
     )
+}
+
+private class LiftedLetter(
+    val box: Rect,
+    // 0..1: how far the letter is raised.
+    val amount: Float,
+    // Where the word's fill has reached; it keeps moving past the word's end for a moment so the
+    // last letters settle back down instead of dropping at once.
+    val fillX: Float,
+    val wordLeft: Float,
+    val wordRight: Float,
+)
+
+private const val LiftGrow = 0.12f
+private const val LiftRise = 0.05f
+
+/**
+ * The letters around the point being sung, for the modern lyric style. A letter starts to rise
+ * just before the fill reaches it, stays up while the next couple of letters are sung and then
+ * settles back, so the raised part travels through each word with the voice.
+ */
+private fun liftedLetters(
+    textLayout: TextLayoutResult,
+    words: List<WordTimestamp>,
+    ranges: List<IntRange>,
+    positionSec: Double,
+): List<LiftedLetter> {
+    val result = ArrayList<LiftedLetter>()
+    words.forEachIndexed { index, word ->
+        val range = ranges[index]
+        if (range.isEmpty() || range.last >= textLayout.layoutInput.text.length) return@forEachIndexed
+        val firstLine = textLayout.getLineForOffset(range.first)
+        if (firstLine != textLayout.getLineForOffset(range.last)) return@forEachIndexed
+        val duration = (word.endTime - word.startTime).coerceAtLeast(0.05)
+        val progress = ((positionSec - word.startTime) / duration).toFloat()
+        if (progress <= -0.2f) return@forEachIndexed
+        val left = textLayout.getBoundingBox(range.first).left
+        val right = textLayout.getBoundingBox(range.last).right
+        val width = right - left
+        if (width <= 0f) return@forEachIndexed
+        val top = textLayout.getLineTop(firstLine)
+        val bottom = textLayout.getLineBottom(firstLine)
+        val em = bottom - top
+        // After the word ends the fill point carries on at the same speed, but never slower than
+        // about three letters a second, so a long held note does not keep its end raised.
+        val overshoot = (progress - 1f).coerceAtLeast(0f)
+        val fillX =
+            if (overshoot > 0f) {
+                right + maxOf(width * overshoot, (overshoot * duration).toFloat() * em * 1.6f)
+            } else {
+                left + width * progress
+            }
+        if (fillX - right > em * 1.5f) return@forEachIndexed
+        for (offset in range) {
+            val box = textLayout.getBoundingBox(offset)
+            val behind = (fillX - box.center.x) / em
+            val amount =
+                when {
+                    behind < -0.25f -> 0f
+                    behind < 0.2f -> (behind + 0.25f) / 0.45f
+                    behind < 0.7f -> 1f
+                    behind < 1.5f -> (1.5f - behind) / 0.8f
+                    else -> 0f
+                }
+            if (amount <= 0f) continue
+            // Smoothstep, so letters ease in and out of the raised position.
+            val eased = amount * amount * (3f - 2f * amount)
+            result += LiftedLetter(Rect(box.left, top, box.right, bottom), eased, fillX, left, right)
+        }
+    }
+    return result
 }
 
 private val SweepEdgeWidth = 14.dp

@@ -13,6 +13,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.view.WindowManager
 import android.widget.Toast
+import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
@@ -188,6 +189,8 @@ import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
+import com.metrolist.music.constants.PlayerCardBackground
+import com.metrolist.music.constants.PlayerCardBackgroundKey
 import com.metrolist.music.constants.PlayerButtonsStyle
 import com.metrolist.music.constants.PlayerButtonsStyleKey
 import com.metrolist.music.constants.PlayerHorizontalPadding
@@ -295,6 +298,10 @@ fun BottomSheetPlayer(
     // so it runs through the GRADIENT code paths for colors and palette extraction.
     val playerBackground =
         if (useCardLayout) PlayerBackgroundStyle.GRADIENT else playerBackgroundPreference
+    val playerCardBackground by rememberEnumPreference(
+        key = PlayerCardBackgroundKey,
+        defaultValue = PlayerCardBackground.CLASSIC,
+    )
     val playerButtonsStyle by rememberEnumPreference(
         key = PlayerButtonsStyleKey,
         defaultValue = PlayerButtonsStyle.DEFAULT,
@@ -1050,6 +1057,12 @@ fun BottomSheetPlayer(
                                 .alpha(backgroundAlpha)
                                 .background(albumBackgroundBrush(cardAlbumColor)),
                         )
+                        if (playerCardBackground == PlayerCardBackground.GLASS) {
+                            GlassCoverBackground(
+                                thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                                modifier = Modifier.alpha(backgroundAlpha),
+                            )
+                        }
                     } else {
                         AnimatedContent(
                             targetState = gradientColors,
@@ -3051,6 +3064,65 @@ private fun PlayerControlButton(
 }
 
 private val DefaultAlbumBackground = Color(0xFF2B2A30)
+
+/**
+ * Glass player background: the album cover, centered, enlarged and blurred until only its colors
+ * are left, darkened a little so white text stays readable. It sits behind the whole player, so
+ * the lyrics and up-next views share it.
+ */
+@Composable
+private fun GlassCoverBackground(
+    thumbnailUrl: String?,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    // Modifier.blur needs Android 12; older versions get a tiny image stretched over the screen,
+    // which smears the cover into soft color areas as well.
+    val canBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    AnimatedContent(
+        targetState = thumbnailUrl,
+        transitionSpec = { fadeIn(tween(800)).togetherWith(fadeOut(tween(800))) },
+        label = "glassBackground",
+        modifier = modifier.fillMaxSize(),
+    ) { url ->
+        if (url != null) {
+            Box(Modifier.fillMaxSize()) {
+                val imageSize = if (canBlur) 96 else 6
+                AsyncImage(
+                    model =
+                        ImageRequest
+                            .Builder(context)
+                            .data(url)
+                            .size(imageSize, imageSize)
+                            .allowHardware(false)
+                            .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = 1.35f
+                                scaleY = 1.35f
+                            }.blur(90.dp),
+                )
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 0.28f),
+                                0.55f to Color.Black.copy(alpha = 0.36f),
+                                1f to Color.Black.copy(alpha = 0.5f),
+                            ),
+                        ),
+                )
+            }
+        } else {
+            Box(Modifier.fillMaxSize())
+        }
+    }
+}
 
 /** Softens an album art color into a calm, mid-dark tone that white text reads well on. */
 private fun albumBackgroundBrush(color: Color): Brush =

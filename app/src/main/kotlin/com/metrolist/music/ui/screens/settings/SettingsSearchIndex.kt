@@ -33,6 +33,8 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.enable_dynamic_icon, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.theme, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.like_icon_color, R.string.appearance, "settings/appearance"),
+    SettingsSearchEntry(R.string.player_background, R.string.appearance, "settings/appearance"),
+    SettingsSearchEntry(R.string.lyric_style, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.new_mini_player_design, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.mini_player_background_style, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.hide_player_thumbnail, R.string.appearance, "settings/appearance"),

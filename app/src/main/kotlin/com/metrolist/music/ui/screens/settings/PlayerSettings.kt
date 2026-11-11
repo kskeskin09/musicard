@@ -395,6 +395,7 @@ fun PlayerSettings(
                     onClick = { onSkipSilenceChange(!skipSilence) }
                 ))
                 add(Material3SettingsItem(
+                    enabled = skipSilence,
                     icon = painterResource(R.drawable.skip_next),
                     title = { Text(stringResource(R.string.skip_silence_instant)) },
                     description = { Text(stringResource(R.string.skip_silence_instant_desc)) },
@@ -447,6 +448,7 @@ fun PlayerSettings(
                     ))
                 }
                 add(Material3SettingsItem(
+                    enabled = !crossfadeEnabled,
                     icon = painterResource(R.drawable.graphic_eq),
                     title = { Text(stringResource(R.string.audio_offload)) },
                     description = {

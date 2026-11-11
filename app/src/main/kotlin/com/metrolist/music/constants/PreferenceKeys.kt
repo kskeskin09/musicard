@@ -432,6 +432,20 @@ enum class PlayerBackgroundStyle {
     BLUR,
 }
 
+val PlayerCardBackgroundKey = stringPreferencesKey("playerCardBackground")
+
+enum class PlayerCardBackground {
+    CLASSIC,
+    GLASS,
+}
+
+val LyricStyleKey = stringPreferencesKey("lyricStyle")
+
+enum class LyricStyle {
+    CLASSIC,
+    MODERN,
+}
+
 val TopSize = stringPreferencesKey("topSize")
 val HistoryDuration = floatPreferencesKey("historyDuration")
 
