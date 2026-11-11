@@ -1265,7 +1265,7 @@ private fun SweepingWordsLine(
                     val liftedPath = Path()
                     lifted.forEach { liftedPath.addRect(it.box) }
                     clipPath(liftedPath, clipOp = ClipOp.Difference) {
-                    drawContent()
+                    this@drawWithContent.drawContent()
                     val sungPath = Path()
                     words.forEachIndexed { index, word ->
                         val range = built.second[index]
