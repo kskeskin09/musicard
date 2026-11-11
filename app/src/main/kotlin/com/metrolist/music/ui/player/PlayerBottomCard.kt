@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import sh.calvin.reorderable.ReorderableItem
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.animation.core.Animatable
@@ -562,7 +563,7 @@ private fun UpNextList(
             val metadata = window.mediaItem.metadata ?: return@itemsIndexed
             val isCurrent = hasCurrent && index == nextIndex - 1
             val upcoming = index >= nextIndex
-            sh.calvin.reorderable.ReorderableItem(
+            ReorderableItem(
                 state = reorderState,
                 key = "${window.uid}_${window.firstPeriodIndex}",
                 enabled = upcoming && !isListenTogetherGuest,
