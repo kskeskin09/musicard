@@ -1014,7 +1014,14 @@ fun CompactLyrics(
                                     } else {
                                         Modifier
                                     },
-                                ).padding(
+                                ).graphicsLayer {
+                                    // The current line grows a touch in the opened lyrics (where all
+                                    // lines share one size): noticeable, but not obvious.
+                                    val grow = 1f + 0.045f * activeness * fraction
+                                    scaleX = grow
+                                    scaleY = grow
+                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin((bias + 1f) / 2f, 0.5f)
+                                }.padding(
                                     top = lerp(5.dp, if (line.isBackground) 0.dp else FullLineGap + 12.dp, fraction),
                                     bottom = lerp(5.dp, if (line.isBackground) 2.dp else 12.dp, fraction),
                                 ),
