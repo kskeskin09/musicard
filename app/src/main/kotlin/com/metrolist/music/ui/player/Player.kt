@@ -123,6 +123,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
@@ -2538,6 +2539,10 @@ fun BottomSheetPlayer(
                                     .zIndex(3f)
                                     .fillMaxWidth()
                                     .height(topInset + 64.dp)
+                                    // A tap on the art and title goes back to the big cover too.
+                                    .pointerInput(cardOpen) {
+                                        detectTapGestures { if (cardOpen) closeCardFull() }
+                                    }
                                     .pointerInput(Unit) {
                                         val tracker = VelocityTracker()
                                         detectVerticalDragGestures(

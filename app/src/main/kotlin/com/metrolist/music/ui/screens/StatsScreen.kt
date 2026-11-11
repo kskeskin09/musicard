@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens
 
+import com.metrolist.music.ui.theme.TintedPageColors
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -101,6 +102,7 @@ import com.metrolist.music.ui.menu.SongMenu
 import com.metrolist.music.ui.theme.albumBackgroundColor
 import com.metrolist.music.ui.theme.rememberCoverColor
 import com.metrolist.music.ui.theme.rememberPageTint
+import com.metrolist.music.ui.theme.pageTintFor
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.ListeningPattern
@@ -174,14 +176,7 @@ fun StatsScreen(
     val coverColor = rememberCoverColor(songs.firstOrNull()?.thumbnailUrl)
     val tint =
         rememberPageTint(
-            target =
-                coverColor?.let {
-                    if (darkTheme) {
-                        lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
-                    } else {
-                        lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
-                    }
-                } ?: pageBackground,
+            target = pageTintFor(coverColor, pageBackground),
             ready = coverColor != null,
         )
     val accent = coverColor?.let { lerp(it, if (darkTheme) Color.White else Color.Black, 0.4f) } ?: MaterialTheme.colorScheme.primary
@@ -297,132 +292,134 @@ fun StatsScreen(
 
     val mainListState = rememberLazyListState()
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(tint),
-    ) {
-        Crossfade(targetState = expanded, label = "statsSection") { section ->
-            val listState = if (section == null) mainListState else remember(section) { LazyListState() }
-            LazyColumn(
-                state = listState,
-                contentPadding =
-                    LocalPlayerAwareWindowInsets.current
-                        .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
-                        .asPaddingValues(),
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)),
-            ) {
-                item(key = "period") { periodChips() }
+    TintedPageColors(tint) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(tint),
+        ) {
+            Crossfade(targetState = expanded, label = "statsSection") { section ->
+                val listState = if (section == null) mainListState else remember(section) { LazyListState() }
+                LazyColumn(
+                    state = listState,
+                    contentPadding =
+                        LocalPlayerAwareWindowInsets.current
+                            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+                            .asPaddingValues(),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)),
+                ) {
+                    item(key = "period") { periodChips() }
 
-                if (section == null) {
-                    item(key = "summary") {
-                        StatsSummaryCard(
-                            pattern = pattern,
-                            songCount = songs.size,
-                            artistCount = artists.size,
-                            albumCount = albums.size,
-                            coverColor = coverColor,
-                        )
-                    }
-                    if (songs.isEmpty() && artists.isEmpty() && albums.isEmpty()) {
-                        item(key = "empty") {
-                            EmptyPlaceholder(
-                                icon = R.drawable.music_note,
-                                text = stringResource(R.string.stats_empty),
+                    if (section == null) {
+                        item(key = "summary") {
+                            StatsSummaryCard(
+                                pattern = pattern,
+                                songCount = songs.size,
+                                artistCount = artists.size,
+                                albumCount = albums.size,
+                                coverColor = coverColor,
                             )
                         }
-                    }
-                    if (songs.isNotEmpty()) {
-                        item(key = "songs_title") {
-                            StatsSectionTitle(stringResource(R.string.stats_top_songs)) { expandedName = StatsSection.SONGS.name }
+                        if (songs.isEmpty() && artists.isEmpty() && albums.isEmpty()) {
+                            item(key = "empty") {
+                                EmptyPlaceholder(
+                                    icon = R.drawable.music_note,
+                                    text = stringResource(R.string.stats_empty),
+                                )
+                            }
                         }
-                        songRows(STATS_PREVIEW_COUNT)
-                    }
-                    if (artists.isNotEmpty()) {
-                        item(key = "artists_title") {
-                            StatsSectionTitle(stringResource(R.string.stats_top_artists)) { expandedName = StatsSection.ARTISTS.name }
+                        if (songs.isNotEmpty()) {
+                            item(key = "songs_title") {
+                                StatsSectionTitle(stringResource(R.string.stats_top_songs)) { expandedName = StatsSection.SONGS.name }
+                            }
+                            songRows(STATS_PREVIEW_COUNT)
                         }
-                        artistRows(STATS_PREVIEW_COUNT)
-                    }
-                    if (albums.isNotEmpty()) {
-                        item(key = "albums_title") {
-                            StatsSectionTitle(stringResource(R.string.stats_top_albums)) { expandedName = StatsSection.ALBUMS.name }
+                        if (artists.isNotEmpty()) {
+                            item(key = "artists_title") {
+                                StatsSectionTitle(stringResource(R.string.stats_top_artists)) { expandedName = StatsSection.ARTISTS.name }
+                            }
+                            artistRows(STATS_PREVIEW_COUNT)
                         }
-                        albumRows(STATS_PREVIEW_COUNT)
+                        if (albums.isNotEmpty()) {
+                            item(key = "albums_title") {
+                                StatsSectionTitle(stringResource(R.string.stats_top_albums)) { expandedName = StatsSection.ALBUMS.name }
+                            }
+                            albumRows(STATS_PREVIEW_COUNT)
+                        }
+                        item(key = "bottom_space") { Spacer(Modifier.height(24.dp)) }
+                    } else {
+                        when (section) {
+                            StatsSection.SONGS -> songRows(topSize)
+                            StatsSection.ARTISTS -> artistRows(topSize)
+                            else -> albumRows(topSize)
+                        }
+                        item(key = "bottom_space") { Spacer(Modifier.height(24.dp)) }
                     }
-                    item(key = "bottom_space") { Spacer(Modifier.height(24.dp)) }
-                } else {
-                    when (section) {
-                        StatsSection.SONGS -> songRows(topSize)
-                        StatsSection.ARTISTS -> artistRows(topSize)
-                        else -> albumRows(topSize)
-                    }
-                    item(key = "bottom_space") { Spacer(Modifier.height(24.dp)) }
                 }
             }
-        }
 
-        if (orderedSongs.isNotEmpty() && expanded != StatsSection.ARTISTS && expanded != StatsSection.ALBUMS) {
-            HideOnScrollFAB(
-                visible = true,
-                lazyListState = mainListState,
-                icon = R.drawable.shuffle,
-                onClick = {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = context.getString(R.string.most_played_songs),
-                            items = orderedSongs.take(topSize).map { it.toMediaMetadata().toMediaItem() }.shuffled(),
-                        ),
-                    )
-                },
-            )
-        }
-
-        TopAppBar(
-            title = {
-                Text(
-                    when (expanded) {
-                        StatsSection.SONGS -> stringResource(R.string.stats_top_songs)
-                        StatsSection.ARTISTS -> stringResource(R.string.stats_top_artists)
-                        StatsSection.ALBUMS -> stringResource(R.string.stats_top_albums)
-                        null -> stringResource(R.string.stats)
+            if (orderedSongs.isNotEmpty() && expanded != StatsSection.ARTISTS && expanded != StatsSection.ALBUMS) {
+                HideOnScrollFAB(
+                    visible = true,
+                    lazyListState = mainListState,
+                    icon = R.drawable.shuffle,
+                    onClick = {
+                        playerConnection.playQueue(
+                            ListQueue(
+                                title = context.getString(R.string.most_played_songs),
+                                items = orderedSongs.take(topSize).map { it.toMediaMetadata().toMediaItem() }.shuffled(),
+                            ),
+                        )
                     },
                 )
-            },
-            navigationIcon = {
-                IconButton(
-                    onClick = { if (expanded != null) expandedName = null else navController.navigateUp() },
-                    onLongClick = { navController.backToMain() },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.arrow_back),
-                        contentDescription = null,
+            }
+
+            TopAppBar(
+                title = {
+                    Text(
+                        when (expanded) {
+                            StatsSection.SONGS -> stringResource(R.string.stats_top_songs)
+                            StatsSection.ARTISTS -> stringResource(R.string.stats_top_artists)
+                            StatsSection.ALBUMS -> stringResource(R.string.stats_top_albums)
+                            null -> stringResource(R.string.stats)
+                        },
                     )
-                }
-            },
-            actions = {
-                if (expanded == null) {
+                },
+                navigationIcon = {
                     IconButton(
-                        onClick = { showTimeTransfer = true },
-                        onLongClick = { showTimeTransfer = true },
+                        onClick = { if (expanded != null) expandedName = null else navController.navigateUp() },
+                        onLongClick = { navController.backToMain() },
                     ) {
                         Icon(
-                            painterResource(R.drawable.sync),
+                            painter = painterResource(R.drawable.arrow_back),
                             contentDescription = null,
                         )
                     }
-                }
-            },
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = tint,
-                    scrolledContainerColor = tint,
-                ),
-        )
+                },
+                actions = {
+                    if (expanded == null) {
+                        IconButton(
+                            onClick = { showTimeTransfer = true },
+                            onLongClick = { showTimeTransfer = true },
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.sync),
+                                contentDescription = null,
+                            )
+                        }
+                    }
+                },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = tint,
+                        scrolledContainerColor = tint,
+                    ),
+            )
+        }
     }
 }
 

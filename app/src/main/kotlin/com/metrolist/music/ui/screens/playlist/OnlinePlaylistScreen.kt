@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.theme.pageRaisedColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -638,7 +639,7 @@ private fun OnlinePlaylistHeader(
                         )
                     }
                 },
-                color = MaterialTheme.colorScheme.primary,
+                color = pageRaisedColor(),
                 shape = CircleShape,
                 modifier = Modifier.size(72.dp),
             ) {
@@ -649,7 +650,7 @@ private fun OnlinePlaylistHeader(
                     Icon(
                         painter = painterResource(R.drawable.play),
                         contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(32.dp),
                     )
                 }
@@ -699,7 +700,7 @@ private fun OnlinePlaylistHeader(
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = pageRaisedColor(),
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(
@@ -736,7 +737,7 @@ private fun OnlinePlaylistHeader(
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = pageRaisedColor(),
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(

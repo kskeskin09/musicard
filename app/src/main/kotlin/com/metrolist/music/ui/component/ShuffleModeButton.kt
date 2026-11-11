@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.ui.theme.pageRaisedColor
 import kotlin.random.Random
 
 /**
@@ -40,7 +41,7 @@ fun ShuffleModeButton(
         if (shuffleOn) {
             MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
         } else {
-            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
+            pageRaisedColor()
         },
         label = "shuffleBackground",
     )

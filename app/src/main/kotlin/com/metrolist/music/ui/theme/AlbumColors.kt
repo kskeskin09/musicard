@@ -6,13 +6,18 @@
 package com.metrolist.music.ui.theme
 
 import android.content.Context
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
@@ -116,4 +121,49 @@ private suspend fun loadCoverColor(
                 .generate()
         Color(palette.rankedColors(1, android.graphics.Color.DKGRAY).first())
     }.also { coverColorCache.put(url, it) }
+}
+
+/**
+ * The even page color taken from a cover: a calm version of it, deep enough in dark mode and a
+ * clear wash in light mode, with the text still readable on top.
+ */
+fun pageTintFor(
+    cover: Color?,
+    pageBackground: Color,
+): Color {
+    cover ?: return pageBackground
+    val dark = pageBackground.luminance() < 0.5f
+    return if (dark) {
+        albumBackgroundColor(cover, true)
+    } else {
+        lerp(pageBackground, albumBackgroundColor(cover, false), 0.42f)
+    }
+}
+
+/** The page color for the cover at [url], ready on the first frame when it is already known. */
+@Composable
+fun rememberCoverPageTint(url: String?): Color {
+    val pageBackground = MaterialTheme.colorScheme.background
+    val cover = rememberCoverColor(url)
+    return rememberPageTint(target = pageTintFor(cover, pageBackground), ready = cover != null)
+}
+
+/** A step lighter (dark mode) or darker (light mode) than [base], clearly set apart from it. */
+fun raisedPageColor(base: Color): Color =
+    if (base.luminance() < 0.5f) lerp(base, Color.White, 0.14f) else lerp(base, Color.Black, 0.09f)
+
+/** The raised color of the page the content sits on; set by pages that are tinted. */
+val LocalPageRaisedColor = compositionLocalOf<Color?> { null }
+
+/** Color of the playing song's row and of the round buttons on a page. */
+@Composable
+fun pageRaisedColor(): Color = LocalPageRaisedColor.current ?: raisedPageColor(MaterialTheme.colorScheme.background)
+
+/** Gives everything inside the raised color that belongs to a page tinted [tint]. */
+@Composable
+fun TintedPageColors(
+    tint: Color,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(LocalPageRaisedColor provides raisedPageColor(tint), content = content)
 }

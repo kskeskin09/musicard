@@ -5,6 +5,12 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import androidx.compose.foundation.background
+import com.metrolist.music.ui.component.FourCoverArt
+import com.metrolist.music.ui.theme.rememberCoverPageTint
+import androidx.compose.material3.TopAppBarDefaults
+import com.metrolist.music.ui.theme.TintedPageColors
+import com.metrolist.music.ui.theme.pageRaisedColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -189,283 +195,289 @@ fun CachePlaylistScreen(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        LazyColumn(
-            state = lazyListState,
-            contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
-        ) {
-            if (filteredSongs.isEmpty() && !isSearching) {
-                item(key = "empty_placeholder") {
-                    EmptyPlaceholder(
-                        icon = R.drawable.music_note,
-                        text = stringResource(R.string.playlist_is_empty),
-                        modifier = Modifier.animateItem()
-                    )
-                }
-            }
+    // The page takes the color of the first song's cover.
+    val tint = rememberCoverPageTint(filteredSongs.firstOrNull()?.thumbnailUrl)
 
-            if (filteredSongs.isEmpty() && isSearching) {
-                item(key = "no_results") {
-                    EmptyPlaceholder(
-                        icon = R.drawable.search,
-                        text = stringResource(R.string.no_results_found),
-                        modifier = Modifier.animateItem()
-                    )
-                }
-            } else {
-                if (filteredSongs.isNotEmpty() && !isSearching) {
-                    item(key = "playlist_header") {
-                        CachePlaylistHeader(
-                            songs = filteredSongs,
-                            context = context,
-                            menuState = menuState,
+    TintedPageColors(tint) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(tint),
+        ) {
+            LazyColumn(
+                state = lazyListState,
+                contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+            ) {
+                if (filteredSongs.isEmpty() && !isSearching) {
+                    item(key = "empty_placeholder") {
+                        EmptyPlaceholder(
+                            icon = R.drawable.music_note,
+                            text = stringResource(R.string.playlist_is_empty),
                             modifier = Modifier.animateItem()
                         )
                     }
                 }
 
-                if (filteredSongs.isNotEmpty()) {
-                    item(key = "sort_header") {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(start = 16.dp)
-                                .animateItem(),
-                        ) {
-                            SortHeader(
-                                sortType = sortType,
-                                sortDescending = sortDescending,
-                                onSortTypeChange = onSortTypeChange,
-                                onSortDescendingChange = onSortDescendingChange,
-                                sortTypeText = { sortType ->
-                                    when (sortType) {
-                                        SongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                        SongSortType.NAME -> R.string.sort_by_name
-                                        SongSortType.ARTIST -> R.string.sort_by_artist
-                                        SongSortType.PLAY_TIME -> R.string.sort_by_play_time
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
+                if (filteredSongs.isEmpty() && isSearching) {
+                    item(key = "no_results") {
+                        EmptyPlaceholder(
+                            icon = R.drawable.search,
+                            text = stringResource(R.string.no_results_found),
+                            modifier = Modifier.animateItem()
+                        )
+                    }
+                } else {
+                    if (filteredSongs.isNotEmpty() && !isSearching) {
+                        item(key = "playlist_header") {
+                            CachePlaylistHeader(
+                                songs = filteredSongs,
+                                context = context,
+                                menuState = menuState,
+                                modifier = Modifier.animateItem()
                             )
                         }
                     }
-                }
 
-                itemsIndexed(filteredSongs, key = { index, song -> "${song.id}_$index" }) { index, song ->
-                    val onCheckedChange: (Boolean) -> Unit = {
-                        if (it) {
-                            selection.add(song.id)
-                        } else {
-                            selection.remove(song.id)
+                    if (filteredSongs.isNotEmpty()) {
+                        item(key = "sort_header") {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .padding(start = 16.dp)
+                                    .animateItem(),
+                            ) {
+                                SortHeader(
+                                    sortType = sortType,
+                                    sortDescending = sortDescending,
+                                    onSortTypeChange = onSortTypeChange,
+                                    onSortDescendingChange = onSortDescendingChange,
+                                    sortTypeText = { sortType ->
+                                        when (sortType) {
+                                            SongSortType.CREATE_DATE -> R.string.sort_by_create_date
+                                            SongSortType.NAME -> R.string.sort_by_name
+                                            SongSortType.ARTIST -> R.string.sort_by_artist
+                                            SongSortType.PLAY_TIME -> R.string.sort_by_play_time
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
 
-                    SongListItem(
-                        song = song,
-                        isActive = song.id == mediaMetadata?.id,
-                        isPlaying = isPlaying,
-                        showInLibraryIcon = true,
-                        trailingContent = {
-                            if (inSelectMode) {
-                                Checkbox(
-                                    checked = song.id in selection,
-                                    onCheckedChange = onCheckedChange
-                                )
+                    itemsIndexed(filteredSongs, key = { index, song -> "${song.id}_$index" }) { index, song ->
+                        val onCheckedChange: (Boolean) -> Unit = {
+                            if (it) {
+                                selection.add(song.id)
                             } else {
-                                IconButton(onClick = {
-                                    menuState.show {
-                                        SongMenu(
-                                            originalSong = song,
-                                            onDismiss = menuState::dismiss,
-                                            isFromCache = true,
-                                        )
-                                    }
-                                }) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.more_vert),
-                                        contentDescription = null
-                                    )
-                                }
+                                selection.remove(song.id)
                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .animateItem()
-                            .combinedClickable(
-                                onClick = {
-                                    if (inSelectMode) {
-                                        onCheckedChange(song.id !in selection)
-                                    } else if (song.id == mediaMetadata?.id) {
-                                        playerConnection.togglePlayPause()
-                                    } else {
-                                        playerConnection.playQueue(
-                                            ListQueue(
-                                                title = "Cache Songs",
-                                                items = cachedSongs.map { it.toMediaItem() },
-                                                startIndex = cachedSongs.indexOfFirst { it.id == song.id }
+                        }
+
+                        SongListItem(
+                            song = song,
+                            isActive = song.id == mediaMetadata?.id,
+                            isPlaying = isPlaying,
+                            showInLibraryIcon = true,
+                            trailingContent = {
+                                if (inSelectMode) {
+                                    Checkbox(
+                                        checked = song.id in selection,
+                                        onCheckedChange = onCheckedChange
+                                    )
+                                } else {
+                                    IconButton(onClick = {
+                                        menuState.show {
+                                            SongMenu(
+                                                originalSong = song,
+                                                onDismiss = menuState::dismiss,
+                                                isFromCache = true,
                                             )
+                                        }
+                                    }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.more_vert),
+                                            contentDescription = null
                                         )
                                     }
-                                },
-                                onLongClick = {
-                                    if (!inSelectMode) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        inSelectMode = true
-                                        onCheckedChange(true)
-                                        selectionAnchorSongId = song.id
-                                    } else {
-                                        val anchorIndex = selectionAnchorSongId?.let { anchorSongId ->
-                                            filteredSongs.indexOfFirst { it.id == anchorSongId }
-                                        } ?: -1
-
-                                        if (anchorIndex == -1) {
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateItem()
+                                .combinedClickable(
+                                    onClick = {
+                                        if (inSelectMode) {
+                                            onCheckedChange(song.id !in selection)
+                                        } else if (song.id == mediaMetadata?.id) {
+                                            playerConnection.togglePlayPause()
+                                        } else {
+                                            playerConnection.playQueue(
+                                                ListQueue(
+                                                    title = "Cache Songs",
+                                                    items = cachedSongs.map { it.toMediaItem() },
+                                                    startIndex = cachedSongs.indexOfFirst { it.id == song.id }
+                                                )
+                                            )
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!inSelectMode) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            inSelectMode = true
                                             onCheckedChange(true)
                                             selectionAnchorSongId = song.id
                                         } else {
-                                            val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
-                                            for (rangeIndex in range) {
-                                                val rangeSongId = filteredSongs[rangeIndex].id
-                                                if (rangeSongId !in selection) {
-                                                    selection.add(rangeSongId)
+                                            val anchorIndex = selectionAnchorSongId?.let { anchorSongId ->
+                                                filteredSongs.indexOfFirst { it.id == anchorSongId }
+                                            } ?: -1
+
+                                            if (anchorIndex == -1) {
+                                                onCheckedChange(true)
+                                                selectionAnchorSongId = song.id
+                                            } else {
+                                                val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
+                                                for (rangeIndex in range) {
+                                                    val rangeSongId = filteredSongs[rangeIndex].id
+                                                    if (rangeSongId !in selection) {
+                                                        selection.add(rangeSongId)
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                            )
-                            .animateItem()
-                    )
+                                )
+                                .animateItem()
+                        )
+                    }
                 }
             }
-        }
 
-        DraggableScrollbar(
-            modifier = Modifier
-                .padding(
-                    LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
-                        .asPaddingValues()
-                )
-                .align(Alignment.CenterEnd),
-            scrollState = lazyListState,
-            headerItems = 2
-        )
+            DraggableScrollbar(
+                modifier = Modifier
+                    .padding(
+                        LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
+                            .asPaddingValues()
+                    )
+                    .align(Alignment.CenterEnd),
+                scrollState = lazyListState,
+                headerItems = 2
+            )
 
-        TopAppBar(
-            title = {
-                when {
-                    inSelectMode -> {
-                        Text(
-                            text = pluralStringResource(R.plurals.n_song, selection.size, selection.size),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
-                    isSearching -> {
-                        TextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.search),
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                            },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.titleLarge,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester)
-                        )
-                    }
-                    else -> {
-                        Text(
-                            stringResource(R.string.cached_playlist),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
-                }
-            },
-            navigationIcon = {
-                IconButton(onClick = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = tint, scrolledContainerColor = tint),
+                title = {
                     when {
-                        isSearching -> {
-                            isSearching = false
-                            query = TextFieldValue()
-                            focusManager.clearFocus()
-                        }
                         inSelectMode -> {
-                            onExitSelectionMode()
+                            Text(
+                                text = pluralStringResource(R.plurals.n_song, selection.size, selection.size),
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
+                        isSearching -> {
+                            TextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                placeholder = {
+                                    Text(
+                                        text = stringResource(R.string.search),
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                },
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.titleLarge,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent,
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                            )
                         }
                         else -> {
-                            navController.navigateUp()
+                            Text(
+                                stringResource(R.string.cached_playlist),
+                                style = MaterialTheme.typography.titleLarge
+                            )
                         }
                     }
-                }, onLongClick = {
-                    if (!isSearching && !inSelectMode) {
-                        navController.backToMain()
-                    }
-                }) {
-                    Icon(
-                        painter = painterResource(
-                            if (inSelectMode) R.drawable.close else R.drawable.arrow_back
-                        ),
-                        contentDescription = null
-                    )
-                }
-            },
-            actions = {
-                if (inSelectMode) {
-                    Checkbox(
-                        checked = selection.size == filteredSongs.size && selection.isNotEmpty(),
-                        onCheckedChange = {
-                            if (selection.size == filteredSongs.size) {
-                                selection.clear()
-                            } else {
-                                selection.clear()
-                                selection.addAll(filteredSongs.map { it.id })
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        when {
+                            isSearching -> {
+                                isSearching = false
+                                query = TextFieldValue()
+                                focusManager.clearFocus()
+                            }
+                            inSelectMode -> {
+                                onExitSelectionMode()
+                            }
+                            else -> {
+                                navController.navigateUp()
                             }
                         }
-                    )
-                    IconButton(
-                        enabled = selection.isNotEmpty(),
-                        onClick = {
-                            val selectedSongs = filteredSongs.filter { it.id in selection }
-                            menuState.show {
-                                SelectionSongMenu(
-                                    songSelection = selectedSongs,
-                                    onDismiss = menuState::dismiss,
-                                    clearAction = onExitSelectionMode,
-                                    onRemoveFromCache = {
-                                        viewModel.removeSongsFromCache(selectedSongs.map { it.id })
-                                    },
-                                )
-                            }
+                    }, onLongClick = {
+                        if (!isSearching && !inSelectMode) {
+                            navController.backToMain()
                         }
-                    ) {
+                    }) {
                         Icon(
-                            painter = painterResource(R.drawable.more_vert),
+                            painter = painterResource(
+                                if (inSelectMode) R.drawable.close else R.drawable.arrow_back
+                            ),
                             contentDescription = null
                         )
                     }
-                } else if (!isSearching) {
-                    IconButton(onClick = { isSearching = true }) {
-                        Icon(
-                            painter = painterResource(R.drawable.search),
-                            contentDescription = null
+                },
+                actions = {
+                    if (inSelectMode) {
+                        Checkbox(
+                            checked = selection.size == filteredSongs.size && selection.isNotEmpty(),
+                            onCheckedChange = {
+                                if (selection.size == filteredSongs.size) {
+                                    selection.clear()
+                                } else {
+                                    selection.clear()
+                                    selection.addAll(filteredSongs.map { it.id })
+                                }
+                            }
                         )
+                        IconButton(
+                            enabled = selection.isNotEmpty(),
+                            onClick = {
+                                val selectedSongs = filteredSongs.filter { it.id in selection }
+                                menuState.show {
+                                    SelectionSongMenu(
+                                        songSelection = selectedSongs,
+                                        onDismiss = menuState::dismiss,
+                                        clearAction = onExitSelectionMode,
+                                        onRemoveFromCache = {
+                                            viewModel.removeSongsFromCache(selectedSongs.map { it.id })
+                                        },
+                                    )
+                                }
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.more_vert),
+                                contentDescription = null
+                            )
+                        }
+                    } else if (!isSearching) {
+                        IconButton(onClick = { isSearching = true }) {
+                            Icon(
+                                painter = painterResource(R.drawable.search),
+                                contentDescription = null
+                            )
+                        }
                     }
                 }
-            }
-        )
+            )
+        }
     }
 }
 
@@ -489,23 +501,7 @@ private fun CachePlaylistHeader(
         Box(
             modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)
         ) {
-            androidx.compose.material3.Surface(
-                modifier = Modifier
-                    .size(240.dp)
-                    .shadow(
-                        elevation = 24.dp,
-                        shape = RoundedCornerShape(3.dp),
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                    ),
-                shape = RoundedCornerShape(3.dp)
-            ) {
-                AsyncImage(
-                    model = songs.first().thumbnailUrl,
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            FourCoverArt(covers = songs.take(4).map { it.thumbnailUrl })
         }
 
         // Playlist Name
@@ -549,7 +545,7 @@ private fun CachePlaylistHeader(
                         )
                     )
                 },
-                color = MaterialTheme.colorScheme.primary,
+                color = pageRaisedColor(),
                 shape = androidx.compose.foundation.shape.CircleShape,
                 modifier = Modifier.size(72.dp)
             ) {
@@ -560,7 +556,7 @@ private fun CachePlaylistHeader(
                     Icon(
                         painter = painterResource(R.drawable.play),
                         contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -591,7 +587,7 @@ private fun CachePlaylistHeader(
                     }
                 },
                 shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = pageRaisedColor(),
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(

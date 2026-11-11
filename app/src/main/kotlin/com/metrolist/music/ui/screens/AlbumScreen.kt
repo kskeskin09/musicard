@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens
 
+import com.metrolist.music.ui.theme.pageRaisedColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -283,7 +284,7 @@ fun AlbumScreen(
                                     )
                                 }
                             },
-                            color = MaterialTheme.colorScheme.primary,
+                            color = pageRaisedColor(),
                             shape = CircleShape,
                             modifier = Modifier.size(72.dp),
                         ) {
@@ -294,7 +295,7 @@ fun AlbumScreen(
                                 Icon(
                                     painter = painterResource(R.drawable.play),
                                     contentDescription = stringResource(R.string.play),
-                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    tint = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.size(32.dp),
                                 )
                             }
@@ -313,7 +314,7 @@ fun AlbumScreen(
                                 }
                             },
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            color = pageRaisedColor(),
                             modifier = Modifier.size(48.dp),
                         ) {
                             Box(
@@ -358,7 +359,7 @@ fun AlbumScreen(
                                 }
                             },
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            color = pageRaisedColor(),
                             modifier = Modifier.size(48.dp),
                         ) {
                             Box(
