@@ -96,22 +96,23 @@ fun AddToPlaylistDialog(
         AddToPlaylistPositionKey,
         AddToPlaylistPosition.BEGINNING,
     )
-    val (sortType, onSortTypeChange) = rememberEnumPreference(
-        AddToPlaylistSortTypeKey,
-        PlaylistSortType.NAME
-    )
-    val (sortDescending, onSortDescendingChange) = rememberPreference(
-        AddToPlaylistSortDescendingKey,
-        false
-    )
+    // Playlists come in the same order as in the library (pinned first, then its sort).
+    val (librarySort) = rememberEnumPreference(com.metrolist.music.constants.LibrarySortKey, com.metrolist.music.constants.LibrarySortOption.ADDED_NEWEST)
+    val (libraryCustomOrder) = rememberPreference(com.metrolist.music.constants.LibraryCustomOrderKey, "")
+    val (libraryPinned) = rememberPreference(com.metrolist.music.constants.LibraryPinnedKey, "")
     val allPlaylists by viewModel.allPlaylists.collectAsStateWithLifecycle()
     // The app's own lists (top, weekly / monthly most) can't take songs, so they aren't offered.
     val playlists =
-        remember(allPlaylists) {
-            allPlaylists.filter {
-                it.id != com.metrolist.music.db.entities.PlaylistEntity.WEEKLY_MOST_PLAYLIST_ID &&
-                    it.id != com.metrolist.music.db.entities.PlaylistEntity.MONTHLY_MOST_PLAYLIST_ID
-            }
+        remember(allPlaylists, librarySort, libraryCustomOrder, libraryPinned) {
+            com.metrolist.music.ui.screens.library.libraryOrder(
+                allPlaylists.filter {
+                    it.id != com.metrolist.music.db.entities.PlaylistEntity.WEEKLY_MOST_PLAYLIST_ID &&
+                        it.id != com.metrolist.music.db.entities.PlaylistEntity.MONTHLY_MOST_PLAYLIST_ID
+                },
+                librarySort,
+                libraryCustomOrder.split('\n').filter { it.isNotBlank() },
+                libraryPinned.split('\n').filter { it.isNotBlank() },
+            )
         }
     val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
     val isLoggedIn = remember(innerTubeCookie) {
@@ -210,70 +211,6 @@ fun AddToPlaylistDialog(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
-                }
-            }
-
-            if (playlists.isNotEmpty()) {
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                    ) {
-                        // The same pill as the other filters in the app.
-                        ChipsRow(
-                            chips =
-                                PlaylistSortType.entries.map { type ->
-                                    type to
-                                        stringResource(
-                                            when (type) {
-                                                PlaylistSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                                PlaylistSortType.NAME -> R.string.sort_by_name
-                                                PlaylistSortType.SONG_COUNT -> R.string.sort_by_song_count
-                                                PlaylistSortType.LAST_UPDATED -> R.string.sort_by_last_updated
-                                            },
-                                        )
-                                },
-                            currentValue = sortType,
-                            onValueUpdate = onSortTypeChange,
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            modifier = Modifier.weight(1f).padding(start = 0.dp),
-                        )
-
-                        val arrowBg by animateColorAsState(
-                            targetValue = if (sortDescending) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.surfaceContainerHighest,
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                            label = "arrowBg"
-                        )
-                        val arrowFg by animateColorAsState(
-                            targetValue = if (sortDescending) MaterialTheme.colorScheme.surface
-                            else MaterialTheme.colorScheme.onSurface,
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                            label = "arrowFg"
-                        )
-                        IconToggleButton(
-                            checked = sortDescending,
-                            onCheckedChange = { onSortDescendingChange(it) },
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(arrowBg)
-                                .size(36.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    if (sortDescending) R.drawable.arrow_downward else R.drawable.arrow_upward
-                                ),
-                                contentDescription = stringResource(
-                                    if (sortDescending) R.string.sort_descending else R.string.sort_ascending
-                                ),
-                                tint = arrowFg,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
                 }
             }
 

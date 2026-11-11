@@ -286,7 +286,7 @@ fun PlaylistMenu(
                             if (dbPlaylist?.playlist?.bookmarkedAt !=
                                 null
                             ) {
-                                MaterialTheme.colorScheme.error
+                                com.metrolist.music.ui.theme.likedTint()
                             } else {
                                 LocalContentColor.current
                             },

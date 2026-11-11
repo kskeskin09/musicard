@@ -1049,4 +1049,9 @@
     <string name="stats_minutes">%1$d min</string>
     <string name="stats_hours_minutes">%1$dh %2$dm</string>
     <string name="stats_empty">Nothing played in this period yet</string>
+    <string name="like_icon_color">Like icon color</string>
+    <string name="like_icon_color_white">White</string>
+    <string name="like_icon_color_red">Red</string>
+    <string name="play_list_button">Play</string>
+    <string name="pause_list_button">Pause</string>
 </resources>

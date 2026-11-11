@@ -17,3 +17,12 @@ fun NavController.backToMain() {
         popBackStack()
     }
 }
+
+/** This entry's route with its arguments filled in, e.g. "album/MPREb_x" for "album/{albumId}". */
+fun androidx.navigation.NavBackStackEntry.resolvedRoute(): String? =
+    destination.route?.let { pattern ->
+        Regex("""\{(\w+)\}""").replace(pattern) { match ->
+            @Suppress("DEPRECATION")
+            arguments?.get(match.groupValues[1])?.toString().orEmpty()
+        }
+    }

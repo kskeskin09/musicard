@@ -101,8 +101,8 @@ fun SettingsScreen(
                 remember(searchQuery) {
                     val q = searchQuery.trim()
                     SettingsSearchIndex.filter { entry ->
-                        context.getString(entry.title).contains(q, ignoreCase = true) ||
-                            context.getString(entry.page).contains(q, ignoreCase = true)
+                        com.metrolist.music.utils.FuzzySearch.matches(q, context.getString(entry.title)) ||
+                            com.metrolist.music.utils.FuzzySearch.matches(q, context.getString(entry.page))
                     }.distinctBy { it.title to it.route }
                 }
             if (results.isEmpty()) {

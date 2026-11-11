@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens
 
+import com.metrolist.music.ui.component.ExpandingSearchField
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -161,14 +162,7 @@ fun HistoryScreen(
                 events
                     .mapValues { (_, songs) ->
                         songs.filter { event ->
-                            event.song.song.title
-                                .contains(query.text, ignoreCase = true) ||
-                                event.song.artists.any {
-                                    it.name.contains(
-                                        query.text,
-                                        ignoreCase = true,
-                                    )
-                                }
+                            com.metrolist.music.utils.FuzzySearch.matches(query.text, event.song.song.title + " " + event.song.artists.joinToString(" ") { it.name })
                         }
                     }.filterValues { it.isNotEmpty() }
             }
@@ -185,8 +179,8 @@ fun HistoryScreen(
                         section.copy(
                             songs =
                                 section.songs.filter { song ->
-                                    song.title.contains(query.text, ignoreCase = true) ||
-                                        song.artists.any { it.name.contains(query.text, ignoreCase = true) }
+                                    com.metrolist.music.utils.FuzzySearch.matches(query.text, song.title) ||
+                                        song.artists.any { com.metrolist.music.utils.FuzzySearch.matches(query.text, it.name) }
                                 },
                         )
                     }?.filter { it.songs.isNotEmpty() }
@@ -438,31 +432,11 @@ fun HistoryScreen(
             if (inSelectMode) {
                 Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
             } else if (isSearching) {
-                TextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.search),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.titleLarge,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                        ),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester),
-                )
+                ExpandingSearchField(
+    value = query,
+    onValueChange = { query = it },
+    focusRequester = focusRequester,
+)
             } else {
                 Text(stringResource(R.string.history))
             }

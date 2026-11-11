@@ -5,6 +5,7 @@
 
 package com.metrolist.music.viewmodels
 
+import com.metrolist.music.utils.FuzzySearch
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -51,28 +52,33 @@ constructor(
             if (query.isEmpty()) {
                 flowOf(LocalSearchResult("", filter, emptyMap()))
             } else {
+                // Everything in the library, ranked by a forgiving match (typos, accents, word
+                // order), so the closest results come first.
+                val songs =
+                    database.searchSongs("").map { all ->
+                        val visible = if (hideVideoSongs) all.filter { !it.song.isVideo } else all
+                        FuzzySearch.rank(visible, query) { song ->
+                            listOf(song.song.title, song.song.title + " " + song.artists.joinToString(" ") { it.name }, song.album?.title)
+                        }
+                    }
+                val albums =
+                    database.searchAlbums("").map { all ->
+                        FuzzySearch.rank(all, query) { album ->
+                            listOf(album.album.title, album.album.title + " " + album.artists.joinToString(" ") { it.name })
+                        }
+                    }
+                val artists = database.searchArtists("").map { all -> FuzzySearch.rank(all, query) { listOf(it.artist.name) } }
+                val playlists = database.searchPlaylists("").map { all -> FuzzySearch.rank(all, query) { listOf(it.playlist.name) } }
                 when (filter) {
                     LocalFilter.ALL ->
-                        combine(
-                            database.searchSongs(query, PREVIEW_SIZE),
-                            database.searchAlbums(query, PREVIEW_SIZE),
-                            database.searchArtists(query, PREVIEW_SIZE),
-                            database.searchPlaylists(query, PREVIEW_SIZE),
-                        ) { songs, albums, artists, playlists ->
-                            val filteredSongs = if (hideVideoSongs) songs.filter { !it.song.isVideo } else songs
-                            val localSongs = filteredSongs.map { it }
-                            val localAlbums = albums.map { it }
-                            val localArtists = artists.map { it }
-                            val localPlaylists = playlists.map { it }
-                            localSongs + localAlbums + localArtists + localPlaylists
+                        combine(songs, albums, artists, playlists) { s, al, ar, p ->
+                            s.take(PREVIEW_SIZE) + al.take(PREVIEW_SIZE) + ar.take(PREVIEW_SIZE) + p.take(PREVIEW_SIZE)
                         }
 
-                    LocalFilter.SONG -> database.searchSongs(query).map { songs ->
-                        if (hideVideoSongs) songs.filter { !it.song.isVideo } else songs
-                    }
-                    LocalFilter.ALBUM -> database.searchAlbums(query)
-                    LocalFilter.ARTIST -> database.searchArtists(query)
-                    LocalFilter.PLAYLIST -> database.searchPlaylists(query)
+                    LocalFilter.SONG -> songs
+                    LocalFilter.ALBUM -> albums
+                    LocalFilter.ARTIST -> artists
+                    LocalFilter.PLAYLIST -> playlists
                 }.map { list ->
                     LocalSearchResult(
                         query = query,

@@ -5,6 +5,11 @@
 
 package com.metrolist.music.ui.component
 
+import com.metrolist.music.ui.utils.resolvedRoute
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Row
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -75,3 +80,54 @@ fun shuffleAwareStartIndex(
     shuffleOn: Boolean,
     size: Int,
 ): Int = if (shuffleOn && size > 0) Random.nextInt(size) else 0
+
+/**
+ * A list's Play button: a pill as tall as the shuffle button, with the play icon and "Play".
+ * While this list is the one playing it turns into Pause, and then Play again resumes where it
+ * stopped instead of starting over.
+ */
+@Composable
+fun ListPlayButton(
+    onPlay: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val pageRoute =
+        (androidx.lifecycle.compose.LocalLifecycleOwner.current as? androidx.navigation.NavBackStackEntry)
+            ?.resolvedRoute()
+    val sourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val thisListIsLoaded = pageRoute != null && sourceRoute == pageRoute
+    val showPause = thisListIsLoaded && isPlaying
+    Surface(
+        onClick = {
+            when {
+                showPause -> playerConnection.player.pause()
+                thisListIsLoaded -> playerConnection.player.play()
+                else -> onPlay()
+            }
+        },
+        shape = CircleShape,
+        color = com.metrolist.music.ui.theme.pageRaisedColor(),
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        modifier = modifier.height(48.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+            modifier = Modifier.padding(start = 18.dp, end = 22.dp),
+        ) {
+            Icon(
+                painter = painterResource(if (showPause) R.drawable.pause else R.drawable.play),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
+            androidx.compose.material3.Text(
+                text = stringResource(if (showPause) R.string.pause_list_button else R.string.play_list_button),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+            )
+        }
+    }
+}

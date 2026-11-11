@@ -3,8 +3,11 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
+@file:OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+
 package com.metrolist.music
 
+import com.metrolist.music.ui.utils.resolvedRoute
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.ForegroundServiceStartNotAllowedException
@@ -761,14 +764,7 @@ class MainActivity : FragmentActivity() {
                 // there remembers where it came from ("Playing from").
                 LaunchedEffect(navBackStackEntry, playerConnection) {
                     val entry = navBackStackEntry ?: return@LaunchedEffect
-                    val pattern = entry.destination.route
-                    playerConnection?.currentScreenRoute =
-                        pattern?.let {
-                            Regex("""\{(\w+)\}""").replace(it) { match ->
-                                @Suppress("DEPRECATION")
-                                entry.arguments?.get(match.groupValues[1])?.toString().orEmpty()
-                            }
-                        }
+                    playerConnection?.currentScreenRoute = entry.resolvedRoute()
                 }
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
@@ -1117,6 +1113,8 @@ class MainActivity : FragmentActivity() {
                 // The strip under the floating nav pill matches the page background.
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
                 val artistNameAliases by ArtistNameAliases.aliases.collectAsStateWithLifecycle()
+                val (likeIconColor) =
+                    rememberEnumPreference(com.metrolist.music.constants.LikeIconColorKey, defaultValue = com.metrolist.music.ui.theme.LikeIconColor.WHITE)
 
                 CompositionLocalProvider(
                     LocalDatabase provides database,
@@ -1130,6 +1128,7 @@ class MainActivity : FragmentActivity() {
                     LocalListenTogetherManager provides listenTogetherManager,
                     LocalChangelogState provides showChangelog,
                     LocalArtistNameAliases provides artistNameAliases,
+                    com.metrolist.music.ui.theme.LocalLikeIconRed provides (likeIconColor == com.metrolist.music.ui.theme.LikeIconColor.RED),
                 ) {
                     if (showChangelog.value) {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
@@ -1457,63 +1456,68 @@ class MainActivity : FragmentActivity() {
                             }
                             Box(Modifier.weight(1f)) {
                                 // NavHost with animations (Material 3 Expressive style)
-                                NavHost(
-                                    navController = navController,
-                                    startDestination =
-                                        when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                                            NavigationTab.HOME -> Screens.Home
-                                            NavigationTab.SEARCH -> Screens.Search
-                                            NavigationTab.LIBRARY -> Screens.Library
-                                        }.route,
-                                    enterTransition = {
-                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                // Lets album covers grow from a card into the album page.
+                                androidx.compose.animation.SharedTransitionLayout {
+                                    CompositionLocalProvider(com.metrolist.music.ui.utils.LocalSharedTransitionScope provides this) {
+                                        NavHost(
+                                            navController = navController,
+                                            startDestination =
+                                                when (tabOpenedFromShortcut ?: defaultOpenTab) {
+                                                    NavigationTab.HOME -> Screens.Home
+                                                    NavigationTab.SEARCH -> Screens.Search
+                                                    NavigationTab.LIBRARY -> Screens.Library
+                                                }.route,
+                                            enterTransition = {
+                                                val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
 
-                                        if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                        } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                        }
-                                    },
-                                    exitTransition = {
-                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
+                                                    slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                                } else {
+                                                    slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                                }
+                                            },
+                                            exitTransition = {
+                                                val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                                val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
 
-                                        if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                                        } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
-                                        }
-                                    },
-                                    popEnterTransition = {
-                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                                if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
+                                                    slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                                } else {
+                                                    slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                                }
+                                            },
+                                            popEnterTransition = {
+                                                val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
 
-                                        if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                        } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                        }
-                                    },
-                                    popExitTransition = {
-                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
+                                                    slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                                } else {
+                                                    slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                                }
+                                            },
+                                            popExitTransition = {
+                                                val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                                val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
 
-                                        if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                                        } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                                if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
+                                                    slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                                } else {
+                                                    slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                                }
+                                            },
+                                            modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+                                        ) {
+                                            navigationBuilder(
+                                                navController = navController,
+                                                scrollBehavior = topAppBarScrollBehavior,
+                                                latestVersionName = latestVersionName,
+                                                activity = this@MainActivity,
+                                                snackbarHostState = snackbarHostState,
+                                            )
                                         }
-                                    },
-                                    modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
-                                ) {
-                                    navigationBuilder(
-                                        navController = navController,
-                                        scrollBehavior = topAppBarScrollBehavior,
-                                        latestVersionName = latestVersionName,
-                                        activity = this@MainActivity,
-                                        snackbarHostState = snackbarHostState,
-                                    )
+                                    }
                                 }
                             }
                         }

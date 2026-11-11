@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.ExpandingSearchField
+import com.metrolist.music.ui.component.ListPlayButton
 import com.metrolist.music.ui.theme.TintedPageColors
 import com.metrolist.music.ui.theme.pageRaisedColor
 import com.metrolist.music.ui.component.ShuffleModeButton
@@ -230,10 +232,7 @@ fun LocalPlaylistScreen(
                 songs
             } else {
                 songs.filter { song ->
-                    song.song.song.title
-                        .contains(query.text, ignoreCase = true) ||
-                        song.song.artists
-                            .fastAny { it.name.contains(query.text, ignoreCase = true) }
+                    com.metrolist.music.utils.FuzzySearch.matches(query.text, song.song.song.title + " " + song.song.artists.joinToString(" ") { it.name })
                 }
             }
         }
@@ -832,31 +831,11 @@ fun LocalPlaylistScreen(
                     if (inSelectMode) {
                         Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
                     } else if (isSearching) {
-                        TextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.search),
-                                    style = MaterialTheme.typography.titleLarge,
-                                )
-                            },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.titleLarge,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            colors =
-                                TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    disabledIndicatorColor = Color.Transparent,
-                                ),
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester),
-                        )
+                        ExpandingSearchField(
+    value = query,
+    onValueChange = { query = it },
+    focusRequester = focusRequester,
+)
                     } else if (showTopBarTitle) {
                         Text(playlist?.playlist?.name.orEmpty())
                     }
@@ -1406,8 +1385,8 @@ fun LocalPlaylistHeader(
         ) {
             // Play: the player's play icon in a circle. With shuffle on it starts from a random
             // song in a shuffled order, otherwise it plays in the order shown.
-            Surface(
-                onClick = {
+            ListPlayButton(
+                onPlay = {
                     context.markPlaylistPlayed(playlist.playlist.id)
                     playerConnection.playQueue(
                         ListQueue(
@@ -1417,22 +1396,7 @@ fun LocalPlaylistHeader(
                         ),
                     )
                 },
-                color = pageRaisedColor(),
-                shape = CircleShape,
-                modifier = Modifier.size(64.dp),
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.player_play),
-                        contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(30.dp),
-                    )
-                }
-            }
+            )
 
             // Shuffle on / off (the same switch as in Up next; it does not start playback).
             ShuffleModeButton()

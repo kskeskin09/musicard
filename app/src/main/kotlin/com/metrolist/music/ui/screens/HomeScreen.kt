@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens
 
+import com.metrolist.music.ui.utils.albumCoverSharedElement
 import com.metrolist.music.db.entities.AlbumEntity
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.db.entities.EventWithSong
@@ -1534,6 +1535,7 @@ fun HomeScreen(
                                         contentScale = ContentScale.Crop,
                                         modifier =
                                             Modifier
+                                                .albumCoverSharedElement(album.id, album.thumbnail)
                                                 .size(size)
                                                 .clip(shape)
                                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
@@ -3018,7 +3020,13 @@ private fun RecentCollectionCard(
                     contentScale = ContentScale.Crop,
                     modifier =
                         Modifier
-                            .size(size)
+                            .then(
+                                if (item is RecentCollection.AlbumItem) {
+                                    Modifier.albumCoverSharedElement(item.album.id, url)
+                                } else {
+                                    Modifier
+                                },
+                            ).size(size)
                             .clip(shape)
                             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 )

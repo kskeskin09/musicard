@@ -1510,6 +1510,7 @@ fun BottomSheetPlayer(
                                                 },
                                             ),
                                         contentDescription = null,
+                                        tint = if (isFavorite) com.metrolist.music.ui.theme.likedTint(iconButtonColor) else iconButtonColor,
                                         modifier = Modifier.size(24.dp),
                                     )
                                 }
@@ -2143,7 +2144,7 @@ fun BottomSheetPlayer(
                                 val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
                                 ResizableIconButton(
                                     icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
-                                    color = if (isFavorite) MaterialTheme.colorScheme.error else TextBackgroundColor,
+                                    color = if (isFavorite) com.metrolist.music.ui.theme.likedTint(TextBackgroundColor) else TextBackgroundColor,
                                     modifier =
                                         Modifier
                                             .size(32.dp)
@@ -2918,7 +2919,7 @@ private fun PlayerLikeButton(
     PlayerCircleButton(
         icon = unlikeGuard.icon(liked),
         contentDescription = stringResource(R.string.action_like),
-        contentColor = contentColor,
+        contentColor = if (liked) com.metrolist.music.ui.theme.likedTint(contentColor) else contentColor,
         onClick = {
             if (unlikeGuard.onTap(liked)) {
                 tapped = true

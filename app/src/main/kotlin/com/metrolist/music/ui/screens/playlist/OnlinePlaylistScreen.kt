@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.ExpandingSearchField
+import com.metrolist.music.ui.component.ListPlayButton
 import com.metrolist.music.ui.theme.pageRaisedColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -153,8 +155,8 @@ fun OnlinePlaylistScreen(
                 songs.mapIndexed { i, s -> i to s }
             } else {
                 songs.mapIndexed { i, s -> i to s }.filter {
-                    it.second.title.contains(query.text, true) ||
-                        it.second.artists.fastAny { a -> a.name.contains(query.text, true) }
+                    com.metrolist.music.utils.FuzzySearch.matches(query.text, it.second.title) ||
+                        it.second.artists.fastAny { a -> com.metrolist.music.utils.FuzzySearch.matches(query.text, a.name) }
                 }
             }
         }
@@ -377,31 +379,11 @@ fun OnlinePlaylistScreen(
                         style = MaterialTheme.typography.titleLarge,
                     )
                 } else if (isSearching) {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.search),
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        colors =
-                            TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                            ),
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester),
-                    )
+                    ExpandingSearchField(
+    value = query,
+    onValueChange = { query = it },
+    focusRequester = focusRequester,
+)
                 } else if (lazyListState.firstVisibleItemIndex > 0) {
                     Text(playlist?.title ?: "")
                 }
@@ -626,8 +608,8 @@ private fun OnlinePlaylistHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Play Button - Larger primary circular button
-            Surface(
-                onClick = {
+            ListPlayButton(
+                onPlay = {
                     if (!isListenTogetherGuest && songs.isNotEmpty()) {
                         playerConnection.playQueue(
                             YouTubePlaylistQueue(
@@ -639,22 +621,7 @@ private fun OnlinePlaylistHeader(
                         )
                     }
                 },
-                color = pageRaisedColor(),
-                shape = CircleShape,
-                modifier = Modifier.size(72.dp),
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play),
-                        contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(32.dp),
-                    )
-                }
-            }
+            )
 
             // Shuffle on / off (the same switch as in Up next; it does not start playback).
             ShuffleModeButton()
@@ -715,7 +682,7 @@ private fun OnlinePlaylistHeader(
                         contentDescription = null,
                         tint =
                             if (dbPlaylist?.playlist?.bookmarkedAt != null) {
-                                MaterialTheme.colorScheme.onBackground
+                                com.metrolist.music.ui.theme.likedTint(MaterialTheme.colorScheme.onBackground)
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },

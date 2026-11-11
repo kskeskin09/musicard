@@ -5,6 +5,9 @@
 
 package com.metrolist.music.ui.screens
 
+import com.metrolist.music.ui.utils.albumCoverSharedElement
+import com.metrolist.music.ui.utils.AlbumCoverPreviewCache
+import com.metrolist.music.ui.component.ListPlayButton
 import androidx.compose.foundation.background
 import androidx.compose.material3.TopAppBarDefaults
 import com.metrolist.music.ui.theme.rememberCoverPageTint
@@ -221,10 +224,18 @@ fun AlbumScreen(
                             Surface(
                                 modifier =
                                     Modifier
+                                        .albumCoverSharedElement(viewModel.albumId)
                                         .size(280.dp)
                                         .shadow(elevation = 24.dp, shape = RoundedCornerShape(16.dp)),
                                 shape = RoundedCornerShape(16.dp),
                             ) {
+                                // The small cover (already loaded) under the sharp one while it loads.
+                                AsyncImage(
+                                    model = AlbumCoverPreviewCache[viewModel.albumId] ?: albumWithSongs.album.thumbnailUrl,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
                                 AsyncImage(
                                     model = albumWithSongs.album.thumbnailUrl?.resize(1080, 1080),
                                     contentDescription = null,
@@ -285,8 +296,8 @@ fun AlbumScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 // Play Button - Larger primary circular button
-                                Surface(
-                                    onClick = {
+                                ListPlayButton(
+                                    onPlay = {
                                         if (!isListenTogetherGuest) {
                                             playerConnection.service.getAutomix(playlistId)
                                             playerConnection.playQueue(
@@ -294,22 +305,7 @@ fun AlbumScreen(
                                             )
                                         }
                                     },
-                                    color = pageRaisedColor(),
-                                    shape = CircleShape,
-                                    modifier = Modifier.size(72.dp),
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize(),
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.play),
-                                            contentDescription = stringResource(R.string.play),
-                                            tint = MaterialTheme.colorScheme.onBackground,
-                                            modifier = Modifier.size(32.dp),
-                                        )
-                                    }
-                                }
+                                )
 
                                 // Shuffle on / off (the same switch as in Up next; it does not start playback).
                                 ShuffleModeButton()
@@ -345,7 +341,7 @@ fun AlbumScreen(
                                             contentDescription = null,
                                             tint =
                                                 if (albumWithSongs.album.bookmarkedAt != null) {
-                                                    MaterialTheme.colorScheme.onBackground
+                                                    com.metrolist.music.ui.theme.likedTint(MaterialTheme.colorScheme.onBackground)
                                                 } else {
                                                     MaterialTheme.colorScheme.onSurfaceVariant
                                                 },
@@ -501,6 +497,36 @@ fun AlbumScreen(
                         }
                     }
                 } else {
+                    // Until the album is loaded, the cover from the tapped card already sits in
+                    // its place, so it can grow straight into it.
+                    val previewCover = AlbumCoverPreviewCache[viewModel.albumId]
+                    if (previewCover != null) {
+                        item(key = "album_header") {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp, bottom = 20.dp),
+                            ) {
+                                Surface(
+                                    modifier =
+                                        Modifier
+                                            .albumCoverSharedElement(viewModel.albumId)
+                                            .size(280.dp)
+                                            .shadow(elevation = 24.dp, shape = RoundedCornerShape(16.dp)),
+                                    shape = RoundedCornerShape(16.dp),
+                                ) {
+                                    AsyncImage(
+                                        model = previewCover,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+                            }
+                        }
+                    }
                     item(key = "loading") {
                         Box(
                             modifier =

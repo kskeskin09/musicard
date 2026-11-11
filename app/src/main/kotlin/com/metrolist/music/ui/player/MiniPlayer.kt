@@ -1167,7 +1167,7 @@ private fun FavoriteButton(
         Icon(
             painter = painterResource(unlikeGuard.icon(isLiked)),
             contentDescription = null,
-            tint = if (isLiked) onSurfaceColor else onSurfaceColor.copy(alpha = 0.8f),
+            tint = if (isLiked) com.metrolist.music.ui.theme.likedTint(onSurfaceColor) else onSurfaceColor.copy(alpha = 0.8f),
             modifier =
                 Modifier
                     .size(26.dp)

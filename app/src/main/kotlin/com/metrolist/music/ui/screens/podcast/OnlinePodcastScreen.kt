@@ -115,8 +115,8 @@ fun OnlinePodcastScreen(
     val filteredEpisodes = remember(episodes, query) {
         if (query.text.isEmpty()) episodes
         else episodes.filter { episode ->
-            episode.title.contains(query.text, ignoreCase = true) ||
-                episode.author?.name?.contains(query.text, ignoreCase = true) == true
+            com.metrolist.music.utils.FuzzySearch.matches(query.text, episode.title) ||
+                episode.author?.name?.let { com.metrolist.music.utils.FuzzySearch.matches(query.text, it) } == true
         }
     }
 
@@ -237,29 +237,11 @@ fun OnlinePodcastScreen(
         TopAppBar(
             title = {
                 if (isSearching) {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.search),
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                    )
+                    ExpandingSearchField(
+    value = query,
+    onValueChange = { query = it },
+    focusRequester = focusRequester,
+)
                 } else if (lazyListState.firstVisibleItemIndex > 0) {
                     Text(podcast?.title ?: "")
                 }

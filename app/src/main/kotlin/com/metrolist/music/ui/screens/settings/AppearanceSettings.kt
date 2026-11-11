@@ -5,6 +5,9 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import android.os.Build
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -91,7 +94,6 @@ import com.metrolist.music.constants.ShowCachedPlaylistKey
 import com.metrolist.music.constants.ShowDownloadedPlaylistKey
 import com.metrolist.music.constants.ShowLikedPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
-import com.metrolist.music.constants.ShowUploadedPlaylistKey
 import com.metrolist.music.constants.SliderStyle
 import com.metrolist.music.constants.SliderStyleKey
 import com.metrolist.music.constants.SlimNavBarKey
@@ -317,11 +319,6 @@ fun AppearanceSettings(
     val (showCachedPlaylist, onShowCachedPlaylistChange) =
         rememberPreference(
             ShowCachedPlaylistKey,
-            defaultValue = true,
-        )
-    val (showUploadedPlaylist, onShowUploadedPlaylistChange) =
-        rememberPreference(
-            ShowUploadedPlaylistKey,
             defaultValue = true,
         )
 
@@ -899,6 +896,9 @@ fun AppearanceSettings(
         }
     }
 
+    val (likeIconColor, onLikeIconColorChange) =
+        rememberEnumPreference(com.metrolist.music.constants.LikeIconColorKey, defaultValue = com.metrolist.music.ui.theme.LikeIconColor.WHITE)
+
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
@@ -909,6 +909,54 @@ fun AppearanceSettings(
             title = stringResource(R.string.theme),
             items =
                 buildList {
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.favorite),
+                            title = { Text(stringResource(R.string.like_icon_color)) },
+                            description = {
+                                Text(
+                                    stringResource(
+                                        if (likeIconColor == com.metrolist.music.ui.theme.LikeIconColor.RED) R.string.like_icon_color_red else R.string.like_icon_color_white,
+                                    ),
+                                )
+                            },
+                            trailingContent = {
+                                // White or red, as a small two-part switch.
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                            .padding(3.dp),
+                                ) {
+                                    com.metrolist.music.ui.theme.LikeIconColor.entries.forEach { option ->
+                                        val selected = option == likeIconColor
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier =
+                                                Modifier
+                                                    .size(width = 40.dp, height = 30.dp)
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(if (selected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f) else Color.Transparent)
+                                                    .clickable { onLikeIconColorChange(option) },
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.favorite),
+                                                contentDescription = null,
+                                                tint = if (option == com.metrolist.music.ui.theme.LikeIconColor.RED) Color(0xFFF0455A) else MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            onClick = {
+                                onLikeIconColorChange(
+                                    if (likeIconColor == com.metrolist.music.ui.theme.LikeIconColor.RED) com.metrolist.music.ui.theme.LikeIconColor.WHITE else com.metrolist.music.ui.theme.LikeIconColor.RED,
+                                )
+                            },
+                        ),
+                    )
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.speed),
@@ -1633,27 +1681,6 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onShowCachedPlaylistChange(!showCachedPlaylist) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.backup),
-                        title = { Text(stringResource(R.string.show_uploaded_playlist)) },
-                        trailingContent = {
-                            Switch(
-                                checked = showUploadedPlaylist,
-                                onCheckedChange = onShowUploadedPlaylistChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (showUploadedPlaylist) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onShowUploadedPlaylistChange(!showUploadedPlaylist) },
                     ),
                 ),
         )

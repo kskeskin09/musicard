@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.library
 
+import com.metrolist.music.ui.utils.albumCoverSharedElement
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -281,7 +282,8 @@ fun LibraryHomeScreen(
         }
     }
 
-    val showAutoPlaylists = kind == null || kind == LibraryKind.PLAYLISTS
+    // The app's own lists (Liked, My Top, Downloaded, Cached) only show in the unfiltered view.
+    val showAutoPlaylists = kind == null
     val autoPlaylists =
         buildList {
             if (showLiked) add(AutoPlaylist("auto_liked", stringResource(R.string.liked), R.drawable.favorite, "auto_playlist/liked", highlighted = true))
@@ -480,6 +482,34 @@ private class AutoPlaylist(
     val highlighted: Boolean = false,
 )
 
+/**
+ * [items] in the order the library shows them: pinned ones first, then by the library's sort
+ * (the same order is used when picking a playlist to add songs to).
+ */
+fun <T : LocalItem> libraryOrder(
+    items: List<T>,
+    sortOption: LibrarySortOption,
+    customOrder: List<String>,
+    pinnedIds: List<String>,
+): List<T> {
+    val collator = Collator.getInstance().apply { strength = Collator.PRIMARY }
+    val byAddedNewest = items.sortedWith(compareByDescending(nullsFirst()) { it.addedAt() })
+    val sorted =
+        when (sortOption) {
+            LibrarySortOption.CUSTOM -> {
+                val position = customOrder.withIndex().associate { it.value to it.index }
+                byAddedNewest.sortedBy { position[it.id] ?: -1 }
+            }
+            LibrarySortOption.NAME -> items.sortedWith(compareBy(collator) { it.title })
+            LibrarySortOption.ADDED_NEWEST -> byAddedNewest
+            LibrarySortOption.ADDED_OLDEST -> items.sortedWith(compareBy(nullsLast()) { it.addedAt() })
+            LibrarySortOption.MODIFIED_NEWEST -> items.sortedWith(compareByDescending(nullsFirst()) { it.modifiedAt() })
+            LibrarySortOption.MODIFIED_OLDEST -> items.sortedWith(compareBy(nullsLast()) { it.modifiedAt() })
+        }
+    val pinned = pinnedIds.mapNotNull { id -> sorted.firstOrNull { it.id == id } }
+    return pinned + sorted.filterNot { it.id in pinnedIds }
+}
+
 private fun LocalItem.addedAt(): LocalDateTime? =
     when (this) {
         is Playlist -> playlist.bookmarkedAt ?: playlist.createdAt
@@ -649,7 +679,13 @@ private fun LibraryItemRow(
             when (item) {
                 is Playlist -> PlaylistCover(item)
                 is Artist -> CoverImage(item.artist.thumbnailUrl, CircleShape, R.drawable.person)
-                is Album -> CoverImage(item.album.thumbnailUrl, RoundedCornerShape(CoverCorner), R.drawable.album)
+                is Album ->
+                    CoverImage(
+                        item.album.thumbnailUrl,
+                        RoundedCornerShape(CoverCorner),
+                        R.drawable.album,
+                        modifier = Modifier.albumCoverSharedElement(item.id, item.album.thumbnailUrl),
+                    )
                 else -> Unit
             }
         },
@@ -737,7 +773,8 @@ private fun LibraryRow(
 @Composable
 private fun AutoPlaylistCover(auto: AutoPlaylist) {
     // Liked stands out: filled with the text color, heart in the background color.
-    val background = if (auto.highlighted) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceContainerHigh
+    // Liked: the light tile takes on a soft red.
+    val background = if (auto.highlighted) androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.onSurface, androidx.compose.ui.graphics.Color(0xFFF0455A), 0.28f) else MaterialTheme.colorScheme.surfaceContainerHigh
     val tint = if (auto.highlighted) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
     Box(
         contentAlignment = Alignment.Center,
@@ -805,11 +842,12 @@ private fun CoverImage(
     shape: androidx.compose.ui.graphics.Shape,
     placeholderIcon: Int,
     size: Dp = CoverSize,
+    modifier: Modifier = Modifier,
 ) {
     Box(
         contentAlignment = Alignment.Center,
         modifier =
-            Modifier
+            modifier
                 .size(size)
                 .clip(shape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),

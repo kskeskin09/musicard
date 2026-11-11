@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.ExpandingSearchField
+import com.metrolist.music.ui.component.ListPlayButton
 import com.metrolist.music.ui.component.FourCoverArt
 import androidx.compose.material3.TopAppBarDefaults
 import com.metrolist.music.ui.theme.TintedPageColors
@@ -162,8 +164,8 @@ fun TopPlaylistScreen(
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs ?: emptyList()
         else songs?.filter { song ->
-            song.title.contains(query.text, true) ||
-                song.artists.any { it.name.contains(query.text, true) }
+            com.metrolist.music.utils.FuzzySearch.matches(query.text, song.title) ||
+                song.artists.any { com.metrolist.music.utils.FuzzySearch.matches(query.text, it.name) }
         } ?: emptyList()
     }
 
@@ -445,33 +447,14 @@ fun TopPlaylistScreen(
                             )
                         }
                         isSearching -> {
-                            TextField(
-                                value = query,
-                                onValueChange = { query = it },
-                                placeholder = {
-                                    Text(
-                                        text = stringResource(R.string.search),
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                },
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.titleLarge,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    disabledIndicatorColor = Color.Transparent,
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                            )
+                            ExpandingSearchField(
+    value = query,
+    onValueChange = { query = it },
+    focusRequester = focusRequester,
+)
                         }
-                        else -> {
-                            Text(text = name)
-                        }
+                        // The page shows the name; the bar stays empty.
+                        else -> {}
                     }
                 },
                 navigationIcon = {
@@ -617,8 +600,8 @@ private fun TopPlaylistHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Play Button - Larger primary circular button
-            Surface(
-                onClick = {
+            ListPlayButton(
+                onPlay = {
                     playerConnection.playQueue(
                         ListQueue(
                             title = name,
@@ -627,22 +610,7 @@ private fun TopPlaylistHeader(
                         ),
                     )
                 },
-                color = pageRaisedColor(),
-                shape = androidx.compose.foundation.shape.CircleShape,
-                modifier = Modifier.size(72.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play),
-                        contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
+            )
 
             // Shuffle on / off (the same switch as in Up next; it does not start playback).
             ShuffleModeButton()

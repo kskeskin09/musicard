@@ -478,7 +478,7 @@ fun SongMenu(
             ) {
                 Icon(
                     painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
-                    tint = LocalContentColor.current,
+                    tint = if (isFavorite) com.metrolist.music.ui.theme.likedTint() else LocalContentColor.current,
                     contentDescription = null,
                 )
             }

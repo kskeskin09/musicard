@@ -190,7 +190,14 @@ private fun Material3SettingsItemRow(
         // Trailing content
         if (item.trailingContent != null) {
             Spacer(modifier = Modifier.width(8.dp))
-            item.trailingContent.invoke()
+            // Switches and buttons here keep their own size instead of the 48dp touch box, so a
+            // one-line row with a switch is as tall as the other one-line rows (the whole row is
+            // tappable anyway).
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.material3.LocalMinimumInteractiveComponentSize provides 0.dp,
+            ) {
+                item.trailingContent.invoke()
+            }
         } else if (item.onClick != null) {
             // Rows that open something get a chevron
             Spacer(modifier = Modifier.width(8.dp))
