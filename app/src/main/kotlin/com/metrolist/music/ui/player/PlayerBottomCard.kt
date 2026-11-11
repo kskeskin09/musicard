@@ -762,8 +762,18 @@ fun CompactLyrics(
             }
         }
     }
-    val currentIndex by remember(lines, synced) {
-        derivedStateOf { if (synced) LyricsUtils.findCurrentLineIndex(lines, position) else -1 }
+    val currentIndex by remember(lines, synced, gaps) {
+        derivedStateOf {
+            if (!synced) return@derivedStateOf -1
+            // The dots leave a moment before the next line starts; in that moment the next line is
+            // already the current one, so the line before the break doesn't light up again.
+            val endingGap = gaps.firstOrNull { position > it.endMs - InterludeEndLeadMs && position < it.endMs }
+            if (endingGap != null) {
+                (endingGap.afterLine + 1).coerceAtMost(lines.lastIndex)
+            } else {
+                LyricsUtils.findCurrentLineIndex(lines, position)
+            }
+        }
     }
 
     // During a break the dots move to the top, otherwise the current line does.
