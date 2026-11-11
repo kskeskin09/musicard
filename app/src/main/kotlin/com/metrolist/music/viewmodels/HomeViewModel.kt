@@ -34,6 +34,8 @@ import com.metrolist.music.constants.QuickPicksKey
 import com.metrolist.music.constants.ShowWrappedCardKey
 import com.metrolist.music.constants.WrappedSeenKey
 import com.metrolist.music.db.MusicDatabase
+import com.metrolist.music.constants.RandomizeHomeOrderKey
+import com.metrolist.music.constants.RecentPlaylistsKey
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.LocalItem
 import com.metrolist.music.db.entities.Song
@@ -126,6 +128,21 @@ class HomeViewModel @Inject constructor(
 
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
+
+    // Kept here (and collected eagerly) so that coming back to Home shows the same rows at
+    // once, and the list returns to the same scroll position instead of jumping.
+    val recentEvents =
+        database.recentEvents(400).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val savedPlaylists =
+        database.playlistsByCreateDateAsc().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val recentPlaylistsRaw =
+        context.dataStore.data
+            .map { it[RecentPlaylistsKey] ?: "" }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+    val randomizeHomeOrder =
+        context.dataStore.data
+            .map { it[RandomizeHomeOrderKey] ?: true }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()

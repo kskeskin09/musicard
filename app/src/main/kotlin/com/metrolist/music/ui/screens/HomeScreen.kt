@@ -79,6 +79,7 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -710,20 +711,36 @@ fun HomeScreen(
 
     // Recently played: the last 16 songs, and the last albums, artists and playlists.
     val context = LocalContext.current
-    val recentEvents by remember { database.recentEvents(400) }.collectAsStateWithLifecycle(initialValue = emptyList())
-    val recentPlaylistsRaw by rememberPreference(RecentPlaylistsKey, "")
-    val savedPlaylists by remember { database.playlistsByCreateDateAsc() }.collectAsStateWithLifecycle(initialValue = emptyList())
-    val recentSongs = remember(recentEvents) { recentEvents.map { it.song }.distinctBy { it.id }.take(16) }
+    val recentEvents by viewModel.recentEvents.collectAsStateWithLifecycle()
+    val recentPlaylistsRaw by viewModel.recentPlaylistsRaw.collectAsStateWithLifecycle()
+    val savedPlaylists by viewModel.savedPlaylists.collectAsStateWithLifecycle()
+    val recentSongs = remember(recentEvents) { recentEvents.map { it.song }.distinctBy { it.id }.take(HomeRowsCount) }
     val recentCollections =
         remember(recentEvents, recentPlaylistsRaw, savedPlaylists) {
             buildRecentCollections(recentEvents, parseRecentPlaylists(recentPlaylistsRaw), savedPlaylists).take(10)
         }
     val recentsLazyGridState = rememberLazyGridState()
+    // Quick Picks: the speed dial's songs, topped up with the other picks.
+    val quickPickSongs =
+        remember(speedDialItems, quickPicks, homePage?.sections) {
+            (
+                speedDialItems.filterIsInstance<SongItem>() +
+                    quickPicks.orEmpty().map { song ->
+                        SongItem(
+                            id = song.id,
+                            title = song.title,
+                            artists = song.artists.map { com.metrolist.innertube.models.Artist(name = it.name, id = it.id) },
+                            thumbnail = song.thumbnailUrl ?: "",
+                        )
+                    } +
+                    homePage?.sections.orEmpty().flatMap { it.items }.filterIsInstance<SongItem>()
+            ).distinctBy { it.id }.take(HomeRowsCount)
+        }
 
     val accountName by viewModel.accountName.collectAsStateWithLifecycle()
     val accountImageUrl by viewModel.accountImageUrl.collectAsStateWithLifecycle()
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-    val (randomizeHomeOrder) = rememberPreference(RandomizeHomeOrderKey, true)
+    val randomizeHomeOrder by viewModel.randomizeHomeOrder.collectAsStateWithLifecycle()
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
@@ -1192,12 +1209,19 @@ fun HomeScreen(
             }
         }
 
+    // Back to the first column only when the songs really change (not when coming back to Home).
+    var quickPicksSeen by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(quickPicks) {
-        quickPicksLazyGridState.scrollToItem(0)
+        val hash = quickPicks?.hashCode() ?: 0
+        if (quickPicksSeen != 0 && quickPicksSeen != hash) quickPicksLazyGridState.scrollToItem(0)
+        quickPicksSeen = hash
     }
 
+    var forgottenSeen by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(forgottenFavorites) {
-        forgottenFavoritesLazyGridState.scrollToItem(0)
+        val hash = forgottenFavorites?.hashCode() ?: 0
+        if (forgottenSeen != 0 && forgottenSeen != hash) forgottenFavoritesLazyGridState.scrollToItem(0)
+        forgottenSeen = hash
     }
 
     PullToRefreshBox(
@@ -1428,6 +1452,63 @@ fun HomeScreen(
                     }
                 }
 
+                // Quick Picks: the songs of the old speed dial (topped up to 20), above Recents.
+                if (selectedChip == null && quickPickSongs.isNotEmpty()) {
+                    item(key = "quick_picks_title") {
+                        NavigationTitle(title = stringResource(R.string.quick_picks))
+                    }
+                    item(key = "quick_picks_rows") {
+                        HomeSongRows(
+                            entries = quickPickSongs,
+                            state = quickPicksLazyGridState,
+                            itemWidth = horizontalLazyGridItemWidth,
+                            itemWidthFactor = horizontalLazyGridItemWidthFactor,
+                            key = { "home_quick_${it.id}" },
+                        ) { song, itemModifier ->
+                            YouTubeListItem(
+                                item = song,
+                                isActive = song.id == mediaMetadata?.id,
+                                isPlaying = isPlaying,
+                                isSwipeable = false,
+                                trailingContent = {
+                                    IconButton(
+                                        onClick = {
+                                            menuState.show {
+                                                YouTubeSongMenu(song = song, onDismiss = menuState::dismiss)
+                                            }
+                                        },
+                                    ) {
+                                        Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
+                                    }
+                                },
+                                modifier =
+                                    itemModifier.combinedClickable(
+                                        onClick = {
+                                            if (isListenTogetherGuest) return@combinedClickable
+                                            if (song.id == mediaMetadata?.id) {
+                                                playerConnection.togglePlayPause()
+                                            } else {
+                                                playerConnection.playQueue(
+                                                    ListQueue(
+                                                        title = context.getString(R.string.quick_picks),
+                                                        items = quickPickSongs.map { it.toMediaItem() },
+                                                        startIndex = quickPickSongs.indexOf(song),
+                                                    ),
+                                                )
+                                            }
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show {
+                                                YouTubeSongMenu(song = song, onDismiss = menuState::dismiss)
+                                            }
+                                        },
+                                    ),
+                            )
+                        }
+                    }
+                }
+
                 if (selectedChip == null && recentSongs.isNotEmpty()) {
                     item(key = "recents_title") {
                         NavigationTitle(title = stringResource(R.string.home_recents))
@@ -1527,66 +1608,8 @@ fun HomeScreen(
                     }
                 }
 
-                // Quick Picks: the songs of the old speed dial, in the same rows as Recents.
-                val quickPickSongs = speedDialItems.filterIsInstance<SongItem>().distinctBy { it.id }
-                if (selectedChip == null && quickPickSongs.isNotEmpty()) {
-                    item(key = "quick_picks_title") {
-                        NavigationTitle(title = stringResource(R.string.quick_picks))
-                    }
-                    item(key = "quick_picks_rows") {
-                        HomeSongRows(
-                            entries = quickPickSongs,
-                            state = quickPicksLazyGridState,
-                            itemWidth = horizontalLazyGridItemWidth,
-                            itemWidthFactor = horizontalLazyGridItemWidthFactor,
-                            key = { "home_quick_${it.id}" },
-                        ) { song, itemModifier ->
-                            YouTubeListItem(
-                                item = song,
-                                isActive = song.id == mediaMetadata?.id,
-                                isPlaying = isPlaying,
-                                isSwipeable = false,
-                                trailingContent = {
-                                    IconButton(
-                                        onClick = {
-                                            menuState.show {
-                                                YouTubeSongMenu(song = song, onDismiss = menuState::dismiss)
-                                            }
-                                        },
-                                    ) {
-                                        Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
-                                    }
-                                },
-                                modifier =
-                                    itemModifier.combinedClickable(
-                                        onClick = {
-                                            if (isListenTogetherGuest) return@combinedClickable
-                                            if (song.id == mediaMetadata?.id) {
-                                                playerConnection.togglePlayPause()
-                                            } else {
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = context.getString(R.string.quick_picks),
-                                                        items = quickPickSongs.map { it.toMediaItem() },
-                                                        startIndex = quickPickSongs.indexOf(song),
-                                                    ),
-                                                )
-                                            }
-                                        },
-                                        onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            menuState.show {
-                                                YouTubeSongMenu(song = song, onDismiss = menuState::dismiss)
-                                            }
-                                        },
-                                    ),
-                            )
-                        }
-                    }
-                }
-
                 // Forgotten Favorites, in the same rows.
-                val forgottenSongs = forgottenFavorites.orEmpty().distinctBy { it.id }
+                val forgottenSongs = forgottenFavorites.orEmpty().distinctBy { it.id }.take(HomeRowsCount)
                 if (selectedChip == null && forgottenSongs.isNotEmpty()) {
                     item(key = "forgotten_favorites_title") {
                         NavigationTitle(title = stringResource(R.string.forgotten_favorites))
@@ -2956,6 +2979,9 @@ fun buildRecentCollections(
     }
     return items.sortedByDescending { it.time }
 }
+
+/** How many songs the four-row sections (Quick Picks, Recents, Forgotten Favorites) show. */
+private const val HomeRowsCount = 20
 
 @Composable
 private fun RecentCollectionCard(
