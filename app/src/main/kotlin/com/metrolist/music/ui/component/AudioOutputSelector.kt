@@ -147,13 +147,17 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
     }
 
     if (options.size <= 3) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = modifier.fillMaxWidth(),
-        ) {
-            options.forEach { option ->
-                OutputChip(option, option.key == selectedKey, onPick, Modifier.widthIn(max = 150.dp))
+        androidx.compose.foundation.layout.BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+            // Each chip gets an equal share, so all of them always fit between the two edges.
+            val maxChip = (maxWidth - 8.dp * (options.size - 1)) / options.size
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                options.forEach { option ->
+                    OutputChip(option, option.key == selectedKey, onPick, Modifier.widthIn(max = maxChip))
+                }
             }
         }
     } else {
