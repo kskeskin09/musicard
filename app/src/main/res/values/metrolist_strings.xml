@@ -1060,4 +1060,7 @@
     <string name="playlist_description_hint">What is it about?</string>
     <string name="playlist_cover_remove">Remove cover</string>
     <string name="playlist_cover_link_title">Cover image link</string>
+    <string name="audio_output_auto">System auto</string>
+    <string name="audio_output_phone">%1$s\'s phone</string>
+    <string name="audio_output_phone_default">Phone</string>
 </resources>
