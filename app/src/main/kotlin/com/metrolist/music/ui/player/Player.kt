@@ -2474,6 +2474,26 @@ fun BottomSheetPlayer(
                             onPullDownClose = closeCardFull,
                             headerAlpha = { cardControlsAlpha },
                             followState = lyricsFollow,
+                            onQueueSongMoreClick = { window ->
+                                val metadata = window.mediaItem.metadata
+                                if (metadata != null) {
+                                    menuState.show {
+                                        com.metrolist.music.ui.menu.QueueMenu(
+                                            mediaMetadata = metadata,
+                                            playerBottomSheetState = state,
+                                            onShowDetailsDialog = {
+                                                bottomSheetPageState.show {
+                                                    ShowMediaInfo(metadata.id)
+                                                }
+                                            },
+                                            onDismiss = menuState::dismiss,
+                                            onRemoveFromQueue = {
+                                                playerConnection.player.removeMediaItem(window.firstPeriodIndex)
+                                            },
+                                        )
+                                    }
+                                }
+                            },
                             onMoreClick = moreMenu@{
                                 val metadata = mediaMetadata ?: return@moreMenu
                                 menuState.show {

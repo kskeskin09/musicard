@@ -172,6 +172,8 @@ fun PlayerBottomCard(
     headerAlpha: () -> Float = { 1f },
     // Whether the opened lyrics stopped following the song after a manual scroll.
     followState: LyricsFollowState? = null,
+    // Opens the song menu for a song in the Up next list.
+    onQueueSongMoreClick: (androidx.media3.common.Timeline.Window) -> Unit = {},
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -343,6 +345,7 @@ fun PlayerBottomCard(
                             isListenTogetherGuest = isListenTogetherGuest,
                             expandFraction = expandFraction,
                             openBottomPadding = openBottomPadding,
+                            onSongMoreClick = onQueueSongMoreClick,
                         )
                     }
             }
@@ -451,6 +454,7 @@ private fun UpNextList(
     isListenTogetherGuest: Boolean,
     expandFraction: () -> Float,
     openBottomPadding: Dp,
+    onSongMoreClick: (androidx.media3.common.Timeline.Window) -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
@@ -494,6 +498,47 @@ private fun UpNextList(
         listState.animateScrollToItem(nextIndex.coerceIn(0, shown.lastIndex))
     }
 
+    // Holding a song picks it up; dropping it moves it in the queue. While dragging, the list
+    // shows the moved order; the player is updated once the song is dropped.
+    var dragOrder by remember { mutableStateOf<List<androidx.media3.common.Timeline.Window>?>(null) }
+    var dragMove by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val displayed = dragOrder ?: shown
+    val reorderState =
+        sh.calvin.reorderable.rememberReorderableLazyListState(lazyListState = listState) { from, to ->
+            // Only upcoming songs can be moved, and only among themselves.
+            if (to.index < nextIndex || from.index < nextIndex) return@rememberReorderableLazyListState
+            val list = (dragOrder ?: shown).toMutableList()
+            list.add(to.index, list.removeAt(from.index))
+            dragOrder = list
+            dragMove = (dragMove?.first ?: from.index) to to.index
+        }
+    LaunchedEffect(reorderState.isAnyItemDragging) {
+        if (reorderState.isAnyItemDragging) return@LaunchedEffect
+        val move = dragMove
+        if (move != null) {
+            val fromWindow = shown.getOrNull(move.first)
+            val toWindow = shown.getOrNull(move.second)
+            if (fromWindow != null && toWindow != null && move.first != move.second) {
+                val player = playerConnection.player
+                if (!player.shuffleModeEnabled) {
+                    player.moveMediaItem(fromWindow.firstPeriodIndex, toWindow.firstPeriodIndex)
+                } else {
+                    val order = queueWindows.map { it.firstPeriodIndex }.toMutableList()
+                    val fromPos = historyStart + move.first
+                    val toPos = historyStart + move.second
+                    if (fromPos in order.indices && toPos in order.indices) {
+                        order.add(toPos, order.removeAt(fromPos))
+                        player.setShuffleOrder(
+                            androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder(order.toIntArray(), System.currentTimeMillis()),
+                        )
+                    }
+                }
+            }
+        }
+        dragMove = null
+        dragOrder = null
+    }
+
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val fraction = expandFraction().coerceIn(0f, 1f)
     LazyColumn(
@@ -511,11 +556,17 @@ private fun UpNextList(
         modifier = Modifier.fillMaxSize(),
     ) {
         itemsIndexed(
-            items = shown,
-            key = { index, window -> "${window.uid}_${historyStart + index}" },
+            items = displayed,
+            key = { _, window -> "${window.uid}_${window.firstPeriodIndex}" },
         ) { index, window ->
             val metadata = window.mediaItem.metadata ?: return@itemsIndexed
             val isCurrent = hasCurrent && index == nextIndex - 1
+            val upcoming = index >= nextIndex
+            sh.calvin.reorderable.ReorderableItem(
+                state = reorderState,
+                key = "${window.uid}_${window.firstPeriodIndex}",
+                enabled = upcoming && !isListenTogetherGuest,
+            ) { isDragging ->
             UpNextRow(
                 metadata = metadata,
                 contentColor = contentColor,
@@ -523,6 +574,14 @@ private fun UpNextList(
                 isCurrent = isCurrent,
                 isPlaying = isPlaying,
                 played = hasCurrent && index < nextIndex - 1,
+                dragging = isDragging,
+                dragModifier =
+                    if (upcoming && !isListenTogetherGuest && fraction >= 1f) {
+                        Modifier.longPressDraggableHandle()
+                    } else {
+                        Modifier
+                    },
+                onMoreClick = if (isListenTogetherGuest) null else { { onSongMoreClick(window) } },
                 onClick = {
                     val castHandler = runCatching { playerConnection.service.castConnectionHandler }.getOrNull()
                     if (castHandler != null && castHandler.isCasting.value) {
@@ -534,6 +593,7 @@ private fun UpNextList(
                     }
                 },
             )
+            }
         }
     }
 }
@@ -549,6 +609,9 @@ private fun UpNextRow(
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
     played: Boolean = false,
+    dragging: Boolean = false,
+    dragModifier: Modifier = Modifier,
+    onMoreClick: (() -> Unit)? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -556,7 +619,13 @@ private fun UpNextRow(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .then(if (isCurrent) Modifier.background(contentColor.copy(alpha = 0.08f)) else Modifier)
+                .then(
+                    when {
+                        dragging -> Modifier.background(contentColor.copy(alpha = 0.16f))
+                        isCurrent -> Modifier.background(contentColor.copy(alpha = 0.08f))
+                        else -> Modifier
+                    },
+                ).then(dragModifier)
                 .clickable(enabled = enabled, onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
                 .alpha(if (played) 0.6f else 1f),
@@ -604,6 +673,19 @@ private fun UpNextRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        if (onMoreClick != null) {
+            androidx.compose.material3.IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.more_vert),
+                    contentDescription = null,
+                    tint = contentColor.copy(alpha = 0.8f),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
     }
 }
