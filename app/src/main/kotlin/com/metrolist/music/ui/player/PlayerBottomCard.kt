@@ -748,17 +748,34 @@ fun CompactLyrics(
     }
     if (synced) {
         LaunchedEffect(lines, isPlaying, lyricsOffset) {
+            // The player's position only changes in steps (about every 100 ms), which made the word
+            // sweep move in jerks. While playing, the position is carried forward with the frame
+            // clock between those steps, so the sweep moves on every frame.
+            var lastSample = Long.MIN_VALUE
+            var anchorPos = 0L
+            var anchorFrameMs = 0L
             while (isActive) {
-                position = positionProvider() + lyricsOffset
-                // Fast updates only while something moves smoothly (word sweep or the dots); while
-                // paused it still notices a seek (for example back to the start).
-                delay(
-                    when {
-                        !isPlaying -> 250L
-                        hasWordTimings || activeGap != null -> 32L
-                        else -> 150L
-                    },
-                )
+                val smooth = isPlaying && (hasWordTimings || activeGap != null)
+                if (smooth) {
+                    androidx.compose.runtime.withFrameMillis { frameMs ->
+                        val sample = positionProvider() + lyricsOffset
+                        if (sample != lastSample) {
+                            lastSample = sample
+                            anchorPos = sample
+                            anchorFrameMs = frameMs
+                        }
+                        val predicted = anchorPos + (frameMs - anchorFrameMs).coerceIn(0L, 400L)
+                        // Never step back a little when a fresh sample lands behind the estimate;
+                        // a real seek (a bigger jump) is followed at once.
+                        position =
+                            if (predicted < position && position - predicted < 250L) position else predicted
+                    }
+                } else {
+                    lastSample = Long.MIN_VALUE
+                    position = positionProvider() + lyricsOffset
+                    // While paused it still notices a seek (for example back to the start).
+                    delay(if (!isPlaying) 250L else 150L)
+                }
             }
         }
     }
