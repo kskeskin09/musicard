@@ -5,6 +5,19 @@
 
 package com.metrolist.music.ui.screens.search
 
+import com.metrolist.music.viewmodels.MoodAndGenresViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -99,21 +112,12 @@ fun SearchScreen(
     val isPlayerExpanded = LocalIsPlayerExpanded.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val lazyListState = rememberLazyListState()
+    var searchActive by rememberSaveable { mutableStateOf(false) }
     var isHandlingScrollToTop by remember { mutableStateOf(false) }
 
     val scrollToTopCount by savedStateHandle.getStateFlow("scrollToTopCount", 0).collectAsStateWithLifecycle(initialValue = 0)
 
     var lastHandledCount by rememberSaveable { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        if (!isPlayerExpanded) {
-            kotlinx.coroutines.delay(100)
-            try {
-                focusRequester.requestFocus()
-                keyboardController?.show()
-            } catch (e: Exception) {
-            }
-        }
-    }
     LaunchedEffect(scrollToTopCount) {
         if (scrollToTopCount > lastHandledCount) {
             lastHandledCount = scrollToTopCount
@@ -122,12 +126,11 @@ fun SearchScreen(
             kotlinx.coroutines.delay(100)
 
             if (!isPlayerExpanded) {
-                focusManager.clearFocus(force = true)
-                kotlinx.coroutines.delay(50)
-                try {
-                    focusRequester.requestFocus()
-                    keyboardController?.show()
-                } catch (e: Exception) {
+                // Tapping the tab again goes back to the top, and from the top opens the search.
+                if (!searchActive && lazyListState.firstVisibleItemIndex > 0) {
+                    lazyListState.animateScrollToItem(0)
+                } else {
+                    searchActive = true
                 }
             }
 
@@ -136,7 +139,6 @@ fun SearchScreen(
         }
     }
 
-    var searchSource by rememberEnumPreference(SearchSourceKey, SearchSource.ONLINE)
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue())
     }
@@ -188,153 +190,62 @@ fun SearchScreen(
 
     val onSearchFromSuggestion: (String) -> Unit = { searchQuery -> handleSearch(searchQuery) }
 
-    Scaffold(
-        topBar = {
-            // Same header as the other main tabs: the page name in large type and, under it, the
-            // search field as a pill. Tapping the Search tab always focuses this field.
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background)
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 8.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                            .height(56.dp),
-                ) {
+    // The page shows Genres until the search field is tapped; then it shows the search history
+    // and suggestions under the field, with a back arrow that returns to Genres.
+    val closeSearch: () -> Unit = {
+        searchActive = false
+        query = TextFieldValue("")
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
+    BackHandler(enabled = searchActive) { closeSearch() }
+    LaunchedEffect(searchActive) {
+        if (searchActive) {
+            kotlinx.coroutines.delay(50)
+            runCatching {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            }
+        }
+    }
+    val pageBackground = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+
+    val searchBar: @Composable () -> Unit = {
+        SearchPill(
+            query = query,
+            onQueryChange = { query = it },
+            active = searchActive,
+            onActivate = { searchActive = true },
+            onBack = closeSearch,
+            onSearch = { onSearch(query.text) },
+            focusRequester = focusRequester,
+        )
+    }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(pageBackground)
+                .windowInsetsPadding(WindowInsets.statusBars),
+    ) {
+        if (searchActive) {
+            Column(Modifier.fillMaxSize()) {
+                Box(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) { searchBar() }
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+                if (query.text.isEmpty()) {
                     Text(
-                        text = stringResource(R.string.search),
-                        fontSize = 34.sp,
+                        text = stringResource(R.string.search_history),
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(
-                        onClick = {
-                            searchSource =
-                                if (searchSource == SearchSource.ONLINE) {
-                                    SearchSource.LOCAL
-                                } else {
-                                    SearchSource.ONLINE
-                                }
-                        },
-                    ) {
-                        Icon(
-                            painter =
-                                painterResource(
-                                    when (searchSource) {
-                                        SearchSource.LOCAL -> R.drawable.library_music
-                                        SearchSource.ONLINE -> R.drawable.language
-                                    },
-                                ),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .clickable {
-                                focusRequester.requestFocus()
-                                keyboardController?.show()
-                            }.padding(start = 18.dp, end = 4.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.search),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    BasicTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .focusRequester(focusRequester),
-                        textStyle =
-                            TextStyle(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 16.sp,
-                            ),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        singleLine = true,
-                        decorationBox = { innerTextField ->
-                            if (query.text.isEmpty()) {
-                                Text(
-                                    text =
-                                        stringResource(
-                                            when (searchSource) {
-                                                SearchSource.LOCAL -> R.string.search_library
-                                                SearchSource.ONLINE -> R.string.search_yt_music
-                                            },
-                                        ),
-                                    style =
-                                        TextStyle(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 16.sp,
-                                        ),
-                                    maxLines = 1,
-                                )
-                            }
-                            innerTextField()
-                        },
-                        keyboardOptions =
-                            KeyboardOptions(
-                                imeAction = ImeAction.Search,
-                            ),
-                        keyboardActions =
-                            KeyboardActions(
-                                onSearch = { onSearch(query.text) },
-                            ),
-                    )
-                    if (query.text.isNotEmpty()) {
-                        IconButton(onClick = { query = TextFieldValue("") }) {
-                            Icon(
-                                painter = painterResource(R.drawable.close),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background,
-    ) { paddingValues ->
-        Box(
-            modifier =
-                Modifier
-                    .padding(top = paddingValues.calculateTopPadding())
-                    .fillMaxSize(),
-        ) {
-            when (searchSource) {
-                SearchSource.LOCAL -> {
-                    LocalSearchScreen(
-                        query = query.text,
-                        onDismiss = { navController.navigateUp() },
-                        pureBlack = pureBlack,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
                     )
                 }
-
-                SearchSource.ONLINE -> {
+                Box(Modifier.weight(1f)) {
                     OnlineSearchScreen(
                         query = query.text,
                         onQueryChange = { query = it },
@@ -344,6 +255,12 @@ fun SearchScreen(
                     )
                 }
             }
+        } else {
+            SearchBrowsePage(
+                listState = lazyListState,
+                pageBackground = pageBackground,
+                searchBar = searchBar,
+            )
 
             HideOnScrollFAB(
                 lazyListState = lazyListState,
@@ -388,5 +305,225 @@ fun SearchScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+}
+/** The search field as a pill: a search icon at rest, a back arrow while searching. */
+@Composable
+private fun SearchPill(
+    query: TextFieldValue,
+    onQueryChange: (TextFieldValue) -> Unit,
+    active: Boolean,
+    onActivate: () -> Unit,
+    onBack: () -> Unit,
+    onSearch: () -> Unit,
+    focusRequester: FocusRequester,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .clickable(enabled = !active, onClick = onActivate)
+                .padding(start = if (active) 4.dp else 20.dp, end = 4.dp),
+    ) {
+        if (active) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    painter = painterResource(R.drawable.arrow_back),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.search),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+        }
+        if (active) {
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
+                singleLine = true,
+                decorationBox = { innerTextField ->
+                    if (query.text.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.search_hint_everything),
+                            style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp),
+                            maxLines = 1,
+                        )
+                    }
+                    innerTextField()
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            )
+            if (query.text.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange(TextFieldValue("")) }) {
+                    Icon(
+                        painter = painterResource(R.drawable.close),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = stringResource(R.string.search_hint_everything),
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/**
+ * The Search tab at rest: the page name (it scrolls away), the search pill (it stays at the top,
+ * with the page fading out under it) and YouTube Music's moods and genres as colored tiles.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SearchBrowsePage(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    pageBackground: Color,
+    searchBar: @Composable () -> Unit,
+    viewModel: MoodAndGenresViewModel = hiltViewModel(),
+) {
+    val navController = LocalNavController.current
+    val sections by viewModel.moodAndGenres.collectAsStateWithLifecycle()
+    val bottomPadding =
+        LocalPlayerAwareWindowInsets.current
+            .only(WindowInsetsSides.Bottom)
+            .asPaddingValues()
+            .calculateBottomPadding()
+
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(bottom = bottomPadding + 16.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item(key = "search_title") {
+            Text(
+                text = stringResource(R.string.search),
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                modifier =
+                    Modifier
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 8.dp)
+                        .height(56.dp)
+                        .wrapContentHeight(Alignment.CenterVertically),
+            )
+        }
+        stickyHeader(key = "search_bar") {
+            Column {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(pageBackground)
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                ) { searchBar() }
+                // The tiles fade out as they scroll up under the search bar.
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .background(Brush.verticalGradient(listOf(pageBackground, pageBackground.copy(alpha = 0f)))),
+                )
+            }
+        }
+        if (sections == null) {
+            item(key = "genres_loading") {
+                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
+                }
+            }
+        }
+        sections?.forEachIndexed { index, section ->
+            item(key = "genres_title_$index") {
+                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = if (index == 0) 0.dp else 20.dp, bottom = 16.dp)) {
+                    Text(
+                        text = section.title,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                }
+            }
+            section.items.chunked(2).forEachIndexed { rowIndex, row ->
+                item(key = "genres_row_${index}_$rowIndex") {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                    ) {
+                        row.forEach { genre ->
+                            GenreTile(
+                                title = genre.title,
+                                stripeColor = Color(genre.stripeColor),
+                                pageBackground = pageBackground,
+                                onClick = {
+                                    navController.navigate("youtube_browse/${genre.endpoint.browseId}?params=${genre.endpoint.params}")
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (row.size < 2) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A mood or genre: a rounded tile in a calm version of its YouTube color, with its name. */
+@Composable
+private fun GenreTile(
+    title: String,
+    stripeColor: Color,
+    pageBackground: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val base = androidx.compose.ui.graphics.lerp(stripeColor, pageBackground, 0.45f)
+    val end = androidx.compose.ui.graphics.lerp(base, pageBackground, 0.35f)
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier =
+            modifier
+                .height(84.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Brush.linearGradient(listOf(base, end)))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 18.dp),
+    ) {
+        Text(
+            text = title,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

@@ -126,9 +126,9 @@ fun LocalSearchScreen(
                 listOf(
                     LocalFilter.ALL to stringResource(R.string.filter_all),
                     LocalFilter.SONG to stringResource(R.string.filter_songs),
+                    LocalFilter.PLAYLIST to stringResource(R.string.filter_playlists),
                     LocalFilter.ALBUM to stringResource(R.string.filter_albums),
                     LocalFilter.ARTIST to stringResource(R.string.filter_artists),
-                    LocalFilter.PLAYLIST to stringResource(R.string.filter_playlists),
                 ),
             currentValue = searchFilter,
             onValueUpdate = { viewModel.filter.value = it },

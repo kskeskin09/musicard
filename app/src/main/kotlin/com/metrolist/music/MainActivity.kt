@@ -99,6 +99,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -906,6 +908,9 @@ class MainActivity : FragmentActivity() {
                             !(isListenTogetherScreen && listenTogetherInTopBar)
                     }
                 val onProfileTab = currentRoute == Screens.Profile.route
+                // Home has no search bar and its name stays at the top while the page scrolls
+                // under it, fading out.
+                val onHomeTab = currentRoute == Screens.Home.route
                 // The main tabs' header scrolls away with the page: first the page name, then the
                 // search bar; scrolling back brings it back the same way.
                 val headerMaxPx = with(density) { TopLevelHeaderHeight.toPx() }
@@ -934,6 +939,7 @@ class MainActivity : FragmentActivity() {
                         showRail,
                         shouldShowTopBar,
                         onProfileTab,
+                        onHomeTab,
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
@@ -947,8 +953,8 @@ class MainActivity : FragmentActivity() {
                                     top =
                                         when {
                                             !shouldShowTopBar -> AppBarHeight
-                                            // The Profile tab's header has no search bar.
-                                            onProfileTab -> TopLevelHeaderHeight - TopLevelSearchHeight
+                                            // The Profile and Home headers have no search bar.
+                                            onProfileTab || onHomeTab -> TopLevelHeaderHeight - TopLevelSearchHeight
                                             else -> TopLevelHeaderHeight
                                         },
                                     bottom = bottom,
@@ -1163,24 +1169,41 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onProfileLongClick = { showProfilePictureDialog = true },
                                     showProfile = false,
-                                    showSearch = !onProfileTab,
+                                    showSearch = !onProfileTab && !onHomeTab,
                                     // Tapping the page name works like tapping its tab again.
                                     onTitleClick = {
                                         navController.currentBackStackEntry?.savedStateHandle?.set("scrollToTop", true)
                                     },
                                     onSearchClick = {
-                                        navController.navigate(Screens.Search.route) { launchSingleTop = true }
+                                        // On the Library tab the pill searches the library itself.
+                                        if (currentRoute == Screens.Library.route) {
+                                            navController.navigate("library_search")
+                                        } else {
+                                            navController.navigate(Screens.Search.route) { launchSingleTop = true }
+                                        }
                                     },
                                     modifier =
                                         Modifier
-                                            .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background)
+                                            .background(
+                                                if (onHomeTab) {
+                                                    // The page shows through toward the bottom of the header.
+                                                    val pageColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+                                                    Brush.verticalGradient(
+                                                        0f to pageColor,
+                                                        0.55f to pageColor.copy(alpha = 0.85f),
+                                                        1f to pageColor.copy(alpha = 0f),
+                                                    )
+                                                } else {
+                                                    SolidColor(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background)
+                                                },
+                                            )
                                             .windowInsetsPadding(WindowInsets.statusBars)
                                             .clipToBounds()
                                             .layout { measurable, constraints ->
                                                 // Shorter by how far the page has scrolled, with the
                                                 // content moved up so its top part goes first.
                                                 val placeable = measurable.measure(constraints)
-                                                val cut = headerCollapsePx.roundToInt().coerceAtMost(placeable.height)
+                                                val cut = if (onHomeTab) 0 else headerCollapsePx.roundToInt().coerceAtMost(placeable.height)
                                                 layout(placeable.width, placeable.height - cut) {
                                                     placeable.place(0, -cut)
                                                 }
