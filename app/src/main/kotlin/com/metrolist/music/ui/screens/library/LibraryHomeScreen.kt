@@ -141,7 +141,8 @@ fun LibraryHomeScreen(
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
 
-    var kind by rememberSaveable { mutableStateOf<LibraryKind?>(null) }
+    // Kept while the app runs, so the filter stays as it was when coming back to the tab.
+    var kind by com.metrolist.music.ui.utils.TabStates.value<LibraryKind?>("library/kind", null)
     var sortOption by rememberEnumPreference(LibrarySortKey, LibrarySortOption.ADDED_NEWEST)
     var customOrderText by rememberPreference(LibraryCustomOrderKey, "")
     var pinnedText by rememberPreference(LibraryPinnedKey, "")
@@ -221,7 +222,7 @@ fun LibraryHomeScreen(
     }
     val shownRest = if (sortOption == LibrarySortOption.CUSTOM) dragList else restItems
 
-    val lazyListState = rememberLazyListState()
+    val lazyListState = com.metrolist.music.ui.utils.TabStates.list("library/list")
     val reorderState =
         rememberReorderableLazyListState(lazyListState = lazyListState) { from, to ->
             val fromIndex = dragList.indexOfFirst { it.id == from.key }

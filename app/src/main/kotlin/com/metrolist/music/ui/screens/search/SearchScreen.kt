@@ -112,8 +112,9 @@ fun SearchScreen(
     val playerConnection = LocalPlayerConnection.current
     val isPlayerExpanded = LocalIsPlayerExpanded.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    val lazyListState = rememberLazyListState()
-    var searchActive by rememberSaveable { mutableStateOf(false) }
+    // Kept while the app runs, so the search page is as it was when coming back to it.
+    val lazyListState = com.metrolist.music.ui.utils.TabStates.list("search/list")
+    var searchActive by com.metrolist.music.ui.utils.TabStates.value("search/active", false)
     var isHandlingScrollToTop by remember { mutableStateOf(false) }
 
     val scrollToTopCount by savedStateHandle.getStateFlow("scrollToTopCount", 0).collectAsStateWithLifecycle(initialValue = 0)
@@ -140,9 +141,7 @@ fun SearchScreen(
         }
     }
 
-    var query by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue())
-    }
+    var query by com.metrolist.music.ui.utils.TabStates.value("search/query", TextFieldValue())
     val pauseSearchHistory by rememberPreference(PauseSearchHistoryKey, defaultValue = false)
 
     fun handleSearch(searchQuery: String) {

@@ -707,8 +707,8 @@ fun HomeScreen(
     val isRandomizing by viewModel.isRandomizing.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
-    val quickPicksLazyGridState = rememberLazyGridState()
-    val forgottenFavoritesLazyGridState = rememberLazyGridState()
+    val quickPicksLazyGridState = com.metrolist.music.ui.utils.TabStates.grid("home/quickPicksLazyGridState")
+    val forgottenFavoritesLazyGridState = com.metrolist.music.ui.utils.TabStates.grid("home/forgottenFavoritesLazyGridState")
 
     // Recently played: the last 16 songs, and the last albums, artists and playlists.
     val context = LocalContext.current
@@ -720,7 +720,7 @@ fun HomeScreen(
         remember(recentEvents, recentPlaylistsRaw, savedPlaylists) {
             buildRecentCollections(recentEvents, parseRecentPlaylists(recentPlaylistsRaw), savedPlaylists).take(10)
         }
-    val recentsLazyGridState = rememberLazyGridState()
+    val recentsLazyGridState = com.metrolist.music.ui.utils.TabStates.grid("home/recentsLazyGridState")
     // Quick Picks: the speed dial's songs, topped up with the other picks.
     val quickPickSongs =
         remember(speedDialItems, quickPicks, homePage?.sections) {
@@ -800,7 +800,7 @@ fun HomeScreen(
     // Track randomization job
     var randomizeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    val lazylistState = rememberLazyListState()
+    val lazylistState = com.metrolist.music.ui.utils.TabStates.list("home/list")
     val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
     val currentGridHeight = if (gridItemSize == GridItemSize.BIG) GridThumbnailHeight else SmallGridThumbnailHeight
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -1284,6 +1284,7 @@ fun HomeScreen(
                     item(key = "chips_shimmer") {
                         ShimmerHost(showGradient = false) {
                             LazyRow(
+                                state = com.metrolist.music.ui.utils.TabStates.list("home/chips_shimmer"),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1318,6 +1319,7 @@ fun HomeScreen(
 
                         item(key = "00_your_shows_list") {
                             LazyRow(
+                                state = com.metrolist.music.ui.utils.TabStates.list("home/00_your_shows_list"),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1343,6 +1345,7 @@ fun HomeScreen(
 
                         item(key = "00_episodes_for_later_list") {
                             LazyRow(
+                                state = com.metrolist.music.ui.utils.TabStates.list("home/00_episodes_for_later_list"),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1366,6 +1369,7 @@ fun HomeScreen(
 
                         item(key = "0_podcast_channels_list") {
                             LazyRow(
+                                state = com.metrolist.music.ui.utils.TabStates.list("home/0_podcast_channels_list"),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1439,6 +1443,7 @@ fun HomeScreen(
 
                             item(key = "1_chip_section_list_${section.index}") {
                                 LazyRow(
+                                    state = com.metrolist.music.ui.utils.TabStates.list("home/1_chip_section_list_${section.index}"),
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)
@@ -1518,6 +1523,7 @@ fun HomeScreen(
                     }
                     item(key = "albums_for_you_row") {
                         LazyRow(
+                            state = com.metrolist.music.ui.utils.TabStates.list("home/albums_for_you_row"),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
@@ -1624,6 +1630,7 @@ fun HomeScreen(
                     if (recentCollections.isNotEmpty()) {
                         item(key = "recents_collections") {
                             LazyRow(
+                                state = com.metrolist.music.ui.utils.TabStates.list("home/recents_collections"),
                                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
@@ -2212,6 +2219,7 @@ fun HomeScreen(
 
                                 item(key = "community_playlists_content") {
                                     LazyRow(
+                                        state = com.metrolist.music.ui.utils.TabStates.list("home/community_playlists_content"),
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     ) {
@@ -2395,6 +2403,7 @@ fun HomeScreen(
 
                                 item(key = "account_playlists_list") {
                                     LazyRow(
+                                        state = com.metrolist.music.ui.utils.TabStates.list("home/account_playlists_list"),
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2575,6 +2584,7 @@ fun HomeScreen(
 
                                 item(key = "similar_to_list_${section.index}") {
                                     LazyRow(
+                                        state = com.metrolist.music.ui.utils.TabStates.list("home/similar_to_list_${section.index}"),
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2751,6 +2761,7 @@ fun HomeScreen(
                                     // Render mixed content as horizontal grid items (albums, playlists, artists, etc.)
                                     item(key = "home_section_list_${section.index}") {
                                         LazyRow(
+                                            state = com.metrolist.music.ui.utils.TabStates.list("home/home_section_list_${section.index}"),
                                             contentPadding =
                                                 WindowInsets.systemBars
                                                     .only(WindowInsetsSides.Horizontal)
@@ -2784,6 +2795,7 @@ fun HomeScreen(
                                 }
                                 item(key = "mood_and_genres_list") {
                                     LazyHorizontalGrid(
+                                        state = com.metrolist.music.ui.utils.TabStates.grid("home/mood_and_genres_list"),
                                         rows = GridCells.Fixed(4),
                                         contentPadding = PaddingValues(6.dp),
                                         modifier =

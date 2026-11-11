@@ -911,6 +911,7 @@ class MainActivity : FragmentActivity() {
                 // search bar; scrolling back brings it back the same way.
                 val headerMaxPx = with(density) { TopLevelHeaderHeight.toPx() }
                 var headerCollapsePx by remember { mutableFloatStateOf(0f) }
+                val latestRoute = androidx.compose.runtime.rememberUpdatedState(currentRoute)
                 val headerCollapseConnection =
                     remember(headerMaxPx) {
                         object : NestedScrollConnection {
@@ -921,12 +922,16 @@ class MainActivity : FragmentActivity() {
                             ): Offset {
                                 if (consumed.y != 0f) {
                                     headerCollapsePx = (headerCollapsePx - consumed.y).coerceIn(0f, headerMaxPx)
+                                    latestRoute.value?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] = headerCollapsePx }
                                 }
                                 return Offset.Zero
                             }
                         }
                     }
-                LaunchedEffect(currentRoute) { headerCollapsePx = 0f }
+                // Each tab's header comes back as far scrolled away as its page was.
+                LaunchedEffect(currentRoute) {
+                    headerCollapsePx = currentRoute?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] } ?: 0f
+                }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -1258,6 +1263,11 @@ class MainActivity : FragmentActivity() {
                                                         val current = entry.savedStateHandle.get<Int>("scrollToTopCount") ?: 0
                                                         entry.savedStateHandle["scrollToTopCount"] = current + 1
                                                     }
+                                            } else if (screen == Screens.Home || screen == Screens.Library) {
+                                                // Tapping the tab again starts it over: back to the top with the
+                                                // header (and its search bar) shown and the filters cleared.
+                                                com.metrolist.music.ui.utils.TabStates.reset(screen.route)
+                                                headerCollapsePx = 0f
                                             } else {
                                                 targetEntry?.savedStateHandle?.set("scrollToTop", true)
                                             }

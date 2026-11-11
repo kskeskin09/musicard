@@ -74,7 +74,10 @@ fun NavGraphBuilder.navigationBuilder(
     snackbarHostState: SnackbarHostState,
 ) {
     composable(Screens.Home.route) {
-        HomeScreen(snackbarHostState = snackbarHostState)
+        // Tapping the Home button again while on it starts the page over.
+        androidx.compose.runtime.key(com.metrolist.music.ui.utils.TabStates.resetCount("home")) {
+            HomeScreen(snackbarHostState = snackbarHostState)
+        }
     }
 
     composable(Screens.Search.route) { backStackEntry ->

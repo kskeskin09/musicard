@@ -26,5 +26,8 @@ import com.metrolist.music.utils.rememberEnumPreference
 @Composable
 fun LibraryScreen() {
     val navController = LocalNavController.current
-    LibraryHomeScreen(navController = navController)
+    // Tapping the Library button again while on it starts the page over.
+    androidx.compose.runtime.key(com.metrolist.music.ui.utils.TabStates.resetCount("library")) {
+        LibraryHomeScreen(navController = navController)
+    }
 }
