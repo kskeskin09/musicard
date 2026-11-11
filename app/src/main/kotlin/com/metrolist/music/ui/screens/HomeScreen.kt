@@ -3042,6 +3042,7 @@ private fun HomeCoverCard(
 }
 
 /** Songs in rows of four that scroll sideways and snap by column, as in the Recents section. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun <T : Any> HomeSongRows(
     entries: List<T>,
