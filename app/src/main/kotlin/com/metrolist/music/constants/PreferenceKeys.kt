@@ -433,7 +433,6 @@ enum class PlayerBackgroundStyle {
 }
 
 val TopSize = stringPreferencesKey("topSize")
-val StatsLastCoverColorKey = intPreferencesKey("statsLastCoverColor")
 val HistoryDuration = floatPreferencesKey("historyDuration")
 
 val PlayerButtonsStyleKey = stringPreferencesKey("player_buttons_style")

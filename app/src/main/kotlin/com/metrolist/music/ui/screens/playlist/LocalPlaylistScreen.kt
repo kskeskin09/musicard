@@ -22,7 +22,7 @@ import com.metrolist.music.constants.LibrarySortOption
 import com.metrolist.music.ui.component.LibrarySortButton
 import com.metrolist.music.ui.component.labelRes
 import com.metrolist.music.ui.theme.albumBackgroundColor
-import com.metrolist.music.ui.theme.rememberCoverColor
+import com.metrolist.music.ui.theme.rememberPageCoverColor
 import com.metrolist.music.ui.theme.rememberPageTint
 import com.metrolist.music.ui.theme.pageTintFor
 import androidx.compose.ui.graphics.luminance
@@ -499,7 +499,7 @@ fun LocalPlaylistScreen(
     // The page is tinted with the cover's color, fading into the normal background further down.
     val pageBackground = MaterialTheme.colorScheme.background
     val darkTheme = pageBackground.luminance() < 0.5f
-    val coverColor = rememberCoverColor(playlist?.thumbnails?.firstOrNull())
+    val coverColor = rememberPageCoverColor(playlist?.thumbnails?.firstOrNull())
     // One even color over the whole page, taken from the cover (darker in dark mode, a light
     // wash in light mode so the dark text stays readable).
     val tint =

@@ -64,7 +64,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -86,7 +85,6 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.StatPeriod
-import com.metrolist.music.constants.StatsLastCoverColorKey
 import com.metrolist.music.constants.TopSize
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
@@ -102,20 +100,14 @@ import com.metrolist.music.ui.menu.AlbumMenu
 import com.metrolist.music.ui.menu.ArtistMenu
 import com.metrolist.music.ui.menu.SongMenu
 import com.metrolist.music.ui.theme.albumBackgroundColor
-import com.metrolist.music.ui.theme.rememberCoverColor
+import com.metrolist.music.ui.theme.rememberPageCoverColor
 import com.metrolist.music.ui.theme.rememberPageTint
 import com.metrolist.music.ui.theme.pageTintFor
 import com.metrolist.music.ui.utils.backToMain
-import com.metrolist.music.utils.dataStore
-import com.metrolist.music.utils.get
 import com.metrolist.music.utils.rememberPreference
-import com.metrolist.music.utils.safeDataStoreEdit
 import com.metrolist.music.viewmodels.ListeningPattern
 import com.metrolist.music.viewmodels.StatsViewModel
 import java.time.format.DateTimeFormatter
-
-/** Cover color of the top song per period, kept while the app runs. */
-private val statsCoverColors = HashMap<Int, Color>()
 
 private enum class StatsSection { SONGS, ARTISTS, ALBUMS }
 
@@ -181,23 +173,7 @@ fun StatsScreen(
     // The whole page takes the color of the most played song's cover.
     val pageBackground = MaterialTheme.colorScheme.background
     val darkTheme = pageBackground.luminance() < 0.5f
-    // The top song is only known after the database answers and its cover is read, so the page
-    // opens in the color it had last time and moves to the new one if the top song changed.
-    val loadedCoverColor = rememberCoverColor(songs.firstOrNull()?.thumbnailUrl)
-    var lastCoverColor by remember {
-        mutableStateOf(
-            statsCoverColors[indexChips] ?: context.dataStore[StatsLastCoverColorKey]?.let { Color(it) },
-        )
-    }
-    LaunchedEffect(loadedCoverColor) {
-        val loaded = loadedCoverColor ?: return@LaunchedEffect
-        statsCoverColors[indexChips] = loaded
-        if (loaded != lastCoverColor) {
-            lastCoverColor = loaded
-            context.safeDataStoreEdit { it[StatsLastCoverColorKey] = loaded.toArgb() }
-        }
-    }
-    val coverColor = loadedCoverColor ?: statsCoverColors[indexChips] ?: lastCoverColor
+    val coverColor = rememberPageCoverColor(songs.firstOrNull()?.thumbnailUrl, variant = period.name)
     val tint =
         rememberPageTint(
             target = pageTintFor(coverColor, pageBackground),

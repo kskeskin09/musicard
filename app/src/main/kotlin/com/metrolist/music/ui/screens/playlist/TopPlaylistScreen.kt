@@ -15,7 +15,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import com.metrolist.music.ui.theme.albumBackgroundColor
-import com.metrolist.music.ui.theme.rememberCoverColor
+import com.metrolist.music.ui.theme.rememberPageCoverColor
 import com.metrolist.music.ui.theme.rememberPageTint
 import com.metrolist.music.ui.theme.pageTintFor
 import androidx.activity.compose.BackHandler
@@ -260,7 +260,7 @@ fun TopPlaylistScreen(
     // Tinted with the color of the most played song's cover, like the other playlist pages.
     val pageBackground = MaterialTheme.colorScheme.background
     val darkTheme = pageBackground.luminance() < 0.5f
-    val coverColor = rememberCoverColor(songs?.firstOrNull()?.thumbnailUrl)
+    val coverColor = rememberPageCoverColor(songs?.firstOrNull()?.thumbnailUrl)
     val tint =
         rememberPageTint(
             target = pageTintFor(coverColor, pageBackground),

@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.navigation.NavBackStackEntry
 import androidx.palette.graphics.Palette
 import coil3.imageLoader
 import coil3.request.ImageRequest
@@ -59,6 +61,57 @@ fun rememberCoverColor(url: String?): Color? {
     }
     return color
 }
+
+/**
+ * Like [rememberCoverColor], for the color a whole page is tinted with. A page usually learns its
+ * cover only after its data has loaded, and then the cover still has to be read, so the color the
+ * page had last time is saved (per page, and per [variant] of it such as a chosen period) and
+ * returned until the current one is known. The page then opens in its color right away.
+ */
+@Composable
+fun rememberPageCoverColor(
+    url: String?,
+    variant: String? = null,
+): Color? {
+    val context = LocalContext.current
+    val loaded = rememberCoverColor(url)
+    val entry = LocalViewModelStoreOwner.current as? NavBackStackEntry
+    val pageKey =
+        remember(entry, variant) {
+            entry?.let {
+                buildString {
+                    append(it.destination.route)
+                    it.destination.arguments.keys.forEach { name ->
+                        @Suppress("DEPRECATION")
+                        append('|').append(it.arguments?.get(name))
+                    }
+                    if (variant != null) append('#').append(variant)
+                }
+            }
+        }
+    var last by remember(pageKey) {
+        mutableStateOf(
+            pageKey?.let { key ->
+                val prefs = context.getSharedPreferences(PAGE_COLOR_PREFS, Context.MODE_PRIVATE)
+                if (prefs.contains(key)) Color(prefs.getInt(key, 0)) else null
+            },
+        )
+    }
+    LaunchedEffect(pageKey, loaded) {
+        if (pageKey == null || loaded == null || loaded == last) return@LaunchedEffect
+        last = loaded
+        val prefs = context.getSharedPreferences(PAGE_COLOR_PREFS, Context.MODE_PRIVATE)
+        prefs
+            .edit()
+            .apply { if (prefs.all.size > PAGE_COLOR_LIMIT) clear() }
+            .putInt(pageKey, loaded.toArgb())
+            .apply()
+    }
+    return loaded ?: last
+}
+
+private const val PAGE_COLOR_PREFS = "page_colors"
+private const val PAGE_COLOR_LIMIT = 400
 
 /** Reads the cover color of [url] in the background so a page opened from this card starts tinted. */
 @Composable
@@ -144,7 +197,7 @@ fun pageTintFor(
 @Composable
 fun rememberCoverPageTint(url: String?): Color {
     val pageBackground = MaterialTheme.colorScheme.background
-    val cover = rememberCoverColor(url)
+    val cover = rememberPageCoverColor(url)
     return rememberPageTint(target = pageTintFor(cover, pageBackground), ready = cover != null)
 }
 
