@@ -112,6 +112,7 @@ import androidx.compose.ui.draw.blur
 import com.metrolist.music.constants.MiniPlayerBackgroundStyle
 import com.metrolist.music.constants.MiniPlayerBackgroundStyleKey
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
@@ -534,10 +535,24 @@ private fun NewMiniPlayerPlayButton(
 
     val haptic = LocalHapticFeedback.current
     val artShape = RoundedCornerShape(10.dp)
+    // The art shrinks a little while the song is paused.
+    val pausedLook = isListenTogetherGuest && isMuted ||
+        (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == Player.STATE_ENDED))
+    val artScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (pausedLook) 0.88f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 400f),
+        label = "miniArtScale",
+    )
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(46.dp),
+        modifier =
+            Modifier
+                .size(46.dp)
+                .graphicsLayer {
+                    scaleX = artScale
+                    scaleY = artScale
+                },
     ) {
         // Thumbnail with play/pause overlay
         Box(
@@ -1083,15 +1098,42 @@ private fun FavoriteButton(
     val isEpisode = librarySong?.song?.isEpisode == true
     val isLiked = if (isEpisode) librarySong?.song?.inLibrary != null else librarySong?.song?.liked == true
 
-    val haptic = LocalHapticFeedback.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    // Same as the player's heart: liking by tap makes it grow a little, wobble once and settle.
+    val scale = remember { androidx.compose.animation.core.Animatable(1f) }
+    val rotation = remember { androidx.compose.animation.core.Animatable(0f) }
+    var tapped by remember { mutableStateOf(false) }
+    LaunchedEffect(isLiked) {
+        if (isLiked && tapped) {
+            launch {
+                scale.animateTo(1.2f, androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                scale.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 300f))
+            }
+            rotation.animateTo(
+                0f,
+                androidx.compose.animation.core.keyframes {
+                    durationMillis = 520
+                    -9f at 110
+                    8f at 240
+                    -4f at 360
+                    2f at 450
+                },
+            )
+        }
+        tapped = false
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .clickable {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    tapped = true
+                    view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                     playerConnection.service.toggleLike()
                 },
     ) {
@@ -1100,7 +1142,14 @@ private fun FavoriteButton(
             painter = painterResource(if (isLiked) R.drawable.favorite else R.drawable.favorite_border),
             contentDescription = null,
             tint = if (isLiked) onSurfaceColor else onSurfaceColor.copy(alpha = 0.8f),
-            modifier = Modifier.size(26.dp),
+            modifier =
+                Modifier
+                    .size(26.dp)
+                    .graphicsLayer {
+                        scaleX = scale.value
+                        scaleY = scale.value
+                        rotationZ = rotation.value
+                    },
         )
     }
 }

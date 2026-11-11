@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.constants.ListenTogetherUsernameKey
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.metrolist.music.utils.makeTimeString
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.width
@@ -488,8 +492,17 @@ fun LocalPlaylistScreen(
     val pageBackground = MaterialTheme.colorScheme.background
     val darkTheme = pageBackground.luminance() < 0.5f
     val coverColor = rememberCoverColor(playlist?.thumbnails?.firstOrNull())
+    // One even color over the whole page, taken from the cover (darker in dark mode, a light
+    // wash in light mode so the dark text stays readable).
     val tint by animateColorAsState(
-        targetValue = coverColor?.let { lerp(pageBackground, albumBackgroundColor(it, darkTheme), 0.6f) } ?: pageBackground,
+        targetValue =
+            coverColor?.let {
+                if (darkTheme) {
+                    lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
+                } else {
+                    lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
+                }
+            } ?: pageBackground,
         animationSpec = tween(600),
         label = "playlistTint",
     )
@@ -498,13 +511,7 @@ fun LocalPlaylistScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(pageBackground)
-                .background(
-                    Brush.verticalGradient(
-                        0f to tint,
-                        0.55f to pageBackground,
-                    ),
-                ),
+                .background(tint),
     ) {
         LazyColumn(
             state = lazyListState,
@@ -665,7 +672,20 @@ fun LocalPlaylistScreen(
                             isActive = song.song.id == mediaMetadata?.id,
                             isPlaying = isPlaying,
                             showInLibraryIcon = true,
+                            // Artist and album under the title; the length sits on the right.
+                            subtitleOverride =
+                                listOfNotNull(
+                                    song.song.orderedArtists.joinToString { it.name }.takeIf { it.isNotBlank() },
+                                    (song.song.album?.title ?: song.song.song.albumName)?.takeIf { it.isNotBlank() },
+                                ).joinToString(" · "),
                             trailingContent = {
+                                if (!inSelectMode) {
+                                    Text(
+                                        text = makeTimeString(song.song.song.duration * 1000L),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                                 if (inSelectMode) {
                                     Checkbox(
                                         checked = selection.contains(song.map.id),
@@ -897,7 +917,7 @@ fun LocalPlaylistScreen(
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (showTopBarTitle) tint else Color.Transparent,
+                    containerColor = tint,
                     scrolledContainerColor = tint,
                 ),
         )
@@ -946,6 +966,7 @@ fun LocalPlaylistHeader(
 
     val liked = playlist.playlist.bookmarkedAt != null
     val editable: Boolean = playlist.playlist.isEditable
+    var shuffleOn by rememberSaveable { mutableStateOf(false) }
 
     val overrideThumbnail = remember { mutableStateOf<String?>(null) }
     var isCustomThumbnail: Boolean =
@@ -1110,12 +1131,12 @@ fun LocalPlaylistHeader(
                     Surface(
                         modifier =
                             Modifier
-                                .size(240.dp)
+                                .size(PlaylistCoverSize)
                                 .shadow(
                                     elevation = 16.dp,
-                                    shape = RoundedCornerShape(3.dp),
+                                    shape = RoundedCornerShape(16.dp),
                                 ),
-                        shape = RoundedCornerShape(3.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                     ) {
                         Box(
@@ -1136,13 +1157,13 @@ fun LocalPlaylistHeader(
                     Surface(
                         modifier =
                             Modifier
-                                .size(240.dp)
+                                .size(PlaylistCoverSize)
                                 .shadow(
                                     elevation = 24.dp,
-                                    shape = RoundedCornerShape(3.dp),
+                                    shape = RoundedCornerShape(16.dp),
                                     spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                                 ),
-                        shape = RoundedCornerShape(3.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         AsyncImage(
                             model = overrideThumbnail.value ?: playlist.thumbnails[0],
@@ -1205,13 +1226,13 @@ fun LocalPlaylistHeader(
                     Surface(
                         modifier =
                             Modifier
-                                .size(240.dp)
+                                .size(PlaylistCoverSize)
                                 .shadow(
                                     elevation = 24.dp,
-                                    shape = RoundedCornerShape(3.dp),
+                                    shape = RoundedCornerShape(16.dp),
                                     spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                                 ),
-                        shape = RoundedCornerShape(3.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             listOf(
@@ -1227,7 +1248,7 @@ fun LocalPlaylistHeader(
                                     modifier =
                                         Modifier
                                             .align(alignment)
-                                            .size(120.dp),
+                                            .size(PlaylistCoverSize / 2),
                                 )
                             }
                         }
@@ -1295,9 +1316,31 @@ fun LocalPlaylistHeader(
             modifier = Modifier.padding(horizontal = 32.dp),
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // Metadata - Song Count • Duration
+        // Who made the playlist: the YouTube author, or your own name for playlists made here
+        // (set next to the profile picture; the same name is used in Listen Together).
+        val onlineAuthor = onlinePlaylist?.author
+        val (myName) = rememberPreference(ListenTogetherUsernameKey, "")
+        val creator = onlineAuthor?.name ?: myName.takeIf { playlist.playlist.browseId == null && it.isNotBlank() }
+        if (creator != null) {
+            Text(
+                text = creator,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .padding(horizontal = 32.dp)
+                        .clickable(enabled = onlineAuthor?.id != null) {
+                            navController.navigate("artist/${onlineAuthor?.id}")
+                        },
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+
+        // Kind · song count · length
         val songCount =
             if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null) {
                 playlist.playlist.remoteSongCount
@@ -1306,53 +1349,12 @@ fun LocalPlaylistHeader(
             }
         val nSongs = pluralStringResource(R.plurals.n_song, songCount, songCount)
         val durationText = if (playlistLength > 0) makeTimeString(playlistLength * 1000L) else null
-        val metadataString = buildString {
-            append(nSongs)
-            if (durationText != null) {
-                append(" ")
-                append(durationText)
-            }
-        }
         Text(
-            text = metadataString,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            text = listOfNotNull(stringResource(R.string.library_kind_playlist), nSongs, durationText).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
         )
-
-        val onlineAuthor = onlinePlaylist?.author
-        if (onlineAuthor != null) {
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier =
-                    Modifier.combinedClickable(
-                        onClick = {
-                            if (onlineAuthor.id != null) {
-                                navController.navigate("artist/${onlineAuthor.id}")
-                            }
-                        },
-                    ),
-            ) {
-                if (onlinePlaylist.authorAvatarUrl != null) {
-                    AsyncImage(
-                        model = onlinePlaylist.authorAvatarUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier =
-                            Modifier
-                                .size(24.dp)
-                                .clip(CircleShape),
-                    )
-                }
-                Text(
-                    text = onlineAuthor.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
 
         val description = onlinePlaylist?.description
         if (!description.isNullOrBlank()) {
@@ -1376,18 +1378,44 @@ fun LocalPlaylistHeader(
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Shuffle Button - Smaller secondary button
+            // Play: the player's play icon in a circle. With shuffle on it starts from a random
+            // song in a shuffled order, otherwise it plays in the order shown.
             Surface(
                 onClick = {
                     playerConnection.playQueue(
                         ListQueue(
                             title = playlist.playlist.name,
-                            items = songs.shuffled().map { it.song.toMediaItem() },
+                            items = (if (shuffleOn) songs.shuffled() else songs).map { it.song.toMediaItem() },
                         ),
                     )
                 },
+                color = MaterialTheme.colorScheme.onBackground,
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(64.dp),
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.player_play),
+                        contentDescription = stringResource(R.string.play),
+                        tint = MaterialTheme.colorScheme.background,
+                        modifier = Modifier.size(30.dp),
+                    )
+                }
+            }
+
+            // Shuffle on / off for the play button.
+            Surface(
+                onClick = { shuffleOn = !shuffleOn },
+                shape = CircleShape,
+                color =
+                    if (shuffleOn) {
+                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
+                    } else {
+                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
+                    },
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(
@@ -1397,34 +1425,8 @@ fun LocalPlaylistHeader(
                     Icon(
                         painter = painterResource(R.drawable.shuffle),
                         contentDescription = stringResource(R.string.shuffle),
+                        tint = if (shuffleOn) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-
-            // Play Button - Larger primary circular button
-            Surface(
-                onClick = {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = playlist.playlist.name,
-                            items = songs.map { it.song.toMediaItem() },
-                        ),
-                    )
-                },
-                color = MaterialTheme.colorScheme.primary,
-                shape = CircleShape,
-                modifier = Modifier.size(72.dp),
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play),
-                        contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(32.dp),
                     )
                 }
             }
@@ -1485,7 +1487,7 @@ fun LocalPlaylistHeader(
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(
@@ -1493,7 +1495,7 @@ fun LocalPlaylistHeader(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.more_vert),
+                        painter = painterResource(R.drawable.more_horiz),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
                     )
@@ -1512,3 +1514,6 @@ fun uriToByteArray(
     } catch (_: SecurityException) {
         null
     }
+
+
+private val PlaylistCoverSize = 280.dp

@@ -2423,6 +2423,12 @@ fun BottomSheetPlayer(
                             onPageChanged = { cardPage = it },
                             expandFraction = { cardExpand },
                             openBottomPadding = with(density) { (playbackHeightPx + navBottomPx).toDp() } + 24.dp,
+                            openBottomCoverPx = {
+                                val controlsPx = playbackHeightPx + navBottomPx + with(density) { 12.dp.toPx() }
+                                cardExpand * lerp(navBottomPx, controlsPx, cardControlsAlpha)
+                            },
+                            onPullDownClose = closeCardFull,
+                            onOpenQueueEditor = { queueSheetState.expandSoft() },
                             onMoreClick = moreMenu@{
                                 val metadata = mediaMetadata ?: return@moreMenu
                                 menuState.show {

@@ -1003,9 +1003,9 @@
     <string name="search_hint_everything">Search songs, artists, albums</string>
     <string name="profile_picture">Profile picture</string>
     <string name="profile_picture_url_hint">Image link (https://…)</string>
-    <string name="profile_picture_zoom">Zoom</string>
-    <string name="profile_picture_horizontal">Left / right</string>
-    <string name="profile_picture_vertical">Up / down</string>
+    <string name="profile_picture_crop_hint">Pinch to zoom, drag to move</string>
+    <string name="profile_picture_choose">Choose photo</string>
+    <string name="profile_picture_link">Use a link</string>
     <string name="library_sort">Sort</string>
     <string name="library_sort_custom">Custom</string>
     <string name="library_sort_name">Name A–Z</string>
@@ -1018,4 +1018,9 @@
     <string name="library_kind_album">Album</string>
     <string name="library_pin_limit">You can pin up to 3 items</string>
     <string name="library_pinned">Pinned</string>
+    <string name="search_filter_music">Music</string>
+    <string name="search_top_result">Top result</string>
+    <string name="search_exact_matches">Exact matches</string>
+    <string name="search_kind_song">Song</string>
+    <string name="profile_username">Username</string>
 </resources>

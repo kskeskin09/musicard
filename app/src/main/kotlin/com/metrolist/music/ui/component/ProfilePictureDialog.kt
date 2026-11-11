@@ -5,7 +5,30 @@
 
 package com.metrolist.music.ui.component
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +40,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -59,44 +81,66 @@ fun Modifier.profileCrop(crop: ProfileCrop): Modifier =
     }
 
 /**
- * Sets the profile picture from an image link and frames it: pinch or drag the preview, or use
- * the zoom slider. Only the link and the framing are saved (in the app's settings on this device);
- * the picture itself is loaded and cached by the app's image loader.
+ * Sets the profile picture and frames it like a photo crop: pick a photo from the gallery (or
+ * paste an image link), then pinch to zoom and drag it inside the round frame. The picked photo
+ * is copied into the app's own storage on this device; only its location and the framing are
+ * saved in the settings.
  */
 @Composable
 fun ProfilePictureDialog(
     initialUrl: String,
     initialCrop: ProfileCrop,
+    initialName: String,
     onDismiss: () -> Unit,
-    onSave: (String, ProfileCrop) -> Unit,
+    onSave: (String, ProfileCrop, String) -> Unit,
 ) {
+    val context = LocalContext.current
+    var name by remember { mutableStateOf(initialName) }
+    val scope = rememberCoroutineScope()
     var url by remember { mutableStateOf(initialUrl) }
     var zoom by remember { mutableFloatStateOf(initialCrop.zoom) }
     var offsetX by remember { mutableFloatStateOf(initialCrop.offsetX) }
     var offsetY by remember { mutableFloatStateOf(initialCrop.offsetY) }
+    var showLinkField by remember { mutableStateOf(initialUrl.isNotBlank() && !initialUrl.startsWith("file:")) }
+    val pickPhoto =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                val saved = withContext(Dispatchers.IO) { copyProfilePhoto(context, uri) }
+                if (saved != null) {
+                    url = saved
+                    zoom = 1f
+                    offsetX = 0f
+                    offsetY = 0f
+                }
+            }
+        }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.profile_picture)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (url.isNotBlank()) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .padding(bottom = 12.dp)
-                                .size(140.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                .pointerInput(Unit) {
-                                    detectTransformGestures { _, pan, gestureZoom, _ ->
-                                        zoom = (zoom * gestureZoom).coerceIn(1f, ProfileMaxZoom)
-                                        val travelX = (zoom - 1f) * size.width / 2f
-                                        val travelY = (zoom - 1f) * size.height / 2f
-                                        if (travelX > 0f) offsetX = (offsetX + pan.x / travelX).coerceIn(-1f, 1f)
-                                        if (travelY > 0f) offsetY = (offsetY + pan.y / travelY).coerceIn(-1f, 1f)
-                                    }
-                                },
-                    ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .padding(bottom = 16.dp)
+                            .size(220.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable(enabled = url.isBlank()) {
+                                pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }.pointerInput(Unit) {
+                                detectTransformGestures { _, pan, gestureZoom, _ ->
+                                    zoom = (zoom * gestureZoom).coerceIn(1f, ProfileMaxZoom)
+                                    val travelX = (zoom - 1f) * size.width / 2f
+                                    val travelY = (zoom - 1f) * size.height / 2f
+                                    offsetX = if (travelX > 0f) (offsetX + pan.x / travelX).coerceIn(-1f, 1f) else 0f
+                                    offsetY = if (travelY > 0f) (offsetY + pan.y / travelY).coerceIn(-1f, 1f) else 0f
+                                }
+                            },
+                ) {
+                    if (url.isNotBlank()) {
                         AsyncImage(
                             model = url.trim(),
                             contentDescription = null,
@@ -106,51 +150,70 @@ fun ProfilePictureDialog(
                                     .fillMaxSize()
                                     .profileCrop(ProfileCrop(zoom, offsetX, offsetY)),
                         )
+                        // Darkens everything outside the round frame, like a crop screen.
+                        Canvas(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen),
+                        ) {
+                            drawRect(Color.Black.copy(alpha = 0.55f))
+                            drawCircle(Color.Transparent, radius = size.minDimension / 2f, blendMode = BlendMode.Clear)
+                            drawCircle(Color.White.copy(alpha = 0.9f), radius = size.minDimension / 2f - 1.dp.toPx(), style = Stroke(1.5.dp.toPx()))
+                        }
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.person),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(72.dp),
+                        )
                     }
+                }
+                if (url.isNotBlank()) {
                     Text(
-                        text = stringResource(R.string.profile_picture_zoom),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Slider(
-                        value = zoom,
-                        onValueChange = { zoom = it },
-                        valueRange = 1f..ProfileMaxZoom,
-                    )
-                    Text(
-                        text = stringResource(R.string.profile_picture_horizontal),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Slider(
-                        value = offsetX,
-                        onValueChange = { offsetX = it },
-                        valueRange = -1f..1f,
-                        enabled = zoom > 1f,
-                    )
-                    Text(
-                        text = stringResource(R.string.profile_picture_vertical),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Slider(
-                        value = offsetY,
-                        onValueChange = { offsetY = it },
-                        valueRange = -1f..1f,
-                        enabled = zoom > 1f,
+                        text = stringResource(R.string.profile_picture_crop_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(
+                        onClick = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    ) {
+                        Text(stringResource(R.string.profile_picture_choose))
+                    }
+                    TextButton(onClick = { showLinkField = !showLinkField }) {
+                        Text(stringResource(R.string.profile_picture_link))
+                    }
+                }
+                // Shown as the creator of your playlists and used in Listen Together.
                 OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
+                    value = name,
+                    onValueChange = { name = it },
                     singleLine = true,
-                    placeholder = { Text(stringResource(R.string.profile_picture_url_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.profile_username)) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
+                if (showLinkField) {
+                    OutlinedTextField(
+                        value = if (url.startsWith("file:")) "" else url,
+                        onValueChange = {
+                            url = it
+                            zoom = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        },
+                        singleLine = true,
+                        placeholder = { Text(stringResource(R.string.profile_picture_url_hint)) },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(url, ProfileCrop(zoom, offsetX, offsetY)) }) {
+            TextButton(onClick = { onSave(url, ProfileCrop(zoom, offsetX, offsetY), name.trim()) }) {
                 Text(stringResource(android.R.string.ok))
             }
         },
@@ -159,3 +222,19 @@ fun ProfilePictureDialog(
         },
     )
 }
+
+/** Copies the picked photo into the app's files (replacing the previous one); returns its file:// address. */
+private fun copyProfilePhoto(
+    context: Context,
+    uri: Uri,
+): String? =
+    runCatching {
+        val dir = File(context.filesDir, "profile").apply { mkdirs() }
+        dir.listFiles()?.forEach { it.delete() }
+        // A new name each time, so the image loader doesn't show the old cached picture.
+        val file = File(dir, "profile_${System.currentTimeMillis()}.jpg")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            file.outputStream().use { output -> input.copyTo(output) }
+        } ?: return null
+        Uri.fromFile(file).toString()
+    }.getOrNull()

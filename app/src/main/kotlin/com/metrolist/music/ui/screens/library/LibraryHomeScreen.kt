@@ -65,6 +65,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -298,12 +299,16 @@ fun LibraryHomeScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                            // Same width as the search bar above.
+                            .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 8.dp),
                 ) {
-                    KindSegments(selected = kind, onSelect = { kind = if (kind == it) null else it })
+                    KindSegments(
+                        selected = kind,
+                        onSelect = { kind = if (kind == it) null else it },
+                        modifier = Modifier.weight(1f),
+                    )
                     Spacer(Modifier.width(10.dp))
                     LibrarySortButton(selected = sortOption, onSelect = { sortOption = it })
-                    Spacer(Modifier.weight(1f))
                 }
             }
 
@@ -331,34 +336,71 @@ fun LibraryHomeScreen(
                         if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.background,
                         label = "dragBackground",
                     )
+                    val custom = sortOption == LibrarySortOption.CUSTOM
+                    val index = dragList.indexOfFirst { it.id == item.id }
                     PinSwipe(pinned = false, onToggle = { togglePin(item.id) }) {
                         LibraryItemRow(
                             item = item,
                             pinned = false,
                             onClick = { openItem(item) },
-                            onLongClick = { showMenu(item) },
-                            modifier = Modifier.background(rowBackground),
+                            onLongClick = if (custom) null else ({ showMenu(item) }),
+                            // In the Custom order, holding a row picks it up to move it.
+                            modifier =
+                                Modifier
+                                    .background(rowBackground)
+                                    .then(
+                                        if (custom) {
+                                            Modifier.longPressDraggableHandle(
+                                                onDragStarted = {
+                                                    dragging = true
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                },
+                                                onDragStopped = { saveCustomOrder() },
+                                            )
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
                             trailing =
-                                if (sortOption == LibrarySortOption.CUSTOM) {
-                                    {
-                                        Icon(
-                                            painter = painterResource(R.drawable.drag_handle),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier =
-                                                Modifier
-                                                    .draggableHandle(
-                                                        onDragStarted = {
-                                                            dragging = true
-                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        },
-                                                        onDragStopped = { saveCustomOrder() },
-                                                    ).padding(8.dp)
-                                                    .size(22.dp),
-                                        )
+                                when {
+                                    custom && isDragging -> {
+                                        // Small arrows toward where the row can still go.
+                                        {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.arrow_upward),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (index > 0) 0.9f else 0f),
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                                Icon(
+                                                    painter = painterResource(R.drawable.arrow_downward),
+                                                    contentDescription = null,
+                                                    tint =
+                                                        MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = if (index in 0 until dragList.lastIndex) 0.9f else 0f,
+                                                        ),
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                            }
+                                        }
                                     }
-                                } else {
-                                    null
+                                    custom -> {
+                                        {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier =
+                                                    Modifier
+                                                        .clip(CircleShape)
+                                                        .clickable { showMenu(item) }
+                                                        .padding(8.dp)
+                                                        .size(20.dp),
+                                            )
+                                        }
+                                    }
+                                    else -> null
                                 },
                         )
                     }
@@ -424,19 +466,20 @@ private fun LocalItem.modifiedAt(): LocalDateTime? =
 private fun KindSegments(
     selected: LibraryKind?,
     onSelect: (LibraryKind) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         modifier =
-            Modifier
+            modifier
                 .clip(RoundedCornerShape(50))
                 .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(3.dp),
     ) {
         listOf(
             LibraryKind.PLAYLISTS to R.string.filter_playlists,
-            LibraryKind.ARTISTS to R.string.filter_artists,
             LibraryKind.ALBUMS to R.string.filter_albums,
+            LibraryKind.ARTISTS to R.string.filter_artists,
         ).forEach { (value, label) ->
             val isSelected = value == selected
             val background by animateColorAsState(
@@ -453,8 +496,10 @@ private fun KindSegments(
                 fontWeight = FontWeight.SemiBold,
                 color = textColor,
                 maxLines = 1,
+                textAlign = TextAlign.Center,
                 modifier =
                     Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(50))
                         .background(background)
                         .clickable { onSelect(value) }
@@ -476,8 +521,10 @@ private fun PinSwipe(
     val state = rememberSwipeToDismissBoxState(positionalThreshold = { it * 0.3f })
     LaunchedEffect(state.currentValue) {
         if (state.currentValue == SwipeToDismissBoxValue.StartToEnd) {
+            // Settle first: the row moves between the pinned and other sections, and a state
+            // left "swiped" would be restored there and pin/unpin it again and again.
+            state.snapTo(SwipeToDismissBoxValue.Settled)
             onToggle()
-            state.reset()
         }
     }
     SwipeToDismissBox(

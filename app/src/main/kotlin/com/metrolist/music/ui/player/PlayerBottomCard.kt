@@ -119,6 +119,14 @@ import com.metrolist.music.constants.PlayerHorizontalPadding
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import com.metrolist.music.utils.rememberEnumPreference
 import kotlin.math.abs
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.foundation.interaction.DragInteraction
 import kotlinx.coroutines.flow.first
 
@@ -151,9 +159,26 @@ fun PlayerBottomCard(
     expandFraction: () -> Float = { 0f },
     // Room kept free at the bottom of the fully opened card for the playback controls.
     openBottomPadding: Dp = 0.dp,
+    // Height (px) at the bottom of the opened card covered by the controls panel; the lyrics and
+    // the list fade out above it instead of showing behind the controls.
+    openBottomCoverPx: () -> Float = { 0f },
+    // Pulling down at the top of the opened lyrics / list goes back to the player.
+    onPullDownClose: () -> Unit = {},
+    // Opens the full queue editor (reorder, remove) from the opened up-next view.
+    onOpenQueueEditor: () -> Unit = {},
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val playerConnection = LocalPlayerConnection.current
+    val currentLyrics = playerConnection?.currentLyrics?.collectAsStateWithLifecycle()?.value
+    var showSourceDialog by remember { mutableStateOf(false) }
+    if (showSourceDialog && mediaMetadata != null) {
+        com.metrolist.music.ui.menu.LyricsSourceDialog(
+            mediaMetadata = mediaMetadata,
+            currentProvider = currentLyrics?.provider,
+            onDismiss = { showSourceDialog = false },
+        )
+    }
     val latestOnPageChanged by rememberUpdatedState(onPageChanged)
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { latestOnPageChanged(it) }
@@ -174,8 +199,8 @@ fun PlayerBottomCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    // The full-screen views have their own header, so this one fades out on the way.
-                    .graphicsLayer { alpha = (1f - expandFraction() * 2f).coerceIn(0f, 1f) }
+                    // Opened, the row moves down below the art and title header and stays usable.
+                    .padding(top = (statusTop + OpenHeaderHeight) * expandFraction().coerceIn(0f, 1f))
                     .padding(start = 18.dp, end = 16.dp, top = CardHeaderTopPadding)
                     .height(CardHeaderRowHeight),
         ) {
@@ -199,7 +224,28 @@ fun PlayerBottomCard(
 
             Spacer(Modifier.weight(1f))
 
+            val opened = expandFraction() >= 1f
             if (pagerState.currentPage == LyricsPage) {
+                val provider = currentLyrics?.provider
+                if (opened && provider != null && provider != "Unknown") {
+                    // Where the lyrics come from; tap to pick another source.
+                    Text(
+                        text = provider,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = contentColor.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier =
+                            Modifier
+                                .padding(end = 6.dp)
+                                .widthIn(max = 140.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(contentColor.copy(alpha = 0.12f))
+                                .clickable { showSourceDialog = true }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
                 PlayerPillButton(
                     icon = R.drawable.more_horiz,
                     contentDescription = stringResource(R.string.more_options),
@@ -209,6 +255,17 @@ fun PlayerBottomCard(
                     onClick = onLyricsMenuClick,
                 )
             } else {
+                if (opened) {
+                    PlayerPillButton(
+                        icon = R.drawable.queue_music,
+                        contentDescription = stringResource(R.string.open_full_queue),
+                        active = false,
+                        enabled = true,
+                        contentColor = contentColor,
+                        onClick = onOpenQueueEditor,
+                        modifier = Modifier.padding(end = 6.dp),
+                    )
+                }
                 UpNextActions(
                     contentColor = contentColor,
                     isListenTogetherGuest = isListenTogetherGuest,
@@ -219,6 +276,7 @@ fun PlayerBottomCard(
             }
         }
 
+        val pullDownConnection = rememberPullDownToClose(enabled = { expandFraction() >= 1f }, onClose = onPullDownClose)
         HorizontalPager(
             state = pagerState,
             beyondViewportPageCount = 1,
@@ -230,17 +288,31 @@ fun PlayerBottomCard(
             // Tapping the lyrics or swiping up on either page opens its full-screen view.
             // Dragging the card up is handled by the player around the card, which stays put
             // while the card grows (see BottomSheetPlayer).
-            val fraction = expandFraction().coerceIn(0f, 1f)
             val pageModifier =
                 Modifier
                     .fillMaxSize()
                     // Lyrics and the up-next list fade out toward the bottom of the card (and, once
                     // opened, under the header at the top). This is a single gradient mask drawn
                     // with the page, much cheaper than a real blur.
-                    .fadingEdge(
-                        top = if (fraction > 0f) (statusTop + OpenHeaderHeight - CardHeaderHeight) * fraction else null,
-                        bottom = CardBottomFade,
-                    )
+                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .drawWithContent {
+                        drawContent()
+                        // Fades out toward the bottom: over the card's last 72 dp when small, and
+                        // just above the controls panel once opened.
+                        val cover = openBottomCoverPx()
+                        val fadePx = CardBottomFade.toPx()
+                        val end = size.height - cover
+                        drawRect(
+                            brush =
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    1f to Color.Transparent,
+                                    startY = end - fadePx,
+                                    endY = end,
+                                ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }.nestedScroll(pullDownConnection)
             when (page) {
                 LyricsPage ->
                     Box(
@@ -409,7 +481,6 @@ private fun UpNextList(
     }
 
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val fraction = expandFraction().coerceIn(0f, 1f)
     LazyColumn(
         // Scrollable only once the card is fully opened; in the small card it just shows what's next.
@@ -418,7 +489,7 @@ private fun UpNextList(
             PaddingValues(
                 start = 8.dp,
                 end = 8.dp,
-                top = lerp(4.dp, statusTop + OpenHeaderHeight - CardHeaderHeight, fraction),
+                top = 4.dp,
                 bottom = lerp(12.dp + navBottom, openBottomPadding, fraction),
             ),
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -578,10 +649,11 @@ fun CompactLyrics(
     val windowHeight = with(density) { LocalWindowInfo.current.containerSize.height.toDp() }
     // Where the full-screen lyrics put their lines, measured from the top of this list once the
     // card covers the screen: the first line near the top, the current line 35% down.
-    val fullLyricsHeight = windowHeight - statusTop - FullLyricsTop - navBottom - 12.dp
-    val fullFirstLineTop = (statusTop + FullLyricsTop + FullLyricsTopPadding - CardHeaderHeight - FullLineGap).coerceAtLeast(0.dp)
-    val fullAnchorDrop = (fullLyricsHeight * FullLyricsAnchorRatio - FullLyricsTopPadding).coerceAtLeast(0.dp)
-    val topPadding = lerp(2.dp, fullFirstLineTop, fraction)
+    // Opened, the list starts below the art header and the Lyrics / Up next row; the current
+    // line sits about a third of the way down the visible lyrics.
+    val fullLyricsHeight = windowHeight - statusTop - OpenHeaderHeight - CardHeaderHeight - openBottomPadding
+    val fullAnchorDrop = (fullLyricsHeight * FullLyricsAnchorRatio).coerceAtLeast(0.dp)
+    val topPadding = lerp(2.dp, 8.dp, fraction)
     val sidePadding = lerp(24.dp, PlayerHorizontalPadding, fraction)
     // How far below the top of the list the current line sits (0 in the small card).
     val anchorPx = with(density) { (fullAnchorDrop * fraction).roundToPx() }
@@ -661,6 +733,7 @@ fun CompactLyrics(
             LyricsPosition.RIGHT -> 1f
         }
 
+    Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(
         state = listState,
         userScrollEnabled = interactive,
@@ -671,7 +744,7 @@ fun CompactLyrics(
                 top = topPadding,
                 bottom = lerp(16.dp + navBottom, openBottomPadding, fraction),
             ),
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
     ) {
         items(cardItems) { item ->
             when (item) {
@@ -824,6 +897,40 @@ fun CompactLyrics(
             }
         }
     }
+    // After scrolling by hand: jump back to the current line (it also comes back on its own).
+    AnimatedVisibility(
+        visible = interactive && synced && followPaused,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+        modifier =
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = openBottomPadding - 8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(color.copy(alpha = 0.18f))
+                    .clickable { followPaused = false }
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.sync),
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.auto_scroll),
+                style = MaterialTheme.typography.labelLarge,
+                color = color,
+            )
+        }
+    }
+    }
 }
 
 private class CompactStyles(
@@ -889,7 +996,47 @@ private const val LineScrollMillis = 650
 private const val FollowResumeMillis = 3000L
 
 // Height of the opened card's header (art and title) below the status bar.
-private val OpenHeaderHeight = 72.dp
+private val OpenHeaderHeight = 64.dp
+
+/**
+ * Pulling down past the top of a list (by hand) calls [onClose] once the pull is long enough.
+ */
+@Composable
+private fun rememberPullDownToClose(
+    enabled: () -> Boolean,
+    onClose: () -> Unit,
+): NestedScrollConnection {
+    val latestEnabled by rememberUpdatedState(enabled)
+    val latestOnClose by rememberUpdatedState(onClose)
+    val thresholdPx = with(LocalDensity.current) { 96.dp.toPx() }
+    return remember {
+        object : NestedScrollConnection {
+            var pulled = 0f
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (latestEnabled() && source == NestedScrollSource.UserInput && available.y > 0f) {
+                    pulled += available.y
+                    if (pulled > thresholdPx) {
+                        pulled = Float.NEGATIVE_INFINITY
+                        latestOnClose()
+                    }
+                } else if (consumed.y != 0f && pulled >= 0f) {
+                    pulled = 0f
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                pulled = 0f
+                return Velocity.Zero
+            }
+        }
+    }
+}
 
 /**
  * One word-timed line. The dim text is drawn first, then the bright text is revealed across

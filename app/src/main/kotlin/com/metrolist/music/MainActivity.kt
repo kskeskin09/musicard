@@ -60,6 +60,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -1039,6 +1040,8 @@ class MainActivity : FragmentActivity() {
                 val (profileOffsetX, setProfileOffsetX) = rememberPreference(ProfileImageOffsetXKey, defaultValue = 0f)
                 val (profileOffsetY, setProfileOffsetY) = rememberPreference(ProfileImageOffsetYKey, defaultValue = 0f)
                 val profileCrop = ProfileCrop(profileZoom, profileOffsetX, profileOffsetY)
+                val (profileName, setProfileName) =
+                    rememberPreference(com.metrolist.music.constants.ListenTogetherUsernameKey, defaultValue = "")
 
                 val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
                 val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
@@ -1078,6 +1081,12 @@ class MainActivity : FragmentActivity() {
                             ) {
                                 // Main tabs: large page name, profile picture and a search pill, on the
                                 // page background (below the status bar).
+                                // Header buttons: round, on the same gray as the search bar.
+                                val headerButtonColors =
+                                    IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    )
                                 TopLevelHeader(
                                     title = currentTitleRes?.let { stringResource(it) } ?: "",
                                     profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
@@ -1090,27 +1099,36 @@ class MainActivity : FragmentActivity() {
                                     },
                                     actions = {
                                         if (showHistoryButton) {
-                                            IconButton(onClick = { navController.navigate("history") }) {
+                                            IconButton(
+                                            colors = headerButtonColors,
+                                            onClick = { navController.navigate("history") }) {
                                                 Icon(
                                                     painter = painterResource(R.drawable.history),
                                                     contentDescription = stringResource(R.string.history),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.size(22.dp),
                                                 )
                                             }
                                         }
-                                        IconButton(onClick = { navController.navigate("stats") }) {
+                                        IconButton(
+                                            colors = headerButtonColors,
+                                            onClick = { navController.navigate("stats") }) {
                                             Icon(
                                                 painter = painterResource(R.drawable.stats),
                                                 contentDescription = stringResource(R.string.stats),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.size(22.dp),
                                             )
                                         }
                                         if (listenTogetherInTopBar) {
-                                            IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
+                                            IconButton(
+                                            colors = headerButtonColors,
+                                            onClick = { navController.navigate("listen_together_from_topbar") }) {
                                                 Icon(
                                                     painter = painterResource(R.drawable.group_outlined),
                                                     contentDescription = stringResource(R.string.together),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.size(22.dp),
                                                 )
                                             }
                                         }
@@ -1178,12 +1196,22 @@ class MainActivity : FragmentActivity() {
                                                 topAppBarScrollBehavior.state.resetHeightOffset()
                                             }
                                         } else {
-                                            navController.navigate(screen.route) {
-                                                popUpTo(navController.graph.startDestinationId) {
-                                                    saveState = true
+                                            // Inside this tab's own pages (e.g. a playlist opened from the
+                                            // library): go back to the tab itself. Restoring the tab would only
+                                            // show the same page again, so the tap seemed to do nothing.
+                                            val tabInStack =
+                                                screen != Screens.Search &&
+                                                    runCatching { navController.getBackStackEntry(screen.route) }.isSuccess
+                                            if (tabInStack) {
+                                                navController.popBackStack(screen.route, inclusive = false)
+                                            } else {
+                                                navController.navigate(screen.route) {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
                                                 }
-                                                launchSingleTop = true
-                                                restoreState = true
                                             }
                                         }
                                     }
@@ -1416,8 +1444,10 @@ class MainActivity : FragmentActivity() {
                         ProfilePictureDialog(
                             initialUrl = profileImageUrl,
                             initialCrop = profileCrop,
+                            initialName = profileName,
                             onDismiss = { showProfilePictureDialog = false },
-                            onSave = { url, crop ->
+                            onSave = { url, crop, name ->
+                                setProfileName(name)
                                 setProfileImageUrl(url.trim())
                                 setProfileZoom(crop.zoom)
                                 setProfileOffsetX(crop.offsetX)
