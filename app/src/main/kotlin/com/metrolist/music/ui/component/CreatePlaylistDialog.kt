@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -57,7 +58,7 @@ fun CreatePlaylistDialog(
     val playlistCreatedLocallyStr = stringResource(R.string.playlist_created_locally)
 
     TextFieldDialog(
-        icon = { Icon(painter = painterResource(R.drawable.add), contentDescription = null) },
+        icon = { Icon(painter = painterResource(R.drawable.add), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
         title = { Text(text = stringResource(R.string.create_playlist)) },
         initialTextFieldValue = TextFieldValue(initialTextFieldValue ?: ""),
         onDismiss = onDismiss,
@@ -77,7 +78,7 @@ fun CreatePlaylistDialog(
             }
         },
         extraContent = {
-            if (allowSyncing) {
+            if (allowSyncing && isSignedIn) {
                 Row(
                     modifier = Modifier.padding(top = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -96,6 +97,14 @@ fun CreatePlaylistDialog(
                     Switch(
                         modifier = Modifier.padding(start = 12.dp),
                         checked = syncedPlaylist,
+                        colors =
+                            androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.surface,
+                                checkedTrackColor = MaterialTheme.colorScheme.onSurface,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                uncheckedBorderColor = Color.Transparent,
+                            ),
                         onCheckedChange = {
                             coroutineScope.launch {
                                 val isYtmSyncEnabled = withContext(Dispatchers.IO) { context.isSyncEnabled() }

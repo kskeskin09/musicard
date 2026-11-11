@@ -24,8 +24,8 @@ import coil3.compose.AsyncImage
 fun FourCoverArt(
     covers: List<String?>,
     modifier: Modifier = Modifier,
-    size: Dp = 240.dp,
-    corner: Dp = 20.dp,
+    size: Dp = 280.dp,
+    corner: Dp = 16.dp,
 ) {
     Surface(
         modifier = modifier.size(size),

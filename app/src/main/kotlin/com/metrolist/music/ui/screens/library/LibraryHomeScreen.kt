@@ -768,6 +768,7 @@ fun PlaylistCover(
 ) {
     val thumbnails = playlist.thumbnails
     com.metrolist.music.ui.theme.PrefetchCoverColor(thumbnails.firstOrNull())
+    androidx.compose.runtime.SideEffect { com.metrolist.music.viewmodels.PlaylistPreviewCache.put(playlist) }
     val shape = RoundedCornerShape(corner)
     when {
         playlist.playlist.thumbnailUrl == null && thumbnails.size >= 4 ->

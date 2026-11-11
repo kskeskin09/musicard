@@ -49,7 +49,9 @@ constructor(
     val playlist =
         database
             .playlist(playlistId)
-            .stateIn(viewModelScope, SharingStarted.Lazily, null)
+            // Starts from the card that was tapped, so the page has its cover and name on the
+            // first frame instead of opening empty while the database answers.
+            .stateIn(viewModelScope, SharingStarted.Lazily, PlaylistPreviewCache[playlistId])
 
     private val _onlinePlaylist = MutableStateFlow<PlaylistItem?>(null)
     val onlinePlaylist: StateFlow<PlaylistItem?> = _onlinePlaylist
@@ -123,5 +125,16 @@ constructor(
                 _onlinePlaylist.value = online
             }
         }
+    }
+}
+
+/** The playlists last shown as cards, so a playlist page can open with them right away. */
+object PlaylistPreviewCache {
+    private val playlists = android.util.LruCache<String, com.metrolist.music.db.entities.Playlist>(300)
+
+    operator fun get(id: String): com.metrolist.music.db.entities.Playlist? = playlists.get(id)
+
+    fun put(playlist: com.metrolist.music.db.entities.Playlist) {
+        playlists.put(playlist.id, playlist)
     }
 }

@@ -937,6 +937,7 @@ fun PlaylistListItem(
     },
     badges = badges,
     thumbnailContent = {
+        androidx.compose.runtime.SideEffect { com.metrolist.music.viewmodels.PlaylistPreviewCache.put(playlist) }
         PlaylistThumbnail(
             thumbnails = playlist.thumbnails,
             size = ListThumbnailSize,
@@ -1036,6 +1037,7 @@ fun PlaylistGridItem(
     },
     badges = badges,
     thumbnailContent = {
+        androidx.compose.runtime.SideEffect { com.metrolist.music.viewmodels.PlaylistPreviewCache.put(playlist) }
         val width = maxWidth
         PlaylistThumbnail(
             thumbnails = playlist.thumbnails,
