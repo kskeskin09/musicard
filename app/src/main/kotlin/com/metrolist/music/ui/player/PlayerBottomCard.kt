@@ -105,6 +105,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -164,8 +165,10 @@ fun PlayerBottomCard(
     openBottomCoverPx: () -> Float = { 0f },
     // Pulling down at the top of the opened lyrics / list goes back to the player.
     onPullDownClose: () -> Unit = {},
-    // Opens the full queue editor (reorder, remove) from the opened up-next view.
-    onOpenQueueEditor: () -> Unit = {},
+    // Opacity of the Lyrics / Up next row and its buttons; they hide with the playback controls.
+    headerAlpha: () -> Float = { 1f },
+    // Whether the opened lyrics stopped following the song after a manual scroll.
+    followState: LyricsFollowState? = null,
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -202,7 +205,13 @@ fun PlayerBottomCard(
                     // Opened, the row moves down below the art and title header and stays usable.
                     .padding(top = (statusTop + OpenHeaderHeight) * expandFraction().coerceIn(0f, 1f))
                     .padding(start = 18.dp, end = 16.dp, top = CardHeaderTopPadding)
-                    .height(CardHeaderRowHeight),
+                    .height(CardHeaderRowHeight)
+                    .graphicsLayer {
+                        val a = headerAlpha()
+                        alpha = a
+                        // Hidden, the row is moved away so it doesn't catch touches.
+                        if (a == 0f) translationY = -100_000f
+                    },
         ) {
             listOf(R.string.lyrics, R.string.up_next).forEachIndexed { page, label ->
                 val selected = pagerState.currentPage == page
@@ -247,7 +256,7 @@ fun PlayerBottomCard(
                     )
                 }
                 PlayerPillButton(
-                    icon = R.drawable.more_horiz,
+                    icon = R.drawable.player_more,
                     contentDescription = stringResource(R.string.more_options),
                     active = false,
                     enabled = true,
@@ -255,17 +264,6 @@ fun PlayerBottomCard(
                     onClick = onLyricsMenuClick,
                 )
             } else {
-                if (opened) {
-                    PlayerPillButton(
-                        icon = R.drawable.queue_music,
-                        contentDescription = stringResource(R.string.open_full_queue),
-                        active = false,
-                        enabled = true,
-                        contentColor = contentColor,
-                        onClick = onOpenQueueEditor,
-                        modifier = Modifier.padding(end = 6.dp),
-                    )
-                }
                 UpNextActions(
                     contentColor = contentColor,
                     isListenTogetherGuest = isListenTogetherGuest,
@@ -331,6 +329,7 @@ fun PlayerBottomCard(
                             isPlaying = isPlaying,
                             expandFraction = expandFraction,
                             openBottomPadding = openBottomPadding,
+                            followState = followState,
                         )
                     }
 
@@ -365,7 +364,7 @@ private fun UpNextActions(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PlayerPillButton(
-            icon = R.drawable.shuffle,
+            icon = R.drawable.player_shuffle,
             contentDescription = stringResource(R.string.shuffle),
             active = shuffleModeEnabled,
             enabled = !isListenTogetherGuest,
@@ -373,7 +372,7 @@ private fun UpNextActions(
             onClick = { playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled },
         )
         PlayerPillButton(
-            icon = if (repeatMode == Player.REPEAT_MODE_ONE) R.drawable.repeat_one else R.drawable.repeat,
+            icon = if (repeatMode == Player.REPEAT_MODE_ONE) R.drawable.player_repeat_one else R.drawable.player_repeat,
             contentDescription = null,
             active = repeatMode != Player.REPEAT_MODE_OFF,
             enabled = !isListenTogetherGuest,
@@ -381,7 +380,7 @@ private fun UpNextActions(
             onClick = { playerConnection.player.toggleRepeatMode() },
         )
         PlayerPillButton(
-            icon = R.drawable.bedtime,
+            icon = R.drawable.player_sleep,
             contentDescription = stringResource(R.string.sleep_timer),
             active = sleepTimerEnabled,
             enabled = !isListenTogetherGuest,
@@ -389,7 +388,7 @@ private fun UpNextActions(
             onClick = onSleepTimerClick,
         )
         PlayerPillButton(
-            icon = R.drawable.more_horiz,
+            icon = R.drawable.player_more,
             contentDescription = stringResource(R.string.more_options),
             active = false,
             enabled = true,
@@ -583,6 +582,7 @@ fun CompactLyrics(
     modifier: Modifier = Modifier,
     expandFraction: () -> Float = { 0f },
     openBottomPadding: Dp = 0.dp,
+    followState: LyricsFollowState? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle()
@@ -660,16 +660,14 @@ fun CompactLyrics(
 
     val listState = rememberLazyListState()
     // Fully opened, the lyrics can be scrolled and tapped. While the user scrolls, following the
-    // song pauses, and resumes a few seconds after the last touch.
+    // song pauses until the re-sync button is tapped.
     val interactive = fraction >= 1f
-    var userScrollTick by remember { mutableIntStateOf(0) }
-    var followPaused by remember { mutableStateOf(false) }
+    // Shared with the player, which shows the re-sync button above the controls.
+    val follow = followState ?: remember { LyricsFollowState() }
+    var followPaused by follow::paused
     LaunchedEffect(listState) {
         listState.interactionSource.interactions.collect {
-            if (it is DragInteraction.Start) {
-                followPaused = true
-                userScrollTick++
-            }
+            if (it is DragInteraction.Start) followPaused = true
         }
     }
     val appliedAnchor = remember { intArrayOf(0) }
@@ -679,12 +677,6 @@ fun CompactLyrics(
             appliedAnchor[0] = anchorPx
             if (scrollTarget >= 0) listState.requestScrollToItem(scrollTarget, -anchorPx)
         }
-    }
-    LaunchedEffect(userScrollTick) {
-        if (!followPaused) return@LaunchedEffect
-        snapshotFlow { listState.isScrollInProgress }.first { !it }
-        delay(FollowResumeMillis)
-        followPaused = false
     }
     LaunchedEffect(interactive) {
         if (!interactive) followPaused = false
@@ -897,40 +889,13 @@ fun CompactLyrics(
             }
         }
     }
-    // After scrolling by hand: jump back to the current line (it also comes back on its own).
-    AnimatedVisibility(
-        visible = interactive && synced && followPaused,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically(),
-        modifier =
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = openBottomPadding - 8.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(color.copy(alpha = 0.18f))
-                    .clickable { followPaused = false }
-                    .padding(horizontal = 16.dp, vertical = 9.dp),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.sync),
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.auto_scroll),
-                style = MaterialTheme.typography.labelLarge,
-                color = color,
-            )
-        }
     }
-    }
+}
+
+/** Whether the opened lyrics stopped following the song because the user scrolled them. */
+@Stable
+class LyricsFollowState {
+    var paused by mutableStateOf(false)
 }
 
 private class CompactStyles(
@@ -993,7 +958,6 @@ private fun findInterludes(lines: List<LyricsEntry>): List<Interlude> {
 private const val InterludeMinMs = 4000L
 private const val InterludeEndLeadMs = 650L
 private const val LineScrollMillis = 650
-private const val FollowResumeMillis = 3000L
 
 // Height of the opened card's header (art and title) below the status bar.
 private val OpenHeaderHeight = 64.dp

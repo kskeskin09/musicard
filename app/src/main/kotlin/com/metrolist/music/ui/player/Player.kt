@@ -15,6 +15,10 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -928,6 +932,8 @@ fun BottomSheetPlayer(
     // Bumped on every touch while the card is open; shows the auto-hidden controls again.
     var cardTouchTick by remember { mutableIntStateOf(0) }
     var cardControlsShown by remember { mutableStateOf(true) }
+    // The opened lyrics stop following the song after a manual scroll, until re-sync is tapped.
+    val lyricsFollow = remember { LyricsFollowState() }
     val animateCardExpand: suspend (Float, Int) -> Unit = { target, millis ->
         animate(cardExpand, target, animationSpec = tween(millis, easing = FastOutSlowInEasing)) { value, _ ->
             cardExpand = value
@@ -2428,7 +2434,8 @@ fun BottomSheetPlayer(
                                 cardExpand * lerp(navBottomPx, controlsPx, cardControlsAlpha)
                             },
                             onPullDownClose = closeCardFull,
-                            onOpenQueueEditor = { queueSheetState.expandSoft() },
+                            headerAlpha = { cardControlsAlpha },
+                            followState = lyricsFollow,
                             onMoreClick = moreMenu@{
                                 val metadata = mediaMetadata ?: return@moreMenu
                                 menuState.show {
@@ -2530,6 +2537,52 @@ fun BottomSheetPlayer(
                             }
                         }
                     }
+                    // Re-sync: above the play buttons, and down at the bottom while they are hidden.
+                    // It stays until it is tapped.
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = cardOpen && cardPage == LyricsPage && lyricsFollow.paused,
+                        enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                        exit = fadeOut() + scaleOut(targetScale = 0.8f),
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .zIndex(4f)
+                                .graphicsLayer {
+                                    val gap = 16.dp.toPx()
+                                    val low = navBottomPx + gap
+                                    val high = navBottomPx + 12.dp.toPx() + playbackHeightPx + gap
+                                    translationY = -lerp(low, high, cardControlsAlpha)
+                                },
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(TextBackgroundColor.copy(alpha = 0.2f))
+                                    // Reacts on touch down: the touch also brings the controls back,
+                                    // which moves the button up under the finger.
+                                    .pointerInput(Unit) {
+                                        awaitEachGesture {
+                                            awaitFirstDown()
+                                            lyricsFollow.paused = false
+                                        }
+                                    }.padding(horizontal = 16.dp, vertical = 9.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.sync),
+                                contentDescription = null,
+                                tint = TextBackgroundColor,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.auto_scroll),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = TextBackgroundColor,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -2564,14 +2617,9 @@ fun BottomSheetPlayer(
                     },
                 )
             }
-            if (useCardLayout) {
-                // On the album color the queue uses the dark palette (white text), like the lyrics.
-                MaterialTheme(colorScheme = MusicardDarkColorScheme) {
-                    Box(Modifier.graphicsLayer { alpha = queueFade.value }) {
-                        queueContent()
-                    }
-                }
-            } else {
+            // Portrait uses its own up-next page in the card; the old queue sheet stays only
+            // for the landscape layout.
+            if (!useCardLayout) {
                 queueContent()
             }
         }
@@ -2590,6 +2638,7 @@ fun InlineLyricsView(
     // Card layout: how far the card is opened toward full screen (0..1).
     expandFraction: () -> Float = { 0f },
     openBottomPadding: Dp = 0.dp,
+    followState: LyricsFollowState? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
@@ -2713,6 +2762,7 @@ fun InlineLyricsView(
                     isPlaying = isPlaying,
                     expandFraction = expandFraction,
                     openBottomPadding = openBottomPadding,
+                    followState = followState,
                 )
             }
 
