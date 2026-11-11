@@ -1301,6 +1301,28 @@ class MainActivity : FragmentActivity() {
 
                             if (!showRail && currentRoute != "wrapped") {
                                 Box {
+                                    // The page fades darker toward the tab bar (and the mini player
+                                    // above it, when one is showing), like the fade under the title.
+                                    if (shouldShowNavigationBar) {
+                                        val fadeColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+                                        val miniPlayerShown = activePlayerConnection != null && !playerBottomSheetState.isDismissed
+                                        val coveredHeight =
+                                            bottomInset + navigationBarHeight + if (miniPlayerShown) MiniPlayerHeight else 0.dp
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .fillMaxWidth()
+                                                    .height(coveredHeight + 56.dp)
+                                                    .background(
+                                                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                                                            0f to fadeColor.copy(alpha = 0f),
+                                                            (56f / (coveredHeight.value + 56f)) to fadeColor.copy(alpha = 0.85f),
+                                                            1f to fadeColor,
+                                                        ),
+                                                    ),
+                                        )
+                                    }
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
