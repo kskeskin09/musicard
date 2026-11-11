@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.layout
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -893,7 +894,17 @@ class MainActivity : FragmentActivity() {
                 val playerReady by playerReadyState
                 val activePlayerConnection = if (playerReady) playerConnection else null
 
-                var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
+                // Worked out in the same frame as the route, so a page never opens with the
+                // previous page's header (or its spacing) for a moment.
+                val shouldShowTopBar =
+                    run {
+                        val isListenTogetherScreen =
+                            currentRoute == Screens.ListenTogether.route ||
+                                currentRoute == "listen_together_from_topbar"
+                        currentRoute in topLevelScreens &&
+                            currentRoute != "settings" &&
+                            !(isListenTogetherScreen && listenTogetherInTopBar)
+                    }
                 val onProfileTab = currentRoute == Screens.Profile.route
                 // The main tabs' header scrolls away with the page: first the page name, then the
                 // search bar; scrolling back brings it back the same way.
@@ -1035,15 +1046,6 @@ class MainActivity : FragmentActivity() {
                     }
                 }
 
-                LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
-                    val currentRoute = navBackStackEntry?.destination?.route
-                    val isListenTogetherScreen =
-                        currentRoute == Screens.ListenTogether.route ||
-                            currentRoute == "listen_together_from_topbar"
-                    shouldShowTopBar = currentRoute in topLevelScreens &&
-                        currentRoute != "settings" &&
-                        !(isListenTogetherScreen && listenTogetherInTopBar)
-                }
 
                 val coroutineScope = rememberCoroutineScope()
                 var sharedSong: SongItem? by remember {
@@ -1132,8 +1134,8 @@ class MainActivity : FragmentActivity() {
                         topBar = {
                             AnimatedVisibility(
                                 visible = shouldShowTopBar,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 200)),
+                                enter = fadeIn(animationSpec = tween(durationMillis = 200)),
+                                exit = ExitTransition.None,
                             ) {
                                 // Main tabs: large page name, profile picture and a search pill, on the
                                 // page background (below the status bar).
