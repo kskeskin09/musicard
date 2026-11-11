@@ -196,6 +196,7 @@
     <string name="last_song_listened">Based on the last song you listened to</string>
     <string name="app_language">App language</string>
     <string name="lyrics_provider">Lyrics provider</string>
+    <string name="home_recents">Recents</string>
     <string name="lyrics_provider_desc">Turn providers on or off, and hold one to drag it. Higher ones are tried first</string>
     <string name="lyrics_provider_priority">Lyrics provider priority</string>
     <string name="lyrics_provider_priority_desc">Drag to reorder providers by preference. Higher position means higher priority</string>

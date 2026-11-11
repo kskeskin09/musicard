@@ -9,6 +9,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,6 +58,10 @@ fun TopLevelHeader(
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
     profileCrop: ProfileCrop = ProfileCrop(),
+    // The profile has its own tab in the bottom bar, so the header can leave the picture out.
+    showProfile: Boolean = true,
+    // Tapping the page name, e.g. to go back to the top of the page.
+    onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Column(
@@ -80,9 +86,23 @@ fun TopLevelHeader(
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .then(
+                            if (onTitleClick != null) {
+                                Modifier.clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onTitleClick,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
             )
             actions()
+            if (showProfile) {
             Spacer(Modifier.width(4.dp))
             BadgedBox(badge = { if (showBadge) Badge() }) {
                 Box(
@@ -110,6 +130,7 @@ fun TopLevelHeader(
                         )
                     }
                 }
+            }
             }
         }
         Spacer(Modifier.height(10.dp))

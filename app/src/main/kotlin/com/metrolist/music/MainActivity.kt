@@ -1106,6 +1106,11 @@ class MainActivity : FragmentActivity() {
                                         }
                                     },
                                     onProfileLongClick = { showProfilePictureDialog = true },
+                                    showProfile = false,
+                                    // Tapping the page name works like tapping its tab again.
+                                    onTitleClick = {
+                                        navController.currentBackStackEntry?.savedStateHandle?.set("scrollToTop", true)
+                                    },
                                     onSearchClick = {
                                         navController.navigate(Screens.Search.route) { launchSingleTop = true }
                                     },

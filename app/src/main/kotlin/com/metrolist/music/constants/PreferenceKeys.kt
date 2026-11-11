@@ -733,6 +733,7 @@ val LibrarySortKey = stringPreferencesKey("librarySort")
 val LibraryCustomOrderKey = stringPreferencesKey("libraryCustomOrder")
 val LibraryPinnedKey = stringPreferencesKey("libraryPinned")
 val LibraryEditLockKey = booleanPreferencesKey("libraryEditLock")
+val RecentPlaylistsKey = stringPreferencesKey("recentPlaylists")
 
 enum class LibrarySortOption {
     CUSTOM,

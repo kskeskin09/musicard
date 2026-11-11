@@ -453,75 +453,6 @@ fun ContentSettings(
         )
     }
 
-    var showProviderDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    // One place for the lyrics providers: switch each on or off, and hold one to move it.
-    if (showProviderDialog) {
-        val currentOrder = LyricsProviderRegistry.deserializeProviderOrder(lyricsProviderOrder)
-        val defaultOrder = LyricsProviderRegistry.getDefaultProviderOrder()
-        val normalizedOrder = currentOrder.filter { it in defaultOrder } +
-            defaultOrder.filter { it !in currentOrder }
-        val switches =
-            mapOf(
-                "LrcLib" to (enableLrclib to onEnableLrclibChange),
-                "KuGou" to (enableKugou to onEnableKugouChange),
-                "BetterLyrics" to (enableBetterLyrics to onEnableBetterLyricsChange),
-                "Paxsenix" to (enablePaxsenix to onEnablePaxsenixChange),
-                "LyricsPlus" to (enableLyricsPlus to onEnableLyricsPlusChange),
-                "Zemer" to (enableZemer to onEnableZemerChange),
-            )
-        val rows =
-            normalizedOrder
-                .filter { it in switches }
-                .map { name ->
-                    ReorderableToggleItem(
-                        id = name,
-                        title = providerDisplayNames[name] ?: name,
-                        enabled = switches.getValue(name).first,
-                    )
-                }
-
-        AlertDialog(
-            onDismissRequest = { showProviderDialog = false },
-            title = { Text(stringResource(R.string.lyrics_provider)) },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        stringResource(R.string.lyrics_provider_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(bottom = 12.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    ReorderableToggleList(
-                        items = rows,
-                        onReorder = { ids ->
-                            // Providers without a switch keep their place after the others.
-                            val others = normalizedOrder.filter { it !in switches }
-                            onLyricsProviderOrderChange(LyricsProviderRegistry.serializeProviderOrder(ids + others))
-                        },
-                        onToggle = { id, on -> switches[id]?.second?.invoke(on) },
-                        maxHeight = 400.dp,
-                    )
-                    Text(
-                        text = stringResource(R.string.youtube_music_lyrics_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 12.dp),
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showProviderDialog = false }
-                ) {
-                    Text(stringResource(R.string.close))
-                }
-            }
-        )
-    }
-
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
@@ -784,7 +715,7 @@ fun ContentSettings(
                     icon = painterResource(R.drawable.lyrics),
                     title = { Text(stringResource(R.string.lyrics_provider)) },
                     description = { Text(stringResource(R.string.lyrics_provider_desc)) },
-                    onClick = { showProviderDialog = true }
+                    onClick = { navController.navigate("settings/content/lyrics_providers") }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.language_korean_latin),

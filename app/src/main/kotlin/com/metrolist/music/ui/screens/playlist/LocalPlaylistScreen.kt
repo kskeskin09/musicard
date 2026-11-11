@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.utils.markPlaylistPlayed
+
 import com.metrolist.music.constants.ListenTogetherUsernameKey
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -755,6 +757,7 @@ fun LocalPlaylistScreen(
                                             } else if (song.song.id == mediaMetadata?.id) {
                                                 playerConnection.togglePlayPause()
                                             } else {
+                                                context.markPlaylistPlayed(playlist!!.playlist.id)
                                                 playerConnection.playQueue(
                                                     ListQueue(
                                                         title = playlist!!.playlist.name,
@@ -1405,6 +1408,7 @@ fun LocalPlaylistHeader(
             // song in a shuffled order, otherwise it plays in the order shown.
             Surface(
                 onClick = {
+                    context.markPlaylistPlayed(playlist.playlist.id)
                     playerConnection.playQueue(
                         ListQueue(
                             title = playlist.playlist.name,
