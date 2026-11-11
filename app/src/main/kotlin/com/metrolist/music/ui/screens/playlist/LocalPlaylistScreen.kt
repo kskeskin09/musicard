@@ -21,6 +21,7 @@ import com.metrolist.music.ui.component.LibrarySortButton
 import com.metrolist.music.ui.component.labelRes
 import com.metrolist.music.ui.theme.albumBackgroundColor
 import com.metrolist.music.ui.theme.rememberCoverColor
+import com.metrolist.music.ui.theme.rememberPageTint
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.lerp
@@ -498,18 +499,18 @@ fun LocalPlaylistScreen(
     val coverColor = rememberCoverColor(playlist?.thumbnails?.firstOrNull())
     // One even color over the whole page, taken from the cover (darker in dark mode, a light
     // wash in light mode so the dark text stays readable).
-    val tint by animateColorAsState(
-        targetValue =
-            coverColor?.let {
-                if (darkTheme) {
-                    lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
-                } else {
-                    lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
-                }
-            } ?: pageBackground,
-        animationSpec = tween(600),
-        label = "playlistTint",
-    )
+    val tint =
+        rememberPageTint(
+            target =
+                coverColor?.let {
+                    if (darkTheme) {
+                        lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
+                    } else {
+                        lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
+                    }
+                } ?: pageBackground,
+            ready = coverColor != null,
+        )
 
     Box(
         modifier =

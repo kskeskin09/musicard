@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import com.metrolist.music.ui.theme.albumBackgroundColor
 import com.metrolist.music.ui.theme.rememberCoverColor
+import com.metrolist.music.ui.theme.rememberPageTint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -255,18 +256,18 @@ fun TopPlaylistScreen(
     val pageBackground = MaterialTheme.colorScheme.background
     val darkTheme = pageBackground.luminance() < 0.5f
     val coverColor = rememberCoverColor(songs?.firstOrNull()?.thumbnailUrl)
-    val tint by animateColorAsState(
-        targetValue =
-            coverColor?.let {
-                if (darkTheme) {
-                    lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
-                } else {
-                    lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
-                }
-            } ?: pageBackground,
-        animationSpec = tween(600),
-        label = "topPlaylistTint",
-    )
+    val tint =
+        rememberPageTint(
+            target =
+                coverColor?.let {
+                    if (darkTheme) {
+                        lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
+                    } else {
+                        lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
+                    }
+                } ?: pageBackground,
+            ready = coverColor != null,
+        )
 
     Box(
         modifier =

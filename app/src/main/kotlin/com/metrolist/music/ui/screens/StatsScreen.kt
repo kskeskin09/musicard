@@ -100,6 +100,7 @@ import com.metrolist.music.ui.menu.ArtistMenu
 import com.metrolist.music.ui.menu.SongMenu
 import com.metrolist.music.ui.theme.albumBackgroundColor
 import com.metrolist.music.ui.theme.rememberCoverColor
+import com.metrolist.music.ui.theme.rememberPageTint
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.ListeningPattern
@@ -171,18 +172,18 @@ fun StatsScreen(
     val pageBackground = MaterialTheme.colorScheme.background
     val darkTheme = pageBackground.luminance() < 0.5f
     val coverColor = rememberCoverColor(songs.firstOrNull()?.thumbnailUrl)
-    val tint by animateColorAsState(
-        targetValue =
-            coverColor?.let {
-                if (darkTheme) {
-                    lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
-                } else {
-                    lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
-                }
-            } ?: pageBackground,
-        animationSpec = tween(600),
-        label = "statsTint",
-    )
+    val tint =
+        rememberPageTint(
+            target =
+                coverColor?.let {
+                    if (darkTheme) {
+                        lerp(albumBackgroundColor(it, true), Color.Black, 0.3f)
+                    } else {
+                        lerp(pageBackground, albumBackgroundColor(it, false), 0.25f)
+                    }
+                } ?: pageBackground,
+            ready = coverColor != null,
+        )
     val accent = coverColor?.let { lerp(it, if (darkTheme) Color.White else Color.Black, 0.4f) } ?: MaterialTheme.colorScheme.primary
     val chipContainer = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f).compositeOver(tint)
 

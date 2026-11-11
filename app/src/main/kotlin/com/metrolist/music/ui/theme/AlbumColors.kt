@@ -40,16 +40,59 @@ fun albumBackgroundColor(
     return Color(ColorUtils.HSLToColor(hsl))
 }
 
+/** Colors already read from covers, so a page opened again (or prefetched) starts in its color. */
+private val coverColorCache = android.util.LruCache<String, Color>(200)
+
 /** The dominant color of the image at [url], or null while it loads or if it can't be read. */
 @Composable
 fun rememberCoverColor(url: String?): Color? {
     val context = LocalContext.current
-    var color by remember(url) { mutableStateOf<Color?>(null) }
+    var color by remember(url) { mutableStateOf(url?.let { coverColorCache.get(it) }) }
     LaunchedEffect(url) {
-        if (url == null) return@LaunchedEffect
+        if (url == null || color != null) return@LaunchedEffect
         color = loadCoverColor(context, url)
     }
     return color
+}
+
+/** Reads the cover color of [url] in the background so a page opened from this card starts tinted. */
+@Composable
+fun PrefetchCoverColor(url: String?) {
+    val context = LocalContext.current
+    LaunchedEffect(url) {
+        if (url == null || coverColorCache.get(url) != null) return@LaunchedEffect
+        loadCoverColor(context, url)
+    }
+}
+
+/**
+ * The page tint for [target]: jumps straight to the color when it is known right away (or within
+ * a moment of opening the page), and only fades when the color arrives later.
+ */
+@Composable
+fun rememberPageTint(target: Color, ready: Boolean): Color {
+    // While the page is opening the tint follows the target directly; after that it fades.
+    var fading by remember { mutableStateOf(false) }
+    val animatable = remember { androidx.compose.animation.Animatable(target) }
+    val latestTarget by androidx.compose.runtime.rememberUpdatedState(target)
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(450)
+        if (!fading) {
+            animatable.snapTo(latestTarget)
+            fading = true
+        }
+    }
+    LaunchedEffect(target, ready) {
+        if (!fading) {
+            if (ready) {
+                animatable.snapTo(target)
+                fading = true
+            }
+            return@LaunchedEffect
+        }
+        animatable.animateTo(target, androidx.compose.animation.core.tween(600))
+    }
+    return if (fading) animatable.value else target
 }
 
 private suspend fun loadCoverColor(
@@ -72,5 +115,5 @@ private suspend fun loadCoverColor(
                 .resizeBitmapArea(100 * 100)
                 .generate()
         Color(palette.rankedColors(1, android.graphics.Color.DKGRAY).first())
-    }
+    }.also { coverColorCache.put(url, it) }
 }

@@ -1670,6 +1670,7 @@ fun PlaylistThumbnail(
     cacheKey: String? = null
 ) {
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    com.metrolist.music.ui.theme.PrefetchCoverColor(thumbnails.firstOrNull())
     
     when (thumbnails.size) {
         0 -> Box(
