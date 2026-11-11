@@ -56,6 +56,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -230,13 +231,38 @@ fun SearchScreen(
                 .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         if (searchActive) {
+            val historyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+            // The "Search history" heading hides once the list is scrolled down, and comes back at the top.
+            val historyAtTop by remember {
+                derivedStateOf {
+                    historyListState.firstVisibleItemIndex == 0 && historyListState.firstVisibleItemScrollOffset < 8
+                }
+            }
             Column(Modifier.fillMaxSize()) {
+                // The page title stays while searching.
+                Text(
+                    text = stringResource(R.string.search),
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 8.dp)
+                            .height(56.dp)
+                            .wrapContentHeight(Alignment.CenterVertically),
+                )
                 Box(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) { searchBar() }
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
-                if (query.text.isEmpty()) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = query.text.isEmpty() && historyAtTop,
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+                ) {
                     Text(
                         text = stringResource(R.string.search_history),
                         fontSize = 26.sp,
@@ -252,6 +278,7 @@ fun SearchScreen(
                         onSearch = onSearchFromSuggestion,
                         onDismiss = { /* Don't dismiss when searching from suggestions */ },
                         pureBlack = pureBlack,
+                        lazyListState = historyListState,
                     )
                 }
             }

@@ -90,6 +90,7 @@ fun OnlineSearchScreen(
     onSearch: (String) -> Unit,
     onDismiss: () -> Unit,
     pureBlack: Boolean,
+    lazyListState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
     viewModel: OnlineSearchSuggestionViewModel = hiltViewModel(),
 ) {
     val navController = LocalNavController.current
@@ -104,8 +105,6 @@ fun OnlineSearchScreen(
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-
-    val lazyListState = rememberLazyListState()
 
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
 
