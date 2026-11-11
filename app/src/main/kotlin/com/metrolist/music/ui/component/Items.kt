@@ -1935,7 +1935,8 @@ fun SwipeToSongBox(
                         RoundedCornerShape(topEnd = corner, bottomEnd = corner)
                     },
                 )
-                .background(if (value != 0f) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface),
+                // See-through at rest, so the row has the page's color (e.g. a playlist's cover tint).
+                .background(if (value != 0f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f) else Color.Transparent),
             content = content
         )
     }

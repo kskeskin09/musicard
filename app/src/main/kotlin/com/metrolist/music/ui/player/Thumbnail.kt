@@ -130,7 +130,7 @@ private fun calculateThumbnailDimensions(
     containerWidth: Dp,
     containerHeight: Dp = containerWidth,
     horizontalPadding: Dp = PlayerHorizontalPadding,
-    cornerRadius: Dp = ThumbnailCornerRadius * 2,
+    cornerRadius: Dp = 6.dp,
     isLandscape: Boolean = false,
     fitHeight: Boolean = false,
 ): ThumbnailDimensions {
@@ -405,7 +405,7 @@ fun Thumbnail(
                         calculateThumbnailDimensions(
                             containerWidth = maxWidth,
                             containerHeight = maxHeight,
-                            cornerRadius = if (compact) CompactThumbnailCornerRadius else ThumbnailCornerRadius * 2,
+                            cornerRadius = if (compact) CompactThumbnailCornerRadius else 6.dp,
                             isLandscape = isLandscape,
                             fitHeight = compact,
                         )
