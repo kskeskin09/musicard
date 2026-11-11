@@ -1027,4 +1027,20 @@
     <string name="profile_username">Username</string>
     <string name="profile_tab">Profile</string>
     <string name="profile_change_photo">Change photo</string>
+    <string name="stats_daily">Daily</string>
+    <string name="stats_weekly">Weekly</string>
+    <string name="stats_monthly">Monthly</string>
+    <string name="stats_yearly">Yearly</string>
+    <string name="stats_lifetime">Lifetime</string>
+    <string name="stats_top_songs">Top songs</string>
+    <string name="stats_top_artists">Top artists</string>
+    <string name="stats_top_albums">Top albums</string>
+    <string name="stats_your_listening">Your listening</string>
+    <string name="stats_minutes_listened">minutes listened</string>
+    <string name="stats_plays">%1$d plays</string>
+    <string name="stats_peak_hour">Most active hour</string>
+    <string name="stats_top_day">Most active day</string>
+    <string name="stats_minutes">%1$d min</string>
+    <string name="stats_hours_minutes">%1$dh %2$dm</string>
+    <string name="stats_empty">Nothing played in this period yet</string>
 </resources>

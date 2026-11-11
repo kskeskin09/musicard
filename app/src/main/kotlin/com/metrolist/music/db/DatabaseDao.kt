@@ -33,6 +33,7 @@ import com.metrolist.music.db.entities.AlbumWithSongs
 import com.metrolist.music.db.entities.Artist
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.db.entities.Event
+import com.metrolist.music.db.entities.EventTime
 import com.metrolist.music.db.entities.EventWithSong
 import com.metrolist.music.db.entities.FormatEntity
 import com.metrolist.music.db.entities.LyricsEntity
@@ -1499,6 +1500,12 @@ interface DatabaseDao {
         thisMondayStart: LocalDateTime,
         lastMondayStart: LocalDateTime,
     ): Flow<List<EventWithSong>>
+
+    @Query("SELECT timestamp, playTime FROM event WHERE timestamp > :fromTimeStamp AND timestamp <= :toTimeStamp")
+    fun eventTimes(
+        fromTimeStamp: LocalDateTime,
+        toTimeStamp: LocalDateTime,
+    ): Flow<List<EventTime>>
 
     @Transaction
     @Query("SELECT * FROM event ORDER BY rowId ASC LIMIT 1")
