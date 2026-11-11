@@ -586,7 +586,8 @@ fun LocalPlaylistScreen(
                                 maxLines = 1,
                                 modifier = Modifier.weight(1f),
                             )
-                            if (editable) {
+                            // The lock only matters for the Custom order: open, songs can be held and moved.
+                            if (editable && sortType == PlaylistSongSortType.CUSTOM) {
                                 IconButton(
                                     onClick = { locked = !locked },
                                     modifier = Modifier.padding(horizontal = 6.dp),
@@ -611,8 +612,11 @@ fun LocalPlaylistScreen(
                 ReorderableItem(
                     state = reorderableState,
                     key = song.map.id,
-                ) {
+                ) { isDragging ->
                     val currentItem by rememberUpdatedState(song)
+                    // Custom order with the lock open: holding a song picks it up to move it.
+                    val canDrag = sortType == PlaylistSongSortType.CUSTOM && !locked && !inSelectMode && !isSearching && editable
+                    val orderIndex = mutableSongs.indexOfFirst { it.map.id == song.map.id }
 
                     fun deleteFromPlaylist() {
                         // Capture values before deletion — DB entry will be gone afterwards
@@ -679,7 +683,29 @@ fun LocalPlaylistScreen(
                                     (song.song.album?.title ?: song.song.song.albumName)?.takeIf { it.isNotBlank() },
                                 ).joinToString(" · "),
                             trailingContent = {
-                                if (!inSelectMode) {
+                                if (canDrag && isDragging) {
+                                    // Small arrows toward where the song can still go.
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.arrow_upward),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (orderIndex > 0) 0.9f else 0f),
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                        Icon(
+                                            painter = painterResource(R.drawable.arrow_downward),
+                                            contentDescription = null,
+                                            tint =
+                                                MaterialTheme.colorScheme.onSurface.copy(
+                                                    alpha = if (orderIndex in 0 until mutableSongs.lastIndex) 0.9f else 0f,
+                                                ),
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
+                                } else if (!inSelectMode) {
                                     Text(
                                         text = makeTimeString(song.song.song.duration * 1000L),
                                         style = MaterialTheme.typography.bodyMedium,
@@ -691,7 +717,7 @@ fun LocalPlaylistScreen(
                                         checked = selection.contains(song.map.id),
                                         onCheckedChange = onCheckedChange,
                                     )
-                                } else {
+                                } else if (!(canDrag && isDragging)) {
                                     IconButton(
                                         onClick = {
                                             menuState.show {
@@ -709,24 +735,20 @@ fun LocalPlaylistScreen(
                                             contentDescription = null,
                                         )
                                     }
-
-                                    if (sortType == PlaylistSongSortType.CUSTOM && !locked && !inSelectMode && !isSearching && editable) {
-                                        IconButton(
-                                            onClick = { },
-                                            modifier = Modifier.draggableHandle(),
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.drag_handle),
-                                                contentDescription = null,
-                                            )
-                                        }
-                                    }
                                 }
                             },
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .combinedClickable(
+                                    .then(
+                                        if (canDrag) {
+                                            Modifier.longPressDraggableHandle(
+                                                onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                            )
+                                        } else {
+                                            Modifier
+                                        },
+                                    ).combinedClickable(
                                         onClick = {
                                             if (inSelectMode) {
                                                 onCheckedChange(!selection.contains(song.map.id))
@@ -742,7 +764,8 @@ fun LocalPlaylistScreen(
                                                 )
                                             }
                                         },
-                                        onLongClick = {
+                                        // While songs can be moved, holding one picks it up instead.
+                                        onLongClick = if (canDrag) null else ({
                                             if (!inSelectMode) {
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 inSelectMode = true
@@ -767,7 +790,7 @@ fun LocalPlaylistScreen(
                                                     }
                                                 }
                                             }
-                                        },
+                                        }),
                                     ),
                         )
                     }

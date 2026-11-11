@@ -487,6 +487,7 @@ fun OnlineSearchResult(
                             lazyListState.animateScrollToItem(0)
                         }
                     },
+                    fillWidth = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
 

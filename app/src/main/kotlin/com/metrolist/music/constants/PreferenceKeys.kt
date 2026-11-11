@@ -732,6 +732,7 @@ val ProfileImageOffsetYKey = floatPreferencesKey("profileImageOffsetY")
 val LibrarySortKey = stringPreferencesKey("librarySort")
 val LibraryCustomOrderKey = stringPreferencesKey("libraryCustomOrder")
 val LibraryPinnedKey = stringPreferencesKey("libraryPinned")
+val LibraryEditLockKey = booleanPreferencesKey("libraryEditLock")
 
 enum class LibrarySortOption {
     CUSTOM,

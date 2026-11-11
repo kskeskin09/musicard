@@ -90,6 +90,7 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.constants.LibraryCustomOrderKey
 import com.metrolist.music.constants.LibraryPinnedKey
+import com.metrolist.music.constants.LibraryEditLockKey
 import com.metrolist.music.constants.LibrarySortKey
 import com.metrolist.music.constants.LibrarySortOption
 import com.metrolist.music.constants.ShowCachedPlaylistKey
@@ -143,6 +144,8 @@ fun LibraryHomeScreen(
     var sortOption by rememberEnumPreference(LibrarySortKey, LibrarySortOption.ADDED_NEWEST)
     var customOrderText by rememberPreference(LibraryCustomOrderKey, "")
     var pinnedText by rememberPreference(LibraryPinnedKey, "")
+    // Custom order: with the lock open, holding a row picks it up to move it.
+    var editLocked by rememberPreference(LibraryEditLockKey, true)
     val pinnedIds = remember(pinnedText) { pinnedText.split('\n').filter { it.isNotBlank() } }
     val customOrder = remember(customOrderText) { customOrderText.split('\n').filter { it.isNotBlank() } }
 
@@ -321,6 +324,25 @@ fun LibraryHomeScreen(
                     )
                     Spacer(Modifier.width(10.dp))
                     LibrarySortButton(selected = sortOption, onSelect = { sortOption = it })
+                    if (sortOption == LibrarySortOption.CUSTOM) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier =
+                                Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                                    .clickable { editLocked = !editLocked },
+                        ) {
+                            Icon(
+                                painter = painterResource(if (editLocked) R.drawable.lock else R.drawable.lock_open),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
                 }
             }
 
@@ -348,7 +370,7 @@ fun LibraryHomeScreen(
                         if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.background,
                         label = "dragBackground",
                     )
-                    val custom = sortOption == LibrarySortOption.CUSTOM
+                    val custom = sortOption == LibrarySortOption.CUSTOM && !editLocked
                     val index = dragList.indexOfFirst { it.id == item.id }
                     PinSwipe(pinned = false, onToggle = { togglePin(item.id) }) {
                         LibraryItemRow(
