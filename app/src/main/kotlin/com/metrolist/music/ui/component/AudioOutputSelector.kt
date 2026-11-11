@@ -42,6 +42,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListenTogetherUsernameKey
@@ -134,7 +136,7 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
                 .forEach {
                     val icon =
                         when (it.type) {
-                            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 26, 27 -> R.drawable.bluetooth
+                            27 -> R.drawable.bluetooth
                             else -> R.drawable.headphones
                         }
                     add(OutputOption(outputKey(it), it.productName?.toString()?.takeIf { n -> n.isNotBlank() } ?: "Audio", icon, it))
@@ -147,38 +149,31 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
     }
 
     if (options.size <= 3) {
-        androidx.compose.foundation.layout.BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-            // Each chip gets an equal share, so all of them always fit between the two edges.
-            val maxChip = (maxWidth - 8.dp * (options.size - 1)) / options.size
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                options.forEach { option ->
-                    OutputChip(option, option.key == selectedKey, onPick, Modifier.widthIn(max = maxChip))
-                }
-            }
+        // The first choice on the left edge, the last on the right, the third (if any) between.
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = modifier.fillMaxWidth(),
+        ) {
+            options.forEach { option -> OutputChip(option, option.key == selectedKey, onPick) }
         }
     } else {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         ) {
-            options.forEach { option ->
-                OutputChip(option, option.key == selectedKey, onPick, Modifier.widthIn(max = 180.dp))
-            }
+            options.forEach { option -> OutputChip(option, option.key == selectedKey, onPick) }
         }
     }
 }
 
+/** A round button with just the output's symbol ("AUTO" for System auto). */
 @Composable
 private fun OutputChip(
     option: OutputOption,
     selected: Boolean,
     onPick: (OutputOption) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val onSurface = MaterialTheme.colorScheme.onSurface
     Surface(
@@ -186,25 +181,22 @@ private fun OutputChip(
         shape = CircleShape,
         color = if (selected) onSurface else MaterialTheme.colorScheme.surfaceContainerHighest,
         contentColor = if (selected) MaterialTheme.colorScheme.surface else onSurface,
-        modifier = modifier.height(44.dp),
+        modifier = Modifier.size(66.dp).semantics { contentDescription = option.label },
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        ) {
-            Icon(
-                painter = painterResource(option.icon),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = option.label,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+            if (option.key == null) {
+                Text(
+                    text = "AUTO",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            } else {
+                Icon(
+                    painter = painterResource(option.icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
         }
     }
 }

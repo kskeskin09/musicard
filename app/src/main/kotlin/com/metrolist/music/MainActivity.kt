@@ -1313,11 +1313,12 @@ class MainActivity : FragmentActivity() {
                                                 Modifier
                                                     .align(Alignment.BottomCenter)
                                                     .fillMaxWidth()
-                                                    .height(coveredHeight + 56.dp)
+                                                    .height(coveredHeight + 14.dp)
                                                     .background(
                                                         androidx.compose.ui.graphics.Brush.verticalGradient(
                                                             0f to fadeColor.copy(alpha = 0f),
-                                                            (56f / (coveredHeight.value + 56f)) to fadeColor.copy(alpha = 0.85f),
+                                                            // Starts just under the buttons that float above the mini player (16 dp up).
+                                                            (14f / (coveredHeight.value + 14f)) to fadeColor.copy(alpha = 0.85f),
                                                             1f to fadeColor,
                                                         ),
                                                     ),

@@ -890,7 +890,8 @@ fun ArtistScreen(
                     )
             )
 
-        if (canPlayAll) {
+        // The play-all button in the corner is not shown (the page has its own play buttons).
+        if (false && canPlayAll) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = isScrollingUp,
                 enter = androidx.compose.animation.slideInVertically { it * 2 },

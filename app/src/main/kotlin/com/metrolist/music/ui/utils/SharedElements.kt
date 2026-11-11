@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
@@ -88,9 +90,15 @@ fun NavGraphBuilder.composable(
         // The page's insets depend on the current route (top bar or not), which changes the moment
         // another page is opened. A page that is leaving keeps the insets it had, so it doesn't
         // jump up while it animates out.
+        // "Leaving" is read from the same back stack state the insets are worked out from, so it
+        // switches in the very same frame (the page transition itself only starts a frame later).
         val insets = com.metrolist.music.LocalPlayerAwareWindowInsets.current
         val held = remember { arrayOf(insets) }
-        val leaving = transition.targetState == androidx.compose.animation.EnterExitState.PostExit
+        val navController = com.metrolist.music.LocalNavController.current
+        val currentEntry by navController.currentBackStackEntryAsState()
+        val leaving =
+            (currentEntry != null && currentEntry?.id != entry.id) ||
+                transition.targetState == androidx.compose.animation.EnterExitState.PostExit
         if (!leaving) held[0] = insets
         CompositionLocalProvider(
             LocalNavAnimatedScope provides this,
