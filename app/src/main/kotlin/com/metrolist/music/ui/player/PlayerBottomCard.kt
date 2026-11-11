@@ -1155,25 +1155,21 @@ private fun SweepingWordsLine(
                             val fillX = left + (right - left) * progress
                             val top = textLayout.getLineTop(firstLine)
                             val bottom = textLayout.getLineBottom(firstLine)
-                            // The whole word brightens as it is sung (like the full lyrics view), so the
-                            // end of the word never jumps from dim to bright.
-                            val wordAlpha = dimAlpha + (1f - dimAlpha) * progress
-                            clipRect(left, top, right, bottom) {
-                                drawText(textLayout, color = color.copy(alpha = wordAlpha))
-                            }
-                            // The sung part is fully bright, with a soft edge drawn as thin strips.
-                            val edgeStart = (fillX - edgeWidthPx / 2f).coerceAtLeast(left)
-                            val edgeEnd = (fillX + edgeWidthPx / 2f).coerceAtMost(right)
+                            // Only the part already sung lights up: fully bright behind a soft edge
+                            // that trails the fill point, so nothing ahead of it brightens early.
+                            val edgeStart = (fillX - edgeWidthPx).coerceAtLeast(left)
                             if (edgeStart > left) {
                                 clipRect(left, top, edgeStart, bottom) {
                                     drawText(textLayout, color = color)
                                 }
                             }
-                            if (edgeEnd > edgeStart) {
+                            if (fillX > edgeStart) {
                                 val strips = 8
-                                val stripWidth = (edgeEnd - edgeStart) / strips
+                                val stripWidth = (fillX - edgeStart) / strips
                                 for (i in 0 until strips) {
-                                    val stripAlpha = 1f - (i + 0.5f) / strips
+                                    // From bright (at the sung side) down to the line's dim color at the fill point.
+                                    val t = (i + 0.5f) / strips
+                                    val stripAlpha = 1f - t
                                     clipRect(edgeStart + stripWidth * i, top, edgeStart + stripWidth * (i + 1), bottom) {
                                         drawText(textLayout, color = color.copy(alpha = stripAlpha))
                                     }
