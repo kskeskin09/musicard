@@ -418,6 +418,9 @@ class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Opened fresh (not a rotation or theme change): Home, Library and Search start at the
+        // top. The song and settings are kept separately and come back as they were.
+        if (savedInstanceState == null) com.metrolist.music.ui.utils.TabStates.clearAll()
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
 

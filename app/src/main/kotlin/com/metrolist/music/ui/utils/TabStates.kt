@@ -44,6 +44,32 @@ object TabStates {
     /** Changes each time the tab starts over; pages key their content on it. */
     fun resetCount(tab: String): Int = resets.getOrPut(tab) { mutableIntStateOf(0) }.intValue
 
+    /**
+     * Scrolls every sideways row of a tab back to its start, leaving the states named in
+     * [except] (such as the page's own vertical list) where they are.
+     */
+    suspend fun scrollRowsToStart(
+        tab: String,
+        except: Set<String> = emptySet(),
+    ) {
+        val prefix = "$tab/"
+        lists.filterKeys { it.startsWith(prefix) && it !in except }.values.toList().forEach { it.scrollToItem(0) }
+        grids.filterKeys { it.startsWith(prefix) && it !in except }.values.toList().forEach { it.scrollToItem(0) }
+    }
+
+    /**
+     * Forgets every tab's state. Called when the app opens fresh (after it was closed from
+     * recents), so the tabs start at the top even if music kept the process alive.
+     */
+    fun clearAll() {
+        lists.clear()
+        grids.clear()
+        scrolls.clear()
+        values.clear()
+        headerCollapse.clear()
+        resets.values.forEach { it.intValue += 1 }
+    }
+
     /** Starts the tab over: back to the top, filters cleared. */
     fun reset(tab: String) {
         val prefix = "$tab/"

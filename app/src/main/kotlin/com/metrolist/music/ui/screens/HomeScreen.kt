@@ -850,6 +850,8 @@ fun HomeScreen(
         if (isRefreshing) {
             randomSeed = System.currentTimeMillis()
             if (selectedChip == null) showChips = false
+            // Like opening the app again: every sideways row starts from its beginning.
+            com.metrolist.music.ui.utils.TabStates.scrollRowsToStart("home", except = setOf("home/list"))
         }
     }
 
@@ -2093,7 +2095,7 @@ fun HomeScreen(
                                 item(key = "keep_listening_list") {
                                     val rows = if (keepListening.size > 6) 2 else 1
                                     LazyHorizontalGrid(
-                                        state = remember("keep_listening_grid") { LazyGridState() },
+                                        state = com.metrolist.music.ui.utils.TabStates.grid("home/keep_listening_grid"),
                                         rows = GridCells.Fixed(rows),
                                         contentPadding =
                                             WindowInsets.systemBars
@@ -2379,7 +2381,7 @@ fun HomeScreen(
                                     // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
                                     item(key = "home_section_list_${section.index}") {
                                         LazyHorizontalGrid(
-                                            state = remember("section_${section.index}_grid") { LazyGridState() },
+                                            state = com.metrolist.music.ui.utils.TabStates.grid("home/section_${section.index}_grid"),
                                             rows = GridCells.Fixed(4),
                                             contentPadding =
                                                 WindowInsets.systemBars
