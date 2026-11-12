@@ -9,6 +9,9 @@ import android.content.Context
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -218,5 +221,32 @@ fun TintedPageColors(
     tint: Color,
     content: @Composable () -> Unit,
 ) {
+    PageFadeColors.Register(tint)
     CompositionLocalProvider(LocalPageRaisedColor provides raisedPageColor(tint), content = content)
+}
+
+/**
+ * The color of the cover-tinted page on screen, so the fade toward the tab bar and the mini
+ * player can use it instead of the plain background. The page shown last wins while two pages
+ * are on screen during a page change.
+ */
+object PageFadeColors {
+    private class Entry(color: Color) {
+        var color by mutableStateOf(color)
+    }
+
+    private val entries = mutableStateListOf<Entry>()
+
+    val current: Color?
+        get() = entries.lastOrNull()?.color
+
+    @Composable
+    fun Register(tint: Color) {
+        val entry = remember { Entry(tint) }
+        SideEffect { entry.color = tint }
+        DisposableEffect(entry) {
+            entries.add(entry)
+            onDispose { entries.remove(entry) }
+        }
+    }
 }
