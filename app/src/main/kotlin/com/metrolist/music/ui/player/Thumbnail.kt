@@ -248,7 +248,6 @@ fun Thumbnail(
     val textBackgroundColor = getTextColor(playerBackground)
     
     // Grid state
-    val thumbnailLazyGridState = rememberLazyGridState()
     
     // Calculate media items data - memoized
     val mediaItemsData by remember(
@@ -264,6 +263,8 @@ fun Thumbnail(
     
     val mediaItems = mediaItemsData.items
     val currentMediaIndex = mediaItemsData.currentIndex
+    // Starts on the current song's art, so opening the player shows it right away.
+    val thumbnailLazyGridState = rememberLazyGridState(initialFirstVisibleItemIndex = currentMediaIndex.coerceAtLeast(0))
 
     // Snap behavior - created once per grid state
     val thumbnailSnapLayoutInfoProvider = remember(thumbnailLazyGridState) {
@@ -326,7 +327,10 @@ fun Thumbnail(
                 ?.key
                 ?.takeIf { thumbnailLazyGridState.firstVisibleItemScrollOffset == 0 }
         try {
-            if (settledKey == currentId) {
+            // Same song as before (the player was just opened, or only the queue changed): jump
+            // straight to its art. Animating here made the art slide in every time the player
+            // was expanded, as if the song had changed.
+            if (settledKey == currentId || previousId == currentId) {
                 thumbnailLazyGridState.scrollToItem(index)
                 return@LaunchedEffect
             }

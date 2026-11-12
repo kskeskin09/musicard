@@ -23,6 +23,7 @@ val PureBlackMiniPlayerKey = booleanPreferencesKey("pureBlackMiniPlayer")
 val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
 val MiniPlayerBlackoutKey = booleanPreferencesKey("miniPlayerBlackout")
 val MiniPlayerBlurKey = booleanPreferencesKey("miniPlayerBlur")
+val NotificationButtonsKey = stringPreferencesKey("notificationButtons")
 
 enum class MiniPlayerBackgroundStyle {
     DEFAULT,
@@ -255,13 +256,13 @@ val AlbumViewTypeKey = stringPreferencesKey("albumViewType")
 val PlaylistViewTypeKey = stringPreferencesKey("playlistViewType")
 
 val PlaylistEditLockKey = booleanPreferencesKey("playlistEditLock")
-val QuickPicksKey = stringPreferencesKey("discover")
+// The home screen sections in the order chosen under Content > Edit home screen (comma-separated ids).
+val HomeSectionOrderKey = stringPreferencesKey("home_section_order")
 val PreferredLyricsProviderKey = stringPreferencesKey("lyricsProvider")
 val LyricsProviderOrderKey = stringPreferencesKey("lyricsProviderOrder")
 val SimpMusicMigrationDoneKey = booleanPreferencesKey("simpMusicMigrationDone")
 val VideoThumbnailMigrationDoneKey = booleanPreferencesKey("videoThumbnailMigrationDone")
 val QueueEditLockKey = booleanPreferencesKey("queueEditLock")
-val ShowWrappedCardKey = booleanPreferencesKey("show_wrapped_card")
 val WrappedSeenKey = booleanPreferencesKey("wrapped_seen")
 val LastSeenVersionKey = stringPreferencesKey("lastSeenVersion")
 val RandomizeHomeOrderKey = booleanPreferencesKey("randomizeHomeOrder")
@@ -409,11 +410,6 @@ enum class MyTopFilter {
                 LocalDateTime.of(1970, 1, 1, 0, 0)
             }
         }
-}
-
-enum class QuickPicks {
-    QUICK_PICKS,
-    LAST_LISTEN,
 }
 
 enum class PreferredLyricsProvider {

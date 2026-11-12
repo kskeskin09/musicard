@@ -102,8 +102,6 @@
     <string name="remove_custom_image">Panaikinti pasirinktiną nuotrauką</string>
     <string name="general">Bendra</string>
     <string name="default_lib_chips">Pakeisti numatytąją bibliotekos žetoną</string>
-    <string name="set_quick_picks">Nustatyti greituosius pasirinkimus</string>
-    <string name="last_song_listened">Remiantis paskutine klausyta daina</string>
     <string name="app_language">Programėlės kalba</string>
     <string name="config_proxy">Konfigūruoti proxy</string>
     <string name="proxy_username">Proxy vartotojo vardas</string>
@@ -246,7 +244,6 @@
     <string name="enable_better_lyrics_desc">Pagal skiemenis sinchronizuoti dainų žodžiai karaokei</string>
     <string name="shuffle_playlist_first">Pirma maišyti grojaraštį/albumą</string>
     <string name="shuffle_playlist_first_desc">Maišant, pirma groti visas dainas iš grojaraščio/albumo, ir tik tada panašų turinį</string>
-    <string name="show_wrapped_card">Rodyti Wrapped kortelę</string>
     <string name="skip_silence_desc">Greitasis perėjimas per tyliąsias dainos vietas</string>
     <string name="skip_silence_instant">Staigiai praleiskite tylą</string>
     <string name="skip_silence_instant_desc">Peršokite per tylias vietas, vietoj pagreitinant atkūrimą</string>

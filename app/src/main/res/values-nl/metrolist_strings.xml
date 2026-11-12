@@ -73,7 +73,6 @@
     <string name="show_downloaded_playlist">\"Gedownload\" tonen</string>
     <string name="show_top_playlist">\"Meest geluisterd\" tonen</string>
     <string name="show_cached_playlist">\"Gecached\" tonen</string>
-    <string name="last_song_listened">Gebaseerd op laatst geluisterd nummer</string>
     <string name="app_language">App taal</string>
     <string name="enable_similar_content">Vergelijkbare muziek aanzetten</string>
     <string name="similar_content_desc">Automatisch vergelijkbare nummers toevoegen wanneer het einde van de afspeellijst is bereikt</string>
@@ -156,7 +155,6 @@
     <string name="sync_playlist_desc">Synchroniseer afspeellijst met YouTube Music</string>
     <string name="lyrics_text_size">Songtekst lettergrootte</string>
     <string name="lyrics_line_spacing">Songtekst regel afstand</string>
-    <string name="show_wrapped_card">Toon Wrapped</string>
     <string name="progress_percent">Vooruitgang %s%%</string>
     <string name="copied_title">Titel gekopieerd</string>
     <string name="copied_artist">Artiest gekopieerd</string>
@@ -179,7 +177,6 @@
     <string name="import_csv">Importeer een \"csv\" afspeellijst</string>
     <string name="enable_better_lyrics">Better Lyrics</string>
     <string name="enable_better_lyrics_desc">Gebruik de Better Lyrics provider voor woord-voor-woord gesynchroniseerde songtekst</string>
-    <string name="set_quick_picks">Snelle keuzes instellen</string>
     <string name="play_pause">Afspelen/Pauzeer</string>
     <string name="lyrics_animation_style">Woord-voor-woord animatie stijl</string>
     <string name="lyrics_glow_effect_desc">Voegt gloeiende animatie en stuiter effecten toe aan actieve songtekst</string>

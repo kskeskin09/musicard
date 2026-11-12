@@ -73,8 +73,6 @@
     <string name="general">Općenito</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Promijeni zadanu knjižnicu čipa</string>
-    <string name="set_quick_picks">Postavi brze kombinacije</string>
-    <string name="last_song_listened">Na temelju posljednje pjesme čuvane</string>
     <string name="app_language">Jezik aplikacije</string>
     <string name="enable_similar_content">Omogućite sličan sadržaj</string>
     <string name="similar_content_desc">Automatski dodajte više sličnih pjesama kada se dostigne kraj redoslijeda</string>

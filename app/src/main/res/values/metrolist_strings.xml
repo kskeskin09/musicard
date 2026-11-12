@@ -166,7 +166,6 @@
     <string name="playlist_position_beginning_desc">Newly added songs appear before existing songs</string>
     <string name="playlist_position_end">End of playlist</string>
     <string name="playlist_position_end_desc">Newly added songs appear after existing songs</string>
-    <string name="show_wrapped_card">Show Wrapped card</string>
     <string name="skip_silence_desc">Fast-forward through silent parts of songs</string>
     <string name="skip_silence_instant">Instantly skip silence</string>
     <string name="skip_silence_instant_desc">Jump ahead during silent moments instead of speeding up playback</string>
@@ -192,8 +191,6 @@
     <string name="general">General</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Change default library chip</string>
-    <string name="set_quick_picks">Set quick picks</string>
-    <string name="last_song_listened">Based on the last song you listened to</string>
     <string name="app_language">App language</string>
     <string name="lyrics_provider">Lyrics provider</string>
     <string name="home_recents">Recents</string>
@@ -364,7 +361,7 @@
     <string name="disable_load_more_when_repeat_all_desc">Don\'t automatically load more songs or similar content when repeat all is enabled</string>
     <string name="pause_music_when_media_is_muted">Pause music when media is muted</string>
     <string name="resume_on_bluetooth_connect">Resume on Bluetooth connection</string>
-    <string name="keep_screen_on_when_player_is_expanded">Keep screen on when player is expanded</string>
+    <string name="keep_screen_on_when_player_is_expanded">Keep screen awake when player is on lyrics mode</string>
 
     <string name="crossfade">Crossfade</string>
     <string name="crossfade_desc">Fades out the current song as the next one fades in</string>
@@ -1098,6 +1095,25 @@
     <string name="genre_filter_for_you">For You</string>
     <string name="genre_filter_popular">Popular</string>
     <string name="genre_filter_new">New</string>
+    <string name="notification_center">Notification center</string>
+    <string name="notification_center_desc">Choose the buttons on the playback notification</string>
+    <string name="notification_buttons_hint">Tap a button to replace it. Play/pause always stays in the middle and each button can be used once.</string>
+    <string name="notification_choose_button">Choose a button</string>
+    <string name="notification_button_in_use">In use</string>
+    <string name="notification_restore_defaults">Restore default buttons</string>
+    <string name="notification_preview_song">Song name</string>
+    <string name="notification_preview_artist">Artist name</string>
+    <string name="repeat">Repeat</string>
+    <string name="seek_back_5">Back 5 seconds</string>
+    <string name="seek_forward_5">Forward 5 seconds</string>
+    <string name="edit_home_screen">Edit home screen</string>
+    <string name="edit_home_screen_desc">Change the order of the sections on Home</string>
+    <string name="edit_home_screen_hint">Hold a section and drag it to move it. Home shows them in this order.</string>
+    <string name="edit_home_screen_random_note">When on, only our own sections keep this order and the rest is shuffled</string>
+    <string name="edit_home_screen_reset">Reset to default</string>
+    <string name="home_section_your_mixes">Your mixes</string>
+    <string name="home_section_similar">Similar to…</string>
+    <string name="home_section_youtube">YouTube Music sections</string>
     <!-- Import from other services -->
     <string name="import_services">Import from other apps</string>
     <string name="import_services_desc">Spotify, Apple Music and playlist files</string>
@@ -1161,4 +1177,5 @@
     <string name="logo_theme_dark">Dark</string>
     <string name="logo_theme_light">Light</string>
     <string name="logo_theme_device">Device colours</string>
+    <string name="history_duration_desc">A song is added to your history and stats after you listen to it for %1$d seconds. Songs you skip sooner are not counted.</string>
 </resources>

@@ -1151,30 +1151,7 @@ fun CompactLyrics(
                     Box(
                         modifier =
                             Modifier
-                                // The blur layer reaches LineBlurBleed past both sides of the line
-                                // (the line keeps its place and width), and the blur sits outside
-                                // the tap clip, so blurred text fades out on every side instead of
-                                // stopping at a hard edge.
-                                .layout { measurable, constraints ->
-                                    val bleed = LineBlurBleed.roundToPx()
-                                    val placeable =
-                                        measurable.measure(
-                                            constraints.copy(
-                                                minWidth = constraints.minWidth + 2 * bleed,
-                                                maxWidth =
-                                                    if (constraints.hasBoundedWidth) constraints.maxWidth + 2 * bleed else constraints.maxWidth,
-                                            ),
-                                        )
-                                    layout((placeable.width - 2 * bleed).coerceAtLeast(0), placeable.height) {
-                                        placeable.place(-bleed, 0)
-                                    }
-                                }.then(
-                                    if (blurRadius > 0.dp) {
-                                        Modifier.blur(blurRadius, BlurredEdgeTreatment.Unbounded)
-                                    } else {
-                                        Modifier
-                                    },
-                                ).padding(horizontal = LineBlurBleed)
+                                .lineBlur(blurRadius)
                                 .then(
                                     if (interactive && synced) {
                                         // Tapping a line jumps the song there.
@@ -1237,6 +1214,8 @@ fun CompactLyrics(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
+                                    // Blurred together with its own line.
+                                    .lineBlur(blurRadius)
                                     .wrapContentWidth(BiasAlignment.Horizontal(bias))
                                     .padding(bottom = lerp(2.dp, 4.dp, fraction)),
                         )
@@ -1251,6 +1230,8 @@ fun CompactLyrics(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
+                                    // Blurred together with its own line.
+                                    .lineBlur(blurRadius)
                                     .wrapContentWidth(BiasAlignment.Horizontal(bias))
                                     .padding(bottom = lerp(4.dp, 8.dp, fraction)),
                         )
@@ -1654,6 +1635,27 @@ private val LyricsBlurStep = 1.3.dp
 
 // Room the line blur gets past the sides of a line, so it can spread out there.
 private val LineBlurBleed = 40.dp
+
+/**
+ * Blurs a lyric line (or its romanized / translated text) by [radius]. The blur layer reaches
+ * LineBlurBleed past both sides while the text keeps its place and width, so blurred text fades
+ * out on every side instead of stopping at a hard edge. Put it before any clip.
+ */
+private fun Modifier.lineBlur(radius: Dp): Modifier =
+    layout { measurable, constraints ->
+        val bleed = LineBlurBleed.roundToPx()
+        val placeable =
+            measurable.measure(
+                constraints.copy(
+                    minWidth = constraints.minWidth + 2 * bleed,
+                    maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + 2 * bleed else constraints.maxWidth,
+                ),
+            )
+        layout((placeable.width - 2 * bleed).coerceAtLeast(0), placeable.height) {
+            placeable.place(-bleed, 0)
+        }
+    }.then(if (radius > 0.dp) Modifier.blur(radius, BlurredEdgeTreatment.Unbounded) else Modifier)
+        .padding(horizontal = LineBlurBleed)
 private const val LyricsBlurMaxSteps = 5
 private const val FullLyricsBlurScale = 2.25f
 

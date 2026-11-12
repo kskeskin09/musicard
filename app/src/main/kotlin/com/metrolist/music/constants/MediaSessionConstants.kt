@@ -15,6 +15,10 @@ object MediaSessionConstants {
     const val ACTION_TOGGLE_SHUFFLE = "TOGGLE_SHUFFLE"
     const val ACTION_TOGGLE_REPEAT_MODE = "TOGGLE_REPEAT_MODE"
     const val ACTION_ADD_TO_TARGET_PLAYLIST = "ADD_TO_TARGET_PLAYLIST"
+    const val ACTION_SKIP_PREVIOUS = "SKIP_PREVIOUS"
+    const val ACTION_SKIP_NEXT = "SKIP_NEXT"
+    const val ACTION_SEEK_BACK_5 = "SEEK_BACK_5"
+    const val ACTION_SEEK_FORWARD_5 = "SEEK_FORWARD_5"
 
     val CommandToggleLibrary = SessionCommand(ACTION_TOGGLE_LIBRARY, Bundle.EMPTY)
     val CommandToggleLike = SessionCommand(ACTION_TOGGLE_LIKE, Bundle.EMPTY)
@@ -22,6 +26,26 @@ object MediaSessionConstants {
     val CommandToggleShuffle = SessionCommand(ACTION_TOGGLE_SHUFFLE, Bundle.EMPTY)
     val CommandToggleRepeatMode = SessionCommand(ACTION_TOGGLE_REPEAT_MODE, Bundle.EMPTY)
     val CommandAddToTargetPlaylist = SessionCommand(ACTION_ADD_TO_TARGET_PLAYLIST, Bundle.EMPTY)
+    val CommandSkipPrevious = SessionCommand(ACTION_SKIP_PREVIOUS, Bundle.EMPTY)
+    val CommandSkipNext = SessionCommand(ACTION_SKIP_NEXT, Bundle.EMPTY)
+    val CommandSeekBack5 = SessionCommand(ACTION_SEEK_BACK_5, Bundle.EMPTY)
+    val CommandSeekForward5 = SessionCommand(ACTION_SEEK_FORWARD_5, Bundle.EMPTY)
+
+    /** Every custom command the session accepts. */
+    val AllCustomCommands = listOf(
+        CommandToggleLibrary,
+        CommandToggleLike,
+        CommandToggleStartRadio,
+        CommandToggleShuffle,
+        CommandToggleRepeatMode,
+        CommandAddToTargetPlaylist,
+        CommandSkipPrevious,
+        CommandSkipNext,
+        CommandSeekBack5,
+        CommandSeekForward5,
+    )
+
+    const val SEEK_STEP_MS = 5_000L
 
     const val TARGET_PLAYLIST_AUTO = "auto"
 }

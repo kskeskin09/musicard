@@ -55,8 +55,6 @@
     <string name="general">Γενικά</string>
     <string name="proxy">Διακομιστής μεσολάβησης</string>
     <string name="default_lib_chips">Αλλαγή προεπιλεγμένου τσιπ βιβλιοθήκης</string>
-    <string name="set_quick_picks">Ορισμός γρήγορων επιλογών</string>
-    <string name="last_song_listened">Με βάση στο τελευταίο τραγούδι που ακούστηκε</string>
     <string name="app_language">Γλώσσα εφαρμογής</string>
     <string name="enable_similar_content">Ενεργοποίηση Παρόμοιου Περιεχομένου</string>
     <string name="similar_content_desc">Αυτόματη προσθήκη περισσότερων παρόμοιων τραγουδιών όταν φτάσει στο τέλος της ουράς</string>
@@ -188,7 +186,6 @@
     <string name="auto_scroll">Επανασυγχρονισμός</string>
     <string name="shuffle_playlist_first">Τυχαία λίστα αναπαραγωγής/άλμπουμ πρώτα</string>
     <string name="shuffle_playlist_first_desc">Κατά την τυχαία αναπαραγωγή, παίξτε πρώτα όλα τα τραγούδια από την αρχική λίστα αναπαραγωγής/άλμπουμ και μετά παρόμοιο περιεχόμενο</string>
-    <string name="show_wrapped_card">Εμφάνιση κάρτας Wrapped</string>
     <string name="skip_silence_desc">Γρήγορη προώθηση στα σιωπηλά μέρη τραγουδιών</string>
     <string name="skip_silence_instant">Άμεση παράλειψη σιωπής</string>
     <string name="skip_silence_instant_desc">Μετάβαση μπροστά κατά τη διάρκεια των σιωπηλών στιγμών αντί να επιταχύνετε την αναπαραγωγή</string>
