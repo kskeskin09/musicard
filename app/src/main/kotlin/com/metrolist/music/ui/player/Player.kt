@@ -62,6 +62,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -2831,16 +2832,18 @@ fun InlineLyricsView(
     ) {
         when {
             lyrics == null -> {
-                ContainedLoadingIndicator()
+                DraggableLyricsState { ContainedLoadingIndicator() }
             }
 
             lyrics == LyricsEntity.LYRICS_NOT_FOUND -> {
-                Text(
-                    text = stringResource(R.string.lyrics_not_found),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = (compactColor ?: MaterialTheme.colorScheme.onSurface).copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                )
+                DraggableLyricsState {
+                    Text(
+                        text = stringResource(R.string.lyrics_not_found),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = (compactColor ?: MaterialTheme.colorScheme.onSurface).copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
 
             compactColor != null -> {
@@ -3315,3 +3318,28 @@ private const val OffscreenOffsetPx = 100_000
 private const val FullViewFadeMillis = 200
 // px/s; a faster flick opens (or keeps closed) the card regardless of how far it was dragged.
 private const val CardFlingVelocity = 1000f
+
+/**
+ * Loading or "no lyrics" in place of the lyrics: still a (non-moving) scrollable area, so dragging
+ * it down behaves like dragging real lyrics. The first pull closes the lyrics back to the art, and
+ * only a second one drags the player down to the mini player.
+ */
+@Composable
+private fun DraggableLyricsState(content: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val boxHeight = maxHeight
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(boxHeight),
+                contentAlignment = Alignment.Center,
+            ) {
+                content()
+            }
+        }
+    }
+}

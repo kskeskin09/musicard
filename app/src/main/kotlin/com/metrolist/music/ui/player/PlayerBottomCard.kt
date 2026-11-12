@@ -1114,7 +1114,9 @@ fun CompactLyrics(
                             line.isBackground -> 0.5f
                             // Modern: every other line shares one soft gray.
                             modern -> 0.34f
-                            currentIndex < 0 -> 0.2f
+                            !synced -> 0.2f
+                            // Before the first line, an empty "current line" sits just above it, so
+                            // the first line reads as the next one and the rest fade as usual.
                             else ->
                                 when (abs(index - currentIndex)) {
                                     0, 1, 2 -> 0.2f
@@ -1129,7 +1131,7 @@ fun CompactLyrics(
                     // scroll) and comes back once they are re-synced.
                     val blurRadius by animateDpAsState(
                         targetValue =
-                            if (lyricsBlur && synced && !followPaused && currentIndex >= 0) {
+                            if (lyricsBlur && synced && !followPaused) {
                                 val away = abs(index - currentIndex)
                                 val compactBlur = LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps)
                                 // Opened, the text is much larger, so the same look needs a wider
