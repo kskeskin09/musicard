@@ -49,10 +49,52 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 /** The output the user picked in the app (null: let the system decide). */
 object AudioOutputChoice {
     val selectedKey = MutableStateFlow<String?>(null)
+
+    private val guardScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
+    private var guardJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Moves playback to [device] (null: the system decides). The playing audio is moved over by
+     * the system without stopping the player, so the sound goes on without a gap.
+     *
+     * When the route changes, some phones throw away the audio already handed to the old output
+     * and the player then carries on from the end of it, which skipped the song ahead by a moment
+     * or more. For a few seconds after the switch the position is compared with where the song
+     * should be; if it has run ahead, it is put back there.
+     */
+    fun switchTo(
+        player: androidx.media3.exoplayer.ExoPlayer,
+        device: AudioDeviceInfo?,
+    ) {
+        val wasPlaying = player.isPlaying
+        val startPosition = player.currentPosition
+        val startIndex = player.currentMediaItemIndex
+        val startTime = android.os.SystemClock.elapsedRealtime()
+        val speed = player.playbackParameters.speed
+        player.setPreferredAudioDevice(device)
+        guardJob?.cancel()
+        if (!wasPlaying) return
+        guardJob =
+            guardScope.launch {
+                repeat(40) {
+                    kotlinx.coroutines.delay(75)
+                    // The user moved on (another song, a seek, pause): nothing to correct.
+                    if (player.currentMediaItemIndex != startIndex || !player.playWhenReady) return@launch
+                    val expected = startPosition + ((android.os.SystemClock.elapsedRealtime() - startTime) * speed).toLong()
+                    val ahead = player.currentPosition - expected
+                    if (ahead < -1500) return@launch
+                    if (ahead > 500) {
+                        player.seekTo(expected)
+                        return@launch
+                    }
+                }
+            }
+    }
 }
 
 private data class OutputOption(
@@ -110,7 +152,7 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
                     val selected = AudioOutputChoice.selectedKey.value
                     if (selected != null && devices.none { outputKey(it) == selected }) {
                         AudioOutputChoice.selectedKey.value = null
-                        runCatching { playerConnection.service.player.setPreferredAudioDevice(null) }
+                        runCatching { AudioOutputChoice.switchTo(playerConnection.service.player, null) }
                     }
                 }
             }
@@ -144,8 +186,11 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
         }
 
     val onPick: (OutputOption) -> Unit = { option ->
-        AudioOutputChoice.selectedKey.value = option.key
-        runCatching { playerConnection.service.player.setPreferredAudioDevice(option.device) }
+        // Tapping the output already in use does nothing (no needless rerouting).
+        if (option.key != AudioOutputChoice.selectedKey.value) {
+            AudioOutputChoice.selectedKey.value = option.key
+            runCatching { AudioOutputChoice.switchTo(playerConnection.service.player, option.device) }
+        }
     }
 
     if (options.size <= 3) {
