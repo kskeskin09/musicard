@@ -2555,7 +2555,7 @@ fun HomeScreen(
                                 Row {
                                     repeat(2) {
                                         TextPlaceholder(
-                                            height = MoodAndGenresButtonHeight,
+                                            height = 48.dp,
                                             shape = RoundedCornerShape(6.dp),
                                             modifier =
                                                 Modifier
