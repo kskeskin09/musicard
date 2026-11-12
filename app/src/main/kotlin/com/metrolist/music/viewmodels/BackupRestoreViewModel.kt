@@ -27,6 +27,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import com.metrolist.music.constants.DataSyncIdKey
 import com.metrolist.music.constants.InnerTubeAuthUserKey
 import com.metrolist.music.constants.InnerTubeCookieKey
+import com.metrolist.music.constants.ProfileImageUrlKey
 import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.db.InternalDatabase
 import com.metrolist.music.db.MusicDatabase
@@ -42,6 +43,8 @@ import com.metrolist.music.playback.MusicService.Companion.PERSISTENT_AUTOMIX_FI
 import com.metrolist.music.playback.MusicService.Companion.PERSISTENT_PLAYER_STATE_FILE
 import com.metrolist.music.playback.MusicService.Companion.PERSISTENT_QUEUE_FILE
 import com.metrolist.music.utils.reportException
+import com.metrolist.music.utils.dataStore
+import kotlinx.coroutines.flow.first
 import com.metrolist.music.utils.ArtistNameAliases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +90,12 @@ class BackupRestoreViewModel @Inject constructor(
                             outputStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
                             inputStream.copyTo(outputStream)
                         }
+                    // The profile photo picked from the gallery lives in the app's files; its
+                    // address, crop and the profile name are already in the settings above.
+                    profilePhotoFile(context)?.let { photo ->
+                        outputStream.putNextEntry(ZipEntry(PROFILE_PHOTO_ENTRY_PREFIX + photo.name))
+                        photo.inputStream().use { it.copyTo(outputStream) }
+                    }
                     outputStream.putNextEntry(ZipEntry(ArtistNameAliases.BACKUP_FILENAME))
                     outputStream.write(ArtistNameAliases.serialize().encodeToByteArray())
                     runBlocking(Dispatchers.IO) {
@@ -147,6 +156,9 @@ class BackupRestoreViewModel @Inject constructor(
                 var foundDb = false
                 var foundSettings = false
                 var restoredArtistNameAliases: Map<String, String>? = null
+                val stagedPhotoDir = File(context.filesDir, "profile_restore")
+                stagedPhotoDir.deleteRecursively()
+                var stagedProfilePhoto: File? = null
 
                 context.applicationContext.contentResolver.openInputStream(uri)?.use { raw ->
                     raw.zipInputStream().use { inputStream ->
@@ -172,7 +184,19 @@ class BackupRestoreViewModel @Inject constructor(
                                 "${InternalDatabase.DB_NAME}-shm" -> {
                                     // Skip SHM — we'll open cleanly
                                 }
-                                else -> Timber.tag("RESTORE").i("Skipping unexpected entry: ${entry.name}")
+                                else -> {
+                                    // Only the file name is used, so an entry can't point outside the folder.
+                                    val photoName =
+                                        entry.name.takeIf { it.startsWith(PROFILE_PHOTO_ENTRY_PREFIX) }?.let { File(it).name }
+                                    if (!photoName.isNullOrBlank()) {
+                                        stagedPhotoDir.mkdirs()
+                                        val staged = File(stagedPhotoDir, photoName)
+                                        FileOutputStream(staged).use { inputStream.copyTo(it) }
+                                        stagedProfilePhoto = staged
+                                    } else {
+                                        Timber.tag("RESTORE").i("Skipping unexpected entry: ${entry.name}")
+                                    }
+                                }
                             }
                             entry = tryOrNull { inputStream.nextEntry }
                         }
@@ -265,6 +289,17 @@ class BackupRestoreViewModel @Inject constructor(
                 }
 
                 if (dbSwapSucceeded) {
+                    // The profile photo replaces the current one, and the restored settings point
+                    // at it where it now is on this device.
+                    stagedProfilePhoto?.let { staged ->
+                        runCatching {
+                            val dir = File(context.filesDir, PROFILE_PHOTO_DIR).apply { mkdirs() }
+                            dir.listFiles()?.forEach { it.delete() }
+                            val photo = File(dir, staged.name)
+                            staged.copyTo(photo, overwrite = true)
+                            if (foundSettings) pointProfilePhotoAt(context, tempSettings, Uri.fromFile(photo).toString())
+                        }.onFailure { Timber.tag("RESTORE").e(it, "Failed to restore the profile photo") }
+                    }
                     if (foundSettings) {
                         // If auth data needs clearing, strip auth keys from the temp file
                         // before copying to actualSettings. This avoids issues with
@@ -344,7 +379,32 @@ class BackupRestoreViewModel @Inject constructor(
             File("$restoreDbPath-wal").delete()
             File("$restoreDbPath-shm").delete()
             tempSettings.delete()
+            File(context.filesDir, "profile_restore").deleteRecursively()
         }
+    }
+
+    /** The profile photo kept in the app's files, when the profile uses one. */
+    private fun profilePhotoFile(context: Context): File? {
+        val url = runBlocking { context.dataStore.data.first()[ProfileImageUrlKey] }.orEmpty()
+        if (!url.startsWith("file:")) return null
+        val dir = File(context.filesDir, PROFILE_PHOTO_DIR)
+        val path = Uri.parse(url).path ?: return null
+        return File(path).takeIf { it.isFile && it.parentFile?.canonicalPath == dir.canonicalPath }
+    }
+
+    /** Sets the profile photo address in a staged settings file (not the live one). */
+    private fun pointProfilePhotoAt(
+        context: Context,
+        settings: File,
+        url: String,
+    ) {
+        val stage = File(context.filesDir, "datastore/settings.photo.preferences_pb")
+        stage.delete()
+        settings.copyTo(stage, overwrite = true)
+        val stageDataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create { stage }
+        runBlocking { stageDataStore.edit { it[ProfileImageUrlKey] = url } }
+        stage.copyTo(settings, overwrite = true)
+        stage.delete()
     }
 
     fun previewBackup(context: Context, uri: Uri): BackupPreviewInfo {
@@ -659,5 +719,7 @@ class BackupRestoreViewModel @Inject constructor(
 
     companion object {
         const val SETTINGS_FILENAME = "settings.preferences_pb"
+        private const val PROFILE_PHOTO_DIR = "profile"
+        private const val PROFILE_PHOTO_ENTRY_PREFIX = "profile/"
     }
 }

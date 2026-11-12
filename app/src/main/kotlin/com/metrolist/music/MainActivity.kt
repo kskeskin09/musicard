@@ -1141,18 +1141,28 @@ class MainActivity : FragmentActivity() {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
                     }
 
-                    // How far up from the bottom the page darkens / blurs: the tab bar and the mini
-                    // player (when showing) plus a short lead-in above them.
+                    // How far up from the bottom the page darkens / blurs: up to the top of the mini
+                    // player (or of the tab bar when no song is loaded) plus the same short lead-in
+                    // everywhere, so the fade starts the same distance above it on every page.
                     val bottomFadeHeight =
                         run {
                             val miniPlayerShown = activePlayerConnection != null && !playerBottomSheetState.isDismissed
-                            val tabBar = if (!showRail) navigationBarHeight else 0.dp
+                            val fullTabBar = if (slimNav) SlimNavBarHeight else NavigationBarHeight
+                            // Follows the tab bar while it slides in or out.
+                            val tabBar = if (!showRail) fullTabBar * (navigationBarHeight / NavigationBarHeight) else 0.dp
                             if (!miniPlayerShown && (showRail || !shouldShowNavigationBar)) {
                                 0.dp
+                            } else if (miniPlayerShown) {
+                                bottomInset + tabBar + MiniPlayerBottomSpacing + MiniPlayerHeight + BottomFadeLead
                             } else {
-                                bottomInset + tabBar + (if (miniPlayerShown) MiniPlayerHeight else 0.dp) + 14.dp
+                                bottomInset + tabBar + BottomFadeLead
                             }
                         }
+                    // The fade's height on Home (tab bar and mini player both showing); every page
+                    // uses Home's curve measured from the top, so it looks the same everywhere.
+                    val homeFadeHeight =
+                        bottomInset + (if (slimNav) SlimNavBarHeight else NavigationBarHeight) +
+                            MiniPlayerBottomSpacing + MiniPlayerHeight + BottomFadeLead
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
@@ -1347,20 +1357,27 @@ class MainActivity : FragmentActivity() {
                                     // Settings pages have no tab bar: the fade still runs under the mini
                                     // player, starting at the same point above it. Blackout turns it off.
                                     if (miniPlayerBlackout && bottomFadeHeight > 14.dp) {
-                                        val fadeColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
-                                        val coveredHeight = bottomFadeHeight - 14.dp
+                                        // Cover-tinted pages (stats, playlists, albums) fade into their own color.
+                                        val fadeColor =
+                                            com.metrolist.music.ui.theme.PageFadeColors.current
+                                                ?: if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+                                        val total = bottomFadeHeight.value
+                                        val rampEnd = (BottomFadeRamp.value / total).coerceIn(0f, 1f)
+                                        // On shorter fades (no tab bar) the curve is cut where Home's would be
+                                        // at that depth, instead of being squeezed.
+                                        val endAlpha =
+                                            0.85f + 0.15f * ((total - BottomFadeRamp.value) / (homeFadeHeight.value - BottomFadeRamp.value)).coerceIn(0f, 1f)
                                         Box(
                                             modifier =
                                                 Modifier
                                                     .align(Alignment.BottomCenter)
                                                     .fillMaxWidth()
-                                                    .height(coveredHeight + 14.dp)
+                                                    .height(bottomFadeHeight)
                                                     .background(
                                                         androidx.compose.ui.graphics.Brush.verticalGradient(
                                                             0f to fadeColor.copy(alpha = 0f),
-                                                            // Starts just under the buttons that float above the mini player (16 dp up).
-                                                            (14f / (coveredHeight.value + 14f)) to fadeColor.copy(alpha = 0.85f),
-                                                            1f to fadeColor,
+                                                            rampEnd to fadeColor.copy(alpha = 0.85f),
+                                                            1f to fadeColor.copy(alpha = endAlpha),
                                                         ),
                                                     ),
                                         )
@@ -1936,3 +1953,8 @@ val LocalListenTogetherManager = staticCompositionLocalOf<com.metrolist.music.li
 val LocalChangelogState = staticCompositionLocalOf<MutableState<Boolean>> { error("No LocalChangelogState provided") }
 val LocalArtistNameAliases = staticCompositionLocalOf<Map<String, String>> { emptyMap() }
 val LocalIsPlayerExpanded = compositionLocalOf { false }
+
+// How far above the mini player (or the tab bar) the bottom fade starts, and how far down from
+// there it takes to reach most of its strength.
+private val BottomFadeLead = 10.dp
+private val BottomFadeRamp = 14.dp

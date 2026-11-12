@@ -160,6 +160,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.action_restore, R.string.backup_restore, "settings/backup_restore"),
     SettingsSearchEntry(R.string.import_online, R.string.backup_restore, "settings/backup_restore"),
     SettingsSearchEntry(R.string.import_csv, R.string.backup_restore, "settings/backup_restore"),
+    SettingsSearchEntry(R.string.import_services, R.string.backup_restore, "settings/import_services"),
     SettingsSearchEntry(R.string.backup_restore, R.string.backup_restore, "settings/backup_restore"),
     SettingsSearchEntry(R.string.android_auto_target_playlist, R.string.android_auto, "settings/android_auto"),
     SettingsSearchEntry(R.string.android_auto_youtube_playlists, R.string.android_auto, "settings/android_auto"),
