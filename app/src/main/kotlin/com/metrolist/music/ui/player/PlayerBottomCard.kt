@@ -323,6 +323,7 @@ fun PlayerBottomCard(
             // Tapping the lyrics or swiping up on either page opens its full-screen view.
             // Dragging the card up is handled by the player around the card, which stays put
             // while the card grows (see BottomSheetPlayer).
+            val cardBottomFadePx = with(LocalDensity.current) { CardBottomFade.toPx() }
             val pageModifier =
                 Modifier
                     .fillMaxSize()
@@ -331,7 +332,7 @@ fun PlayerBottomCard(
                     // with the page, much cheaper than a real blur.
                     .bottomEdgeBlur(
                         enabled = pageEdge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR,
-                        startFromBottomPx = { openBottomCoverPx() + CardBottomFade.toPx() },
+                        startFromBottomPx = { openBottomCoverPx() + cardBottomFadePx },
                     ).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                     .drawWithContent {
                         drawContent()
