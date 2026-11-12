@@ -32,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import timber.log.Timber
-import java.text.Normalizer
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -239,13 +238,22 @@ class ServiceImportManager @Inject constructor(
         val query = listOf(track.title, artistText).filter { it.isNotBlank() }.joinToString(" ")
         val original = if (artistText.isBlank()) track.title else "${track.title} · ${track.artists.joinToString(", ")}"
 
-        val candidates = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrNull()
-            ?.items?.filterIsInstance<SongItem>()?.take(5).orEmpty()
-        val best = candidates.maxByOrNull { score(track, it) }
-        val result = if (best == null) {
+        fun score(item: SongItem) = ImportMatcher.score(track.title, track.artists, item.title, item.artists.map { it.name })
+        suspend fun bestOf(filter: YouTube.SearchFilter) =
+            YouTube.search(query, filter).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(5).orEmpty()
+                .maxByOrNull(::score)
+
+        val songResult = bestOf(YouTube.SearchFilter.FILTER_SONG)
+        // Some songs are only on YouTube as a video; look there when the song results are weak.
+        val best = if (songResult != null && score(songResult) >= ImportMatcher.SURE) {
+            songResult
+        } else {
+            listOfNotNull(songResult, bestOf(YouTube.SearchFilter.FILTER_VIDEO)).maxByOrNull(::score)
+        }
+        val result = if (best == null || score(best) <= 0) {
             MatchResult(null, MatchQuality.NOT_FOUND, null)
         } else {
-            val quality = if (score(track, best) >= 3) MatchQuality.MATCHED else MatchQuality.UNSURE
+            val quality = if (score(best) >= ImportMatcher.SURE) MatchQuality.MATCHED else MatchQuality.UNSURE
             runCatching { database.insert(best.toMediaMetadata()) }.onFailure { Timber.e(it) }
             MatchResult(best.id, quality, "${best.title} · ${best.artists.joinToString(", ") { it.name }}")
         }
@@ -258,26 +266,6 @@ class ServiceImportManager @Inject constructor(
         if (result.quality != MatchQuality.MATCHED) {
             problems[track.key] = MatchReportItem(original, result.found, result.quality, query)
         }
-    }
-
-    /** 0–4: up to 2 points for the title, up to 2 for the artist. */
-    private fun score(track: ImportTrack, item: SongItem): Int {
-        var score = 0
-        val wantTitle = clean(track.title)
-        val gotTitle = clean(item.title)
-        when {
-            wantTitle == gotTitle -> score += 2
-            wantTitle.isNotEmpty() && (gotTitle.contains(wantTitle) || wantTitle.contains(gotTitle)) -> score += 1
-        }
-        val gotArtists = item.artists.map { clean(it.name) }
-        val wantArtists = track.artists.map(::clean)
-        if (wantArtists.isEmpty()) {
-            score += 1
-        } else {
-            val hits = wantArtists.count { want -> gotArtists.any { got -> got == want || got.contains(want) || want.contains(got) } }
-            if (hits > 0) score += if (hits == wantArtists.size || gotArtists.firstOrNull() in wantArtists) 2 else 1
-        }
-        return score
     }
 
     private suspend fun saveAlbum(album: ImportAlbum): Boolean {
@@ -329,12 +317,5 @@ class ServiceImportManager @Inject constructor(
         }.getOrElse { reportException(it); false }
     }
 
-    private fun clean(text: String): String =
-        Normalizer.normalize(text.lowercase(), Normalizer.Form.NFD)
-            .replace(Regex("\\p{M}+"), "")
-            // "Song (Remastered 2011)", "Song - Live" and "feat." parts don't decide a match.
-            .replace(Regex("\\s*[(\\[].*?[)\\]]"), "")
-            .replace(Regex("\\s+-\\s+.*$"), "")
-            .replace(Regex("\\b(feat|ft)\\.?\\s.*$"), "")
-            .filter { it.isLetterOrDigit() }
+    private fun clean(text: String) = ImportMatcher.clean(text)
 }
