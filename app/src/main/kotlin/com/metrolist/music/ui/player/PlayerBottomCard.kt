@@ -775,6 +775,8 @@ fun CompactLyrics(
     val lyricsTextPosition by rememberEnumPreference(LyricsTextPositionKey, LyricsPosition.CENTER)
     val modern = rememberEnumPreference(LyricStyleKey, LyricStyle.CLASSIC).value == LyricStyle.MODERN
     val lyricsBlur by rememberPreference(LyricsBlurKey, false)
+    val lyricsBlurKeepNeighbors by rememberPreference(com.metrolist.music.constants.LyricsBlurKeepNeighborsKey, true)
+    val lyricsBlurStrength by rememberPreference(com.metrolist.music.constants.LyricsBlurStrengthKey, 1f)
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
     val allLines =
         remember(lyrics) {
@@ -846,7 +848,10 @@ fun CompactLyrics(
             var anchorPos = 0L
             var anchorFrameMs = 0L
             while (isActive) {
-                val smooth = isPlaying && (hasWordTimings || activeGap != null)
+                // While the audio output changes the song is held for a moment; the lyrics wait too.
+                val smooth =
+                    isPlaying && (hasWordTimings || activeGap != null) &&
+                        !com.metrolist.music.ui.component.AudioOutputChoice.switching.value
                 if (smooth) {
                     androidx.compose.runtime.withFrameMillis { frameMs ->
                         val sample = positionProvider() + lyricsOffset
@@ -1144,13 +1149,26 @@ fun CompactLyrics(
                     val blurRadius by animateDpAsState(
                         targetValue =
                             if (lyricsBlur && synced && !followPaused) {
-                                val away = abs(index - currentIndex)
+                                // During a break the dots count as the current line, so one line
+                                // above and one below them stay clear, like around a sung line.
+                                val gap = activeGap
+                                val away =
+                                    if (gap != null) {
+                                        if (index <= gap.afterLine) gap.afterLine - index + 1 else index - gap.afterLine
+                                    } else {
+                                        abs(index - currentIndex)
+                                    }
                                 val compactBlur = LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps)
                                 // Opened, the text is much larger, so the same look needs a wider
-                                // blur. The lines right next to the current one stay easy to read.
+                                // blur. The lines right next to the current one stay easy to read
+                                // unless that is switched off in the settings.
                                 val fullBlur =
-                                    if (away <= 1) LyricsBlurStep * away else compactBlur * FullLyricsBlurScale
-                                lerp(compactBlur, fullBlur, fraction)
+                                    if (away <= 1 && lyricsBlurKeepNeighbors) {
+                                        LyricsBlurStep * away
+                                    } else {
+                                        LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps) * FullLyricsBlurScale
+                                    }
+                                lerp(compactBlur, fullBlur, fraction) * lyricsBlurStrength
                             } else {
                                 0.dp
                             },

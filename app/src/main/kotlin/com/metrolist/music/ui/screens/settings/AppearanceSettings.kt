@@ -215,6 +215,10 @@ fun AppearanceSettings(
     val (lyricStyle, onLyricStyleChange) =
         rememberEnumPreference(LyricStyleKey, defaultValue = LyricStyle.CLASSIC)
     val (lyricsBlur, onLyricsBlurChange) = rememberPreference(LyricsBlurKey, defaultValue = false)
+    val (lyricsBlurKeepNeighbors, onLyricsBlurKeepNeighborsChange) =
+        rememberPreference(com.metrolist.music.constants.LyricsBlurKeepNeighborsKey, defaultValue = true)
+    val (lyricsBlurStrength, onLyricsBlurStrengthChange) =
+        rememberPreference(com.metrolist.music.constants.LyricsBlurStrengthKey, defaultValue = 1f)
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -1157,7 +1161,58 @@ fun AppearanceSettings(
                         },
                         onClick = { onLyricsBlurChange(!lyricsBlur) },
                     ),
-                ),
+                ) +
+                    if (lyricsBlur) {
+                        listOf(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.lyrics),
+                                title = { Text(stringResource(R.string.lyrics_blur_keep_neighbors)) },
+                                description = { Text(stringResource(R.string.lyrics_blur_keep_neighbors_desc)) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = lyricsBlurKeepNeighbors,
+                                        onCheckedChange = onLyricsBlurKeepNeighborsChange,
+                                        thumbContent = {
+                                            Icon(
+                                                painter =
+                                                    painterResource(
+                                                        id = if (lyricsBlurKeepNeighbors) R.drawable.check else R.drawable.close,
+                                                    ),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                                            )
+                                        },
+                                    )
+                                },
+                                onClick = { onLyricsBlurKeepNeighborsChange(!lyricsBlurKeepNeighbors) },
+                            ),
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.blur_on),
+                                title = {
+                                    Text(
+                                        stringResource(
+                                            R.string.lyrics_blur_strength,
+                                            (lyricsBlurStrength * 100).roundToInt(),
+                                        ),
+                                    )
+                                },
+                                description = {
+                                    // The new value is saved when the finger lifts.
+                                    var tempStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
+                                    StyledSlider(
+                                        value = tempStrength,
+                                        onValueChange = { tempStrength = it },
+                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempStrength) },
+                                        valueRange = 0.5f..2f,
+                                        steps = 5,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                },
+                            ),
+                        )
+                    } else {
+                        emptyList()
+                    },
         )
 
         Spacer(modifier = Modifier.height(27.dp))

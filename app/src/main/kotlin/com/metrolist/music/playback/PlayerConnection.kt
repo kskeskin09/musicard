@@ -612,6 +612,9 @@ class PlayerConnection(
         newPlayWhenReady: Boolean,
         reason: Int,
     ) {
+        // While the audio output is being changed the player is held for a moment; the app keeps
+        // showing it as playing.
+        if (com.metrolist.music.ui.component.AudioOutputChoice.switching.value) return
         val wasPlaying = playWhenReady.value
         playWhenReady.value = newPlayWhenReady
 

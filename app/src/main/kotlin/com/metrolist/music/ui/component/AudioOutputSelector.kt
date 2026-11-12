@@ -61,43 +61,47 @@ object AudioOutputChoice {
     private val guardScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
     private var guardJob: kotlinx.coroutines.Job? = null
 
+    /** True for the moment the output is being changed; the app keeps showing "playing" then. */
+    val switching = MutableStateFlow(false)
+
     /**
-     * Moves playback to [device] (null: the system decides). The playing audio is moved over by
-     * the system without stopping the player, so the sound goes on without a gap.
+     * Moves playback to [device] (null: the system decides).
      *
-     * When the route changes, some phones throw away the audio already handed to the old output
-     * and the player then carries on from the end of it, which skipped the song ahead by a moment
-     * or more. For a few seconds after the switch the position is compared with where the song
-     * should be; if it has run ahead, it is put back there.
+     * When the route changes while audio is flowing, phones throw away the audio already handed
+     * to the old output, so the song jumped back, the lyrics stopped, and then it all caught up
+     * again. Instead the player is held quietly while the output changes and then carries on from
+     * exactly where it was. The app (play button, lyrics, progress) just waits for that moment
+     * and doesn't show a pause.
      */
     fun switchTo(
         player: androidx.media3.exoplayer.ExoPlayer,
         device: AudioDeviceInfo?,
     ) {
-        val wasPlaying = player.isPlaying
+        guardJob?.cancel()
+        val wasPlaying = player.playWhenReady
+        if (!wasPlaying) {
+            player.setPreferredAudioDevice(device)
+            return
+        }
         val startPosition = player.currentPosition
         val startIndex = player.currentMediaItemIndex
-        val startTime = android.os.SystemClock.elapsedRealtime()
-        val speed = player.playbackParameters.speed
+        switching.value = true
+        player.playWhenReady = false
         player.setPreferredAudioDevice(device)
-        guardJob?.cancel()
-        if (!wasPlaying) return
         guardJob =
             guardScope.launch {
-                repeat(40) {
-                    kotlinx.coroutines.delay(75)
-                    // The user moved on (another song, a seek, pause): nothing to correct.
-                    if (player.currentMediaItemIndex != startIndex || !player.playWhenReady) return@launch
-                    val expected = startPosition + ((android.os.SystemClock.elapsedRealtime() - startTime) * speed).toLong()
-                    val ahead = player.currentPosition - expected
-                    if (ahead < -1500) return@launch
-                    if (ahead > 500) {
-                        player.seekTo(expected)
-                        return@launch
-                    }
+                try {
+                    // Long enough for the new output to be ready, short enough not to be noticed.
+                    kotlinx.coroutines.delay(SwitchHoldMillis)
+                    if (player.currentMediaItemIndex == startIndex) player.seekTo(startPosition)
+                    player.playWhenReady = true
+                } finally {
+                    switching.value = false
                 }
             }
     }
+
+    private const val SwitchHoldMillis = 350L
 }
 
 private data class OutputOption(
@@ -174,15 +178,15 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
         buildList {
             add(OutputOption(null, stringResource(R.string.audio_output_auto), R.drawable.audio_output_auto, null))
             devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }?.let {
-                add(OutputOption(outputKey(it), phoneLabel, R.drawable.smartphone, it))
+                add(OutputOption(outputKey(it), phoneLabel, R.drawable.audio_output_phone, it))
             }
             devices
                 .filter { it.type != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
                 .forEach {
                     val icon =
                         when (it.type) {
-                            27 -> R.drawable.bluetooth
-                            else -> R.drawable.headphones
+                            27 -> R.drawable.audio_output_bluetooth
+                            else -> R.drawable.audio_output_headphones
                         }
                     add(OutputOption(outputKey(it), it.productName?.toString()?.takeIf { n -> n.isNotBlank() } ?: "Audio", icon, it))
                 }

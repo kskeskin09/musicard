@@ -85,7 +85,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.enable_proxy, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.lyrics_provider, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.lyrics_romanization, R.string.content, "settings/content"),
-    SettingsSearchEntry(R.string.randomize_home_order, R.string.content, "settings/content"),
+    SettingsSearchEntry(R.string.randomize_home_order, R.string.content, "settings/content/home_layout"),
     SettingsSearchEntry(R.string.edit_home_screen, R.string.content, "settings/content/home_layout"),
     SettingsSearchEntry(R.string.content, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.general, R.string.content, "settings/content"),

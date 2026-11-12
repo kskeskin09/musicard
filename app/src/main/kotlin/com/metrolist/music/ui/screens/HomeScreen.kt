@@ -1140,17 +1140,10 @@ fun HomeScreen(
 
             if (explorePage?.moodAndGenres != null) list.add(HomeSection.MoodAndGenres)
 
-            val ownSections =
-                setOf<HomeSection>(
-                    HomeSection.QuickPicks,
-                    HomeSection.AlbumsForYou,
-                    HomeSection.Recents,
-                    HomeSection.ForgottenFavorites,
-                )
             if (randomizeHomeOrder) {
-                // As before: our own sections stay on top (in the chosen order), the rest is shuffled.
-                val (own, rest) = list.partition { it in ownSections }
-                own.sortedBy { homeOrder.indexOf(it.layoutId) } + rest.sortedByDescending { section ->
+                // Every section takes part, so the page really changes on each refresh (before,
+                // our own sections always stayed on top and the shuffle was hard to notice).
+                list.sortedByDescending { section ->
                     // Use a stable seed for each section based on the session seed + section ID hash
                     // This ensures the weight for a specific section remains constant during a session (until refresh)
                     // even if other sections appear/disappear, preventing jumping.
@@ -1171,6 +1164,8 @@ fun HomeScreen(
                             HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
+                            HomeSection.AlbumsForYou,
+                            HomeSection.Recents,
                             -> 300
 
                             // Middle tier starts equal
@@ -1194,6 +1189,8 @@ fun HomeScreen(
                             HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
+                            HomeSection.AlbumsForYou,
+                            HomeSection.Recents,
                             -> sectionRandom.nextInt(-100, 400)
 
                             // Bottom tier: Standard variance
