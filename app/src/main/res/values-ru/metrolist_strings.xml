@@ -17,7 +17,6 @@
     <string name="token_hidden">Нажмите, чтобы показать токен</string>
     <string name="token_shown">Нажмите еще раз, чтобы скопировать или изменить</string>
     <string name="proxy">Прокси</string>
-    <string name="last_song_listened">На основе последнего прослушанного трека</string>
     <string name="app_language">Язык приложения</string>
     <string name="enable_similar_content">Включить похожий контент</string>
     <string name="similar_content_desc">Автоматически добавляет больше похожих треков при достижении конца очереди</string>
@@ -86,7 +85,6 @@
     <string name="more_content">Доп. контент</string>
     <string name="general">Общие</string>
     <string name="default_lib_chips">Изменение чипа библиотеки (по умолчанию)</string>
-    <string name="set_quick_picks">Выбрать тип рекомендаций</string>
     <string name="percentage_format">%d%%</string>
     <string name="import_online">Импортировать плейлист M3U</string>
     <string name="import_csv">Импортировать плейлист CSV</string>
@@ -208,7 +206,6 @@
     <string name="shuffle_playlist_first_desc">При перемешивании проигрывать все треки из текущего плейлиста или альбома перед переходом к похожему контенту</string>
     <string name="lyrics_glow_effect">Включить эффект свечения текста</string>
     <string name="lyrics_glow_effect_desc">Добавляет свечение и эффект отскока для текущей строки</string>
-    <string name="show_wrapped_card">Показать карточку Wrapped</string>
     <string name="album_art_for">Обложка альбома для %s</string>
     <string name="wrapped_total_albums_title">Вы прослушали</string>
     <string name="wrapped_total_albums_subtitle">уникальных альбомов!</string>

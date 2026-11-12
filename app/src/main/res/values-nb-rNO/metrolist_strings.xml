@@ -67,8 +67,6 @@
     <string name="general">Alminnelig</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Endre standardvisning i biblioteket</string>
-    <string name="set_quick_picks">Still inn hurtigvalg</string>
-    <string name="last_song_listened">Basert på siste sang spilt av</string>
     <string name="app_language">Appspråk</string>
     <string name="uploaded_playlist">Opplastet</string>
     <string name="filter_uploaded">Opplastet</string>
@@ -111,7 +109,6 @@
     <string name="show_uploaded_playlist">Vis \"Opplastet\" spilleliste</string>
     <string name="shuffle_playlist_first">Shuffle spilleliste/album først</string>
     <string name="shuffle_playlist_first_desc">Når du shuffler, spill alle sanger fra den originale spillelisten/albumet først, så lignende innhold</string>
-    <string name="show_wrapped_card">Vis Wrapped-kort</string>
     <string name="skip_silence_desc">Hopp forbi stille deler av sanger</string>
     <string name="skip_silence_instant">Hopp over stillhet øyeblikkelig</string>
     <string name="monthly_most_playlist_name">Månedlig mest</string>

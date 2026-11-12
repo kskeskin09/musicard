@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -77,7 +76,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,6 +114,8 @@ import com.metrolist.music.ui.theme.albumBackgroundColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
@@ -384,7 +384,6 @@ private fun NewMiniPlayer(
                 Modifier
                     .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
                     .height(64.dp)
-                    .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
                     .clip(RoundedCornerShape(32.dp))
                     .background(color = backgroundColor)
                     .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
@@ -424,6 +423,21 @@ private fun NewMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxSize().padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             ) {
+                // Swiping moves only the cover and the song info, both ways; the pill, the progress
+                // line and the buttons stay put and switch to the new song once it changes.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clipToBounds()
+                            .graphicsLayer {
+                                val offset = offsetXAnimatable.value
+                                translationX = offset
+                                alpha = (1f - kotlin.math.abs(offset) / (size.width * 0.8f)).coerceIn(0f, 1f)
+                            },
+                ) {
                 // Album art: tap to play / pause - isolated composable
                 NewMiniPlayerPlayButton(
                     progressState = progressState,
@@ -446,6 +460,7 @@ private fun NewMiniPlayer(
                     errorColor = errorColor,
                     modifier = Modifier.weight(1f),
                 )
+                }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
