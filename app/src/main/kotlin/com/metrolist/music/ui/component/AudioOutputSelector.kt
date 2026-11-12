@@ -172,7 +172,7 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
         }
     val options =
         buildList {
-            add(OutputOption(null, stringResource(R.string.audio_output_auto), R.drawable.volume_up, null))
+            add(OutputOption(null, stringResource(R.string.audio_output_auto), R.drawable.audio_output_auto, null))
             devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }?.let {
                 add(OutputOption(outputKey(it), phoneLabel, R.drawable.smartphone, it))
             }
@@ -278,21 +278,12 @@ private fun OutputBar(
                         .clickable { onPick(option) }
                         .semantics { contentDescription = option.label },
             ) {
-                if (option.key == null) {
-                    Text(
-                        text = "AUTO",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = tint,
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(option.icon),
-                        contentDescription = null,
-                        tint = tint,
-                        modifier = Modifier.size(28.dp),
-                    )
-                }
+                Icon(
+                    painter = painterResource(option.icon),
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(28.dp),
+                )
             }
         }
     }
