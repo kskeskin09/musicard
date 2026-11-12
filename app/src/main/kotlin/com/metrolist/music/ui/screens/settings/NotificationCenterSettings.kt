@@ -152,6 +152,7 @@ fun NotificationCenterSettings(navController: NavController) {
                         Icon(
                             painter = painterResource(option.iconRes),
                             contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp),
                         )
                         Spacer(Modifier.width(20.dp))
@@ -281,15 +282,19 @@ private fun SlotButton(
             modifier = Modifier
                 .size(52.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (selected) colors.secondaryContainer else colors.surfaceContainerHighest)
-                .border(
-                    BorderStroke(if (selected) 2.dp else 1.dp, if (selected) colors.primary else colors.outlineVariant),
-                    RoundedCornerShape(16.dp),
+                .background(if (selected) colors.secondaryContainer else colors.surfaceContainerHigh)
+                .then(
+                    if (selected) {
+                        Modifier.border(BorderStroke(2.dp, colors.primary), RoundedCornerShape(16.dp))
+                    } else {
+                        Modifier
+                    },
                 ).clickable(onClick = onClick),
         ) {
             Icon(
                 painter = painterResource(button.iconRes),
                 contentDescription = stringResource(button.labelRes),
+                tint = if (selected) colors.primary else colors.onSurface,
                 modifier = Modifier.size(24.dp),
             )
         }
@@ -317,7 +322,7 @@ private fun PlayButton() {
                 .background(colors.primary),
         ) {
             Icon(
-                painter = painterResource(R.drawable.play),
+                painter = painterResource(R.drawable.player_play),
                 contentDescription = null,
                 tint = colors.onPrimary,
                 modifier = Modifier.size(26.dp),

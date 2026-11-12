@@ -9,20 +9,20 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.metrolist.music.R
 
-/** A button the user can place on the playback notification. */
+/** A button the user can place on the playback notification. [iconRes] is the app-style icon shown in settings. */
 enum class NotificationButton(
     @StringRes val labelRes: Int,
     @DrawableRes val iconRes: Int,
 ) {
-    PREVIOUS(R.string.previous, R.drawable.skip_previous),
-    NEXT(R.string.next, R.drawable.skip_next),
-    LIKE(R.string.like, R.drawable.ic_heart_outline),
-    REPEAT(R.string.repeat, R.drawable.repeat),
-    SHUFFLE(R.string.shuffle, R.drawable.shuffle),
-    SEEK_BACK_5(R.string.seek_back_5, R.drawable.replay_5),
-    SEEK_FORWARD_5(R.string.seek_forward_5, R.drawable.forward_5),
-    START_RADIO(R.string.start_radio, R.drawable.radio),
-    ADD_TO_PLAYLIST(R.string.android_auto_target_playlist, R.drawable.playlist_add),
+    PREVIOUS(R.string.previous, R.drawable.player_backward),
+    NEXT(R.string.next, R.drawable.player_forward),
+    LIKE(R.string.like, R.drawable.player_heart),
+    REPEAT(R.string.repeat, R.drawable.player_repeat),
+    SHUFFLE(R.string.shuffle, R.drawable.player_shuffle),
+    SEEK_BACK_5(R.string.seek_back_5, R.drawable.player_seek_back_5),
+    SEEK_FORWARD_5(R.string.seek_forward_5, R.drawable.player_seek_forward_5),
+    START_RADIO(R.string.start_radio, R.drawable.player_radio),
+    ADD_TO_PLAYLIST(R.string.android_auto_target_playlist, R.drawable.player_playlist_add),
 }
 
 /**
