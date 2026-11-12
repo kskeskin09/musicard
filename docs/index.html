@@ -256,7 +256,7 @@
       <span data-en>Musicard is an ad-free YouTube Music client with a clean black-and-white interface. A player that takes on the album's colour, lyrics in a card, and your listening stats, all in one place.</span>
     </p>
     <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard-with-Google-Cast.apk">
+      <a class="btn btn-primary" data-apk="cast" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard.apk">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>
         <span data-tr>APK indir</span><span data-en>Download APK</span>
       </a>
@@ -372,11 +372,11 @@
         <h2><span data-tr>Hemen dinlemeye başla.</span><span data-en>Start listening now.</span></h2>
         <p class="sub"><span data-tr>Son sürümü GitHub Releases'ten indir. Telefonunda Google Play Hizmetleri yoksa Google Cast'siz sürümü seç.</span><span data-en>Get the latest version from GitHub Releases. Pick the build without Google Cast if your phone has no Google Play Services.</span></p>
         <div class="cta">
-          <a class="btn btn-primary" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard-with-Google-Cast.apk">
+          <a class="btn btn-primary" data-apk="cast" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard.apk">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>
             <span data-tr>APK indir</span><span data-en>Download APK</span>
           </a>
-          <a class="btn btn-ghost" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard.apk">
+          <a class="btn btn-ghost" data-apk="nocast" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard-without-Google-Cast.apk">
             <span data-tr>Google Cast'siz sürüm</span><span data-en>Without Google Cast</span>
           </a>
         </div>
@@ -417,7 +417,17 @@
 
     fetch('https://api.github.com/repos/kskeskin09/musicard/releases/latest')
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { if (d && d.tag_name) { var v = document.getElementById('ver'); v.textContent = d.tag_name; v.hidden = false; } })
+      .then(function (d) {
+        if (!d || !d.tag_name) return;
+        var v = document.getElementById('ver'); v.textContent = d.tag_name; v.hidden = false;
+        // Older releases named the Cast build Musicard-with-Google-Cast.apk and the plain build Musicard.apk.
+        var names = (d.assets || []).map(function (a) { return a.name; });
+        if (names.indexOf('Musicard-with-Google-Cast.apk') !== -1) {
+          var base = 'https://github.com/kskeskin09/musicard/releases/latest/download/';
+          document.querySelectorAll('[data-apk="cast"]').forEach(function (a) { a.href = base + 'Musicard-with-Google-Cast.apk'; });
+          document.querySelectorAll('[data-apk="nocast"]').forEach(function (a) { a.href = base + 'Musicard.apk'; });
+        }
+      })
       .catch(function () {});
 
     var nav = document.getElementById('nav');
