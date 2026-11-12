@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import android.os.Build
 import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.res.colorResource
@@ -991,11 +990,12 @@ fun AppearanceSettings(
                                                         .border(
                                                             width = 2.dp,
                                                             color = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                                            shape = CircleShape,
+                                                            // Launchers show the icon as a rounded square, so the preview does too.
+                                                            shape = RoundedCornerShape(18.dp),
                                                         ).padding(4.dp)
-                                                        .clip(CircleShape)
+                                                        .clip(RoundedCornerShape(14.dp))
                                                         .background(bg)
-                                                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                                                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
                                             ) {
                                                 Icon(
                                                     painter = painterResource(logo.glyph),
@@ -1057,9 +1057,9 @@ fun AppearanceSettings(
                                             Box(
                                                 Modifier
                                                     .size(16.dp)
-                                                    .clip(CircleShape)
+                                                    .clip(RoundedCornerShape(5.dp))
                                                     .background(bg)
-                                                    .border(1.dp, fg.copy(alpha = 0.6f), CircleShape),
+                                                    .border(1.dp, fg.copy(alpha = 0.6f), RoundedCornerShape(5.dp)),
                                             )
                                             Spacer(Modifier.width(6.dp))
                                             Text(
