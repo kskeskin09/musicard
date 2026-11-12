@@ -60,6 +60,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1155,6 +1156,23 @@ class MainActivity : FragmentActivity() {
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
+                            // The header goes at once when a page without it opens, while the old
+                            // page is still sliding out; the status bar area keeps the page color
+                            // and fades with the change, so it never turns see-through for a moment.
+                            val statusScrimAlpha by androidx.compose.animation.core.animateFloatAsState(
+                                targetValue = if (shouldShowTopBar) 1f else 0f,
+                                animationSpec = if (shouldShowTopBar) androidx.compose.animation.core.snap() else tween(320),
+                                label = "statusScrim",
+                            )
+                            if (!shouldShowTopBar && statusScrimAlpha > 0f) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .windowInsetsTopHeight(WindowInsets.statusBars)
+                                        .graphicsLayer { alpha = statusScrimAlpha }
+                                        .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background),
+                                )
+                            }
                             AnimatedVisibility(
                                 visible = shouldShowTopBar,
                                 enter = fadeIn(animationSpec = tween(durationMillis = 200)),

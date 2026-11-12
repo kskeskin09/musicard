@@ -7,6 +7,7 @@ package com.metrolist.music.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -85,6 +86,8 @@ fun ProfileScreen(
     val showHistory = !(pauseListenHistory && eventCount == 0)
 
     var showPictureDialog by remember { mutableStateOf(false) }
+    val listeningDays by database.listeningDays().collectAsStateWithLifecycle(initialValue = emptyList())
+    val streak = remember(listeningDays) { com.metrolist.music.utils.ListeningStreak.from(listeningDays) }
     val avatarUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl
 
     // Opening another page changes the bottom space (the navigation bar and mini player go away)
@@ -100,7 +103,6 @@ fun ProfileScreen(
     }
 
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
         modifier =
             Modifier
                 .fillMaxSize()
@@ -115,52 +117,89 @@ fun ProfileScreen(
                 ),
     ) {
         Spacer(Modifier.height(12.dp))
-        Box(
-            contentAlignment = Alignment.Center,
+        // The profile card: picture on the left, the name and the listening streak beside it.
+        // Holding it opens the profile editor.
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+        androidx.compose.foundation.layout.Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier
-                    .size(112.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .clickable { showPictureDialog = true },
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .combinedClickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                        onLongClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            showPictureDialog = true
+                        },
+                    ),
         ) {
-            if (avatarUrl != null) {
-                CroppedProfileImage(
-                    url = avatarUrl,
-                    crop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
-                    contentDescription = stringResource(R.string.profile_picture),
-                    modifier = Modifier.size(112.dp),
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(112.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                if (avatarUrl != null) {
+                    CroppedProfileImage(
+                        url = avatarUrl,
+                        crop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                        contentDescription = stringResource(R.string.profile_picture),
+                        modifier = Modifier.size(112.dp),
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.person),
+                        contentDescription = stringResource(R.string.profile_picture),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(52.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.size(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = profileName.ifBlank { accountName.ifBlank { stringResource(R.string.profile_tab) } },
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            } else {
-                Icon(
-                    painter = painterResource(R.drawable.person),
-                    contentDescription = stringResource(R.string.profile_picture),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(52.dp),
-                )
+                if (streak.current > 0) {
+                    // White (black in the light theme) once a song was played today; gray while
+                    // today still needs a play to keep the streak going.
+                    val streakColor =
+                        if (streak.listenedToday) {
+                            MaterialTheme.colorScheme.onBackground
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        }
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.streak_flame),
+                            contentDescription = null,
+                            tint = streakColor,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.size(4.dp))
+                        Text(
+                            text = androidx.compose.ui.res.pluralStringResource(R.plurals.streak_days, streak.current, streak.current),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = streakColor,
+                        )
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = profileName.ifBlank { accountName.ifBlank { stringResource(R.string.profile_tab) } },
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
-        Text(
-            text = stringResource(R.string.profile_change_photo),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier =
-                Modifier
-                    .padding(top = 2.dp)
-                    .clip(CircleShape)
-                    .clickable { showPictureDialog = true }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-        )
         Spacer(Modifier.height(12.dp))
 
         // History, stats and Listen Together (they were buttons in the header).

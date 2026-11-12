@@ -1038,6 +1038,14 @@
     <string name="profile_username">Username</string>
     <string name="profile_tab">Profile</string>
     <string name="profile_change_photo">Edit profile</string>
+    <plurals name="streak_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="longest_streak">Longest streak</string>
+    <string name="about_based_on_metrolist">Based on Metrolist</string>
+    <string name="about_based_on_metrolist_desc">Musicard is a fork of Metrolist, used under GPL-3.0</string>
+    <string name="listening_since">You\'ve been listening since %s</string>
     <string name="stats_daily">Daily</string>
     <string name="stats_weekly">Weekly</string>
     <string name="stats_monthly">Monthly</string>

@@ -292,6 +292,12 @@ fun StatsScreen(
 
     val mainListState = rememberLazyListState()
 
+    // Footer of the main page: the longest daily streak and the day of the first recorded play.
+    val database = com.metrolist.music.LocalDatabase.current
+    val listeningDays by database.listeningDays().collectAsStateWithLifecycle(initialValue = emptyList())
+    val streak = remember(listeningDays) { com.metrolist.music.utils.ListeningStreak.from(listeningDays) }
+    val firstListen by database.firstEventTime().collectAsStateWithLifecycle(initialValue = null)
+
     TintedPageColors(tint) {
         Box(
             modifier =
@@ -350,6 +356,11 @@ fun StatsScreen(
                             }
                             albumRows(STATS_PREVIEW_COUNT)
                         }
+                        if (firstListen != null) {
+                            item(key = "listening_footer") {
+                                ListeningFooter(longestStreak = streak.longest, firstListenMillis = firstListen!!)
+                            }
+                        }
                         item(key = "bottom_space") { Spacer(Modifier.height(24.dp)) }
                     } else {
                         when (section) {
@@ -362,7 +373,7 @@ fun StatsScreen(
                 }
             }
 
-            if (orderedSongs.isNotEmpty() && expanded != StatsSection.ARTISTS && expanded != StatsSection.ALBUMS) {
+            if (ShowStatsShuffleAndTransfer && orderedSongs.isNotEmpty() && expanded != StatsSection.ARTISTS && expanded != StatsSection.ALBUMS) {
                 HideOnScrollFAB(
                     visible = true,
                     lazyListState = mainListState,
@@ -401,7 +412,7 @@ fun StatsScreen(
                     }
                 },
                 actions = {
-                    if (expanded == null) {
+                    if (ShowStatsShuffleAndTransfer && expanded == null) {
                         IconButton(
                             onClick = { showTimeTransfer = true },
                             onLongClick = { showTimeTransfer = true },
@@ -420,6 +431,63 @@ fun StatsScreen(
                     ),
             )
         }
+    }
+}
+
+/** Shuffle play and the listening time transfer stay in the code but are hidden for now. */
+private const val ShowStatsShuffleAndTransfer = false
+
+@Composable
+private fun ListeningFooter(
+    longestStreak: Int,
+    firstListenMillis: Long,
+) {
+    // Plays are stored as the local clock time, so read the millis back without a zone shift.
+    val date =
+        remember(firstListenMillis) {
+            java.time.Instant
+                .ofEpochMilli(firstListenMillis)
+                .atZone(java.time.ZoneOffset.UTC)
+                .toLocalDate()
+                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        }
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(top = 28.dp),
+    ) {
+        if (longestStreak > 0) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.longest_streak),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    painter = painterResource(R.drawable.streak_flame),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = pluralStringResource(R.plurals.streak_days, longestStreak, longestStreak),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+        Text(
+            text = stringResource(R.string.listening_since, date),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

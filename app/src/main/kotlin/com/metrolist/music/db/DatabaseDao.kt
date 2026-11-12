@@ -1523,6 +1523,14 @@ interface DatabaseDao {
     @Query("SELECT COUNT(*) FROM event")
     fun eventCount(): Flow<Int>
 
+    /** The days (local date as days since 1970) with at least one play, newest first. */
+    @Query("SELECT DISTINCT timestamp / 86400000 FROM event ORDER BY 1 DESC")
+    fun listeningDays(): Flow<List<Long>>
+
+    /** When the first play was recorded (epoch millis of the local time), or null. */
+    @Query("SELECT MIN(timestamp) FROM event")
+    fun firstEventTime(): Flow<Long?>
+
     @Transaction
     @Query("DELETE FROM event")
     fun clearListenHistory()
