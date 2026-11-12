@@ -534,14 +534,28 @@ private fun UpNextList(
             }
             return@LaunchedEffect
         }
-        snapshotFlow { listState.isScrollInProgress }.collectLatest { scrolling ->
+        // The slide back is itself a scroll, so it runs on its own: it must not be cancelled by
+        // the scrolling it starts (which is what kept the list from coming back before).
+        var waiting: kotlinx.coroutines.Job? = null
+        var gliding = false
+        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+            if (gliding) return@collect
+            waiting?.cancel()
             if (!scrolling) {
-                delay(AutoReturnMillis)
-                // Not while a song is being held to move it.
-                if (reorderState.isAnyItemDragging) return@collectLatest
-                if (listState.firstVisibleItemIndex != nextTarget || listState.firstVisibleItemScrollOffset != 0) {
-                    listState.glideTo(nextTarget) { 0 }
-                }
+                waiting =
+                    launch {
+                        delay(AutoReturnMillis)
+                        // Not while a song is being held to move it.
+                        if (reorderState.isAnyItemDragging) return@launch
+                        if (listState.firstVisibleItemIndex != nextTarget || listState.firstVisibleItemScrollOffset != 0) {
+                            gliding = true
+                            try {
+                                listState.glideTo(nextTarget) { 0 }
+                            } finally {
+                                gliding = false
+                            }
+                        }
+                    }
             }
         }
     }
@@ -761,6 +775,39 @@ fun CompactLyrics(
             }
         }
     val lines = remember(allLines) { allLines.filter { it.text.isNotBlank() } }
+    // Romanized lines ("Romanize current track" in the lyrics menu, languages from the lyrics
+    // settings), worked out in the background like the full lyrics view does.
+    val romanizeList by rememberPreference(com.metrolist.music.constants.LyricsRomanizeList, "")
+    val romanizeCyrillicByLine by rememberPreference(com.metrolist.music.constants.LyricsRomanizeCyrillicByLineKey, false)
+    val romanizeLanguages =
+        remember(romanizeList) {
+            if (romanizeList.isEmpty()) {
+                com.metrolist.music.ui.screens.settings.defaultList
+            } else {
+                romanizeList.split(",").mapNotNull { entry ->
+                    val parts = entry.split(":")
+                    if (parts.size == 2) parts[0] to parts[1].toBoolean() else null
+                }
+            }.filter { it.second }.map { it.first }
+        }
+    val romanizeOn = currentSong?.romanizeLyrics == true && romanizeLanguages.isNotEmpty()
+    LaunchedEffect(lines, romanizeOn, romanizeLanguages, romanizeCyrillicByLine) {
+        if (!romanizeOn) {
+            lines.forEach { it.romanizedTextFlow.value = null }
+            return@LaunchedEffect
+        }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            lines.forEach { entry ->
+                entry.romanizedTextFlow.value =
+                    LyricsUtils.romanize(
+                        text = lyrics,
+                        line = entry.text,
+                        enabledLanguages = romanizeLanguages,
+                        romanizeCyrillicByLine = romanizeCyrillicByLine,
+                    )?.takeIf { it.isNotBlank() && it != entry.text }
+            }
+        }
+    }
     // Instrumental breaks, found the same way as in the full lyrics view.
     val gaps = remember(allLines, synced) { if (synced) findInterludes(allLines) else emptyList() }
     val cardItems =
@@ -1155,6 +1202,24 @@ fun CompactLyrics(
                             )
                         }
                     }
+                    // Under the line: its romanized form, then its translation.
+                    val romanized by line.romanizedTextFlow.collectAsStateWithLifecycle()
+                    romanized?.let { text ->
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = lerp(14f, 18f, fraction).sp,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                            color = color.copy(alpha = if (active) 0.8f else 0.5f),
+                            textAlign = textAlign,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentWidth(BiasAlignment.Horizontal(bias))
+                                    .padding(bottom = lerp(2.dp, 4.dp, fraction)),
+                        )
+                    }
                     val translated by line.translatedTextFlow.collectAsStateWithLifecycle()
                     translated?.takeIf { it.isNotBlank() }?.let { text ->
                         Text(
@@ -1176,8 +1241,6 @@ fun CompactLyrics(
     }
 }
 
-/** Whether the opened lyrics stopped following the song because the user scrolled them. */
-@Stable
 private const val AutoReturnMillis = 3000L
 
 /** Quick at first, slowing down as it arrives. */
@@ -1220,6 +1283,8 @@ private fun LazyListState.distanceTo(
     return reference.offset + (index - reference.index) * average - anchorPx
 }
 
+/** Whether the opened lyrics stopped following the song because the user scrolled them. */
+@Stable
 class LyricsFollowState {
     var paused by mutableStateOf(false)
 }
