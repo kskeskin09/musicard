@@ -328,9 +328,7 @@ fun BottomSheetPlayer(
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val isKeepScreenOn by rememberPreference(KeepScreenOn, false)
-    val keepScreenOn = isPlaying && isKeepScreenOn
-
-    DisposableEffect(playerBackground, state.isExpanded, useDarkTheme, keepScreenOn, isFullScreen, hideStatusBarOnFullscreen) {
+    DisposableEffect(playerBackground, state.isExpanded, useDarkTheme, isFullScreen, hideStatusBarOnFullscreen) {
         val window = (context as? android.app.Activity)?.window
         if (window != null && state.isExpanded) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -351,12 +349,6 @@ fun BottomSheetPlayer(
             } else {
                 insetsController.show(WindowInsetsCompat.Type.statusBars())
             }
-
-            if (keepScreenOn && state.isExpanded) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            } else {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            }
         }
 
         onDispose {
@@ -364,7 +356,6 @@ fun BottomSheetPlayer(
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                 insetsController.isAppearanceLightStatusBars = !useDarkTheme
                 insetsController.show(WindowInsetsCompat.Type.statusBars())
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
     }
@@ -752,50 +743,38 @@ fun BottomSheetPlayer(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
+                        // Real buttons: the round icon buttons used here before cut their text off.
+                        val saveDefault: () -> Unit = {
+                            scope.launch {
+                                context.safeDataStoreEdit { settings ->
+                                    settings[SleepTimerDefaultKey] = sleepTimerValue
+                                }
+                            }
+                            Toast.makeText(
+                                context,
+                                String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
                         if (isAtDefault) {
-                            FilledIconButton(
-                                onClick = {
-                                    scope.launch {
-                                        context.safeDataStoreEdit { settings ->
-                                            settings[SleepTimerDefaultKey] = sleepTimerValue
-                                        }
-                                    }
-                                    Toast.makeText(
-                                        context,
-                                        String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                },
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            ) {
+                            androidx.compose.material3.Button(onClick = saveDefault) {
                                 Text(stringResource(R.string.set_as_default))
                             }
                         } else {
-                            OutlinedIconButton(
-                                onClick = {
-                                    scope.launch {
-                                        context.safeDataStoreEdit { settings ->
-                                            settings[SleepTimerDefaultKey] = sleepTimerValue
-                                        }
-                                    }
-                                    Toast.makeText(
-                                        context,
-                                        String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                },
-                            ) {
+                            androidx.compose.material3.OutlinedButton(onClick = saveDefault) {
                                 Text(stringResource(R.string.set_as_default))
                             }
                         }
 
-                        OutlinedIconButton(
+                        androidx.compose.material3.OutlinedButton(
                             onClick = {
                                 showSleepTimerDialog = false
-                                playerConnection.service.sleepTimer?.start(minute = -1)
+                                // End of song keeps the fade-out setting too.
+                                playerConnection.service.sleepTimer?.start(
+                                    minute = -1,
+                                    stopAfterCurrentSong = false,
+                                    fadeOut = sleepTimerFadeOut,
+                                )
                             },
                         ) {
                             Text(stringResource(R.string.end_of_song))
@@ -996,6 +975,16 @@ fun BottomSheetPlayer(
             delay(ControlsAutoHideMillis)
             cardControlsShown = false
         }
+    }
+
+    // "Keep screen awake in lyrics mode": while the lyrics are opened (full screen, or enlarged
+    // with the lyrics button) and music plays, the screen doesn't turn off.
+    val lyricsMode = state.isExpanded && cardPage == LyricsPage && (cardOpen || showInlineLyrics)
+    val keepAwake = isKeepScreenOn && isPlaying && lyricsMode
+    DisposableEffect(keepAwake) {
+        val window = (context as? android.app.Activity)?.window
+        if (keepAwake) window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 
     LaunchedEffect(state.isExpanded) {
