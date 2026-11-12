@@ -924,4 +924,16 @@
     <string name="import_search_manually">YouTube Music\'te yok · Elle ara</string>
     <string name="import_finish">Tamam</string>
     <string name="import_likes_local_note">Beğenilen şarkılar yalnızca Musicard\'a kaydedilir, YouTube hesabına gönderilmez.</string>
+    <string name="logo">Logo</string>
+    <string name="logo_desc">Ana ekrandaki uygulama simgesi</string>
+    <string name="logo_card">Kart</string>
+    <string name="logo_wave">Dalga</string>
+    <string name="logo_vinyl">Plak</string>
+    <string name="logo_notes">Nota</string>
+    <string name="logo_theme">Logo teması</string>
+    <string name="logo_theme_desc">%s · telefon temasından bağımsız</string>
+    <string name="logo_theme_device_desc">Duvar kağıdı renklerine ve temalı simgelere uyar</string>
+    <string name="logo_theme_dark">Koyu</string>
+    <string name="logo_theme_light">Aydınlık</string>
+    <string name="logo_theme_device">Cihaz renkleri</string>
 </resources>
