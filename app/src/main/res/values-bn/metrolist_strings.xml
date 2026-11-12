@@ -119,7 +119,6 @@
     <string name="show_top_playlist">টপ প্লেলিস্ট দেখান</string>
     <string name="prevent_duplicate_tracks_in_queue">সারিতে সদৃশ গান প্রতিরোধ করুন</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">সারিতে আগে থেকেই থাকা কোনো গান যোগ করার সময়, সেটিকে পুনরায় যোগ না করে তার আগের অবস্থান থেকে সরানো হবে</string>
-    <string name="show_wrapped_card">Wrapped কার্ড দেখান</string>
     <string name="skip_silence_desc">গানের নীরব অংশগুলোতে দ্রুত এগিয়ে যান</string>
     <string name="skip_silence_instant">তাৎক্ষণিকভাবে নীরবতা এড়িয়ে যান</string>
     <string name="skip_silence_instant_desc">প্লেব্যাকের গতি না বাড়িয়ে নীরব মুহূর্তগুলোতে এগিয়ে যান</string>
@@ -142,7 +141,6 @@
     </plurals>
     <string name="seek_forward_dynamic">+%1$d সেকেন্ড অগ্রসর</string>
     <string name="seek_backward_dynamic">-%1$d সেকেন্ড পিছনে</string>
-    <string name="last_song_listened">আপনার শোনা শেষ গানের উপর ভিত্তি করে</string>
     <string name="app_language">অ্যাপের ভাষা</string>
     <string name="lyrics_provider_priority_desc">পছন্দ অনুযায়ী সরবরাহকারীদের পুনর্বিন্যাস করতে টেনে আনুন। উপরের অবস্থান মানে উচ্চতর অগ্রাধিকার</string>
     <string name="experimental_lyrics">পরীক্ষামূলক লিরিক্স</string>
@@ -573,7 +571,6 @@
     <string name="edit_playlist_cover">প্লেলিস্ট কভার এডিট করুন</string>
     <string name="remove_custom_image">কাস্টম ছবি সরান</string>
     <string name="default_lib_chips">ডিফল্ট লাইব্রেরি চিপ পরিবর্তন করুন</string>
-    <string name="set_quick_picks">দ্রুত বাছাই সেট করুন</string>
     <string name="lyrics_provider_priority">লিরিক্স সরবরাহকারীর অগ্রাধিকার</string>
     <string name="enable_authentication">Authentication চালু করুন</string>
     <string name="persistent_shuffle_title">স্থির শাফেল</string>

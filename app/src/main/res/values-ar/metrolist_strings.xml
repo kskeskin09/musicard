@@ -73,8 +73,6 @@
     <string name="general">عام</string>
     <string name="proxy">الوكيل</string>
     <string name="default_lib_chips">تغيير الشريحة الافتراضية للمكتبة</string>
-    <string name="set_quick_picks">ضبط الاختيارات السريعة</string>
-    <string name="last_song_listened">بناءً على آخر أغنية استمعت إليها</string>
     <string name="app_language">لغة التطبيق</string>
     <string name="enable_similar_content">تفعيل المحتوى المشابه</string>
     <string name="similar_content_desc">إضافة المزيد من الأغاني المشابهة تلقائيًا عند الوصول إلى نهاية قائمة الانتظار</string>
@@ -210,7 +208,6 @@
     <string name="lyrics_line_spacing">تباعد أسطر الكلمات</string>
     <string name="shuffle_playlist_first">تشغيل القائمة أو الألبوم عشوائيًا أولاً</string>
     <string name="shuffle_playlist_first_desc">عند التشغيل العشوائي، يتم تشغيل جميع أغاني القائمة أو الألبوم الحالية قبل الانتقال إلى محتوى مشابه</string>
-    <string name="show_wrapped_card">عرض البطاقة المغلفة</string>
     <string name="album_art_for">غلاف ألبوم لـ %s</string>
     <string name="wrapped_total_albums_title">استمعت إلى</string>
     <string name="wrapped_total_albums_subtitle">ألبومات فريدة!</string>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Musicard logo glyph (108dp adaptive icon canvas). Generated, see LogoUtils.kt. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/logo_device_fg"
+        android:pathData="M29 54C29 40.19 40.19 29 54 29C67.81 29 79 40.19 79 54C79 67.81 67.81 79 54 79C40.19 79 29 67.81 29 54ZM35 54C35 64.49 43.51 73 54 73C64.49 73 73 64.49 73 54C73 43.51 64.49 35 54 35C43.51 35 35 43.51 35 54ZM37.2 54C37.2 44.72 44.72 37.2 54 37.2C63.28 37.2 70.8 44.72 70.8 54C70.8 63.28 63.28 70.8 54 70.8C44.72 70.8 37.2 63.28 37.2 54ZM56.34 40.71 55.56 45.14C58.18 45.6 60.46 47.2 61.79 49.5L65.69 47.25C63.7 43.79 60.27 41.4 56.34 40.71ZM50.4 54C50.4 55.99 52.01 57.6 54 57.6C55.99 57.6 57.6 55.99 57.6 54C57.6 52.01 55.99 50.4 54 50.4C52.01 50.4 50.4 52.01 50.4 54Z" />
+</vector>

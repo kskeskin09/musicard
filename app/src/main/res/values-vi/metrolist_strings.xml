@@ -35,8 +35,6 @@
     <string name="general">Nâng cao</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Thay đổi thư viện mặc định</string>
-    <string name="set_quick_picks">Đặt lựa chọn nhanh</string>
-    <string name="last_song_listened">Dựa trên bài hát cuối cùng bạn đã nghe</string>
     <string name="app_language">Ngôn ngữ ứng dụng</string>
     <string name="enable_similar_content">Bật hiển thị nội dung tương tự</string>
     <string name="similar_content_desc">Tự động thêm các bài hát tương tự khi phát hết hàng chờ</string>
@@ -159,7 +157,6 @@
     <string name="show_uploaded_playlist">Hiển danh sách phát đã tải lên</string>
     <string name="shuffle_playlist_first">Phát ngẫu nhiên danh sách phát hoặc album đầu tiên</string>
     <string name="shuffle_playlist_first_desc">Khi kích hoạt phát ngẫu nhiên, nó sẽ phát tất cả các bài hát từ danh sách phát / Album trước, sau đó mới phát nội dung tương tự</string>
-    <string name="show_wrapped_card">Hiển thị thẻ Wrapped</string>
     <string name="updater">Trình cập nhật</string>
     <string name="check_for_updates">Tự động kiểm tra cập nhật</string>
     <string name="update_notifications">Bật thông báo về cập nhật</string>

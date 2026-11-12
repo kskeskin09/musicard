@@ -66,6 +66,11 @@ object ServiceImportParser {
         val name = queryName(context, uri)
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytesCapped() }
             ?: throw UnsupportedFileException()
+        return parseBytes(name, bytes)
+    }
+
+    /** The file-format part of [parse], kept free of Android types so it can be checked on the JVM. */
+    fun parseBytes(name: String, bytes: ByteArray): ImportBundle {
         val collector = Collector()
         collect(name, bytes, collector, depth = 0)
         val bundle = collector.build()
@@ -278,9 +283,12 @@ object ServiceImportParser {
                     val title = row["title"].orEmpty().ifBlank { row["name"].orEmpty() }
                     if (title.isBlank()) return@forEach
                     val track = ImportTrack(title.trim(), splitArtists(row["artist"]), row["album"]?.ifBlank { null })
-                    listOf("trackidentifier", "applemusictrackidentifier", "purchasedtrackidentifier", "tagmatchedtrackidentifier")
+                    // Playlists point at "Track Identifier"; the other ids only fill gaps and never replace it.
+                    row["trackidentifier"]?.takeIf { it.isNotBlank() }?.let { out.appleTracks[it] = track }
+                    listOf("applemusictrackidentifier", "purchasedtrackidentifier", "tagmatchedtrackidentifier")
                         .mapNotNull { row[it]?.takeIf { id -> id.isNotBlank() } }
-                        .forEach { out.appleTracks[it] = track }
+                        .forEach { out.appleTracks.putIfAbsent(it, track) }
+                    out.appleLibrary.add(track)
                     val rating = row["tracklikerating"].orEmpty().uppercase()
                     if (rating == "LOVE" || rating == "LIKE") out.liked(track)
                 }
@@ -324,6 +332,9 @@ object ServiceImportParser {
         }
     }
 
+    private const val APPLE_LIBRARY_NAME = "Apple Music Library"
+    private val LIKED_NAMES = setOf("likedsongs", "yourlikedsongs", "begenilensarkilar", "beğenilenşarkılar", "favoritesongs", "lovedtracks")
+
     private val TITLE_KEYS = listOf("trackname", "tracktitle", "title", "songname", "song", "name", "track")
     private val ARTIST_KEYS = listOf("artistnames", "artistname", "artists", "artist", "albumartistnames", "albumartist")
     private val ALBUM_KEYS = listOf("albumname", "album", "albumtitle")
@@ -345,7 +356,10 @@ object ServiceImportParser {
             val list = playlistKey?.let { row[it] }?.ifBlank { null } ?: fileTitle(name)
             grouped.getOrPut(list) { mutableListOf() }.add(track)
         }
-        grouped.forEach { (title, tracks) -> out.playlist(ImportPlaylist(title, tracks)) }
+        grouped.forEach { (title, tracks) ->
+            // Exportify and others name the liked songs file "Liked Songs" / "Liked_Songs".
+            if (norm(title) in LIKED_NAMES) tracks.forEach(out::liked) else out.playlist(ImportPlaylist(title, tracks))
+        }
     }
 
     /** RFC 4180 CSV: quoted fields, doubled quotes and line breaks inside quotes. Also reads ";" and tab separated files. */
@@ -389,7 +403,7 @@ object ServiceImportParser {
             .distinct()
 
     private fun fileTitle(name: String) =
-        name.substringAfterLast('/').substringBeforeLast('.').ifBlank { "Imported playlist" }
+        name.substringAfterLast('/').substringBeforeLast('.').replace('_', ' ').trim().ifBlank { "Imported playlist" }
 
     private class Collector {
         private var source: ImportSource? = null
@@ -400,6 +414,7 @@ object ServiceImportParser {
         private var skipped = 0
 
         val appleTracks = HashMap<String, ImportTrack>()
+        val appleLibrary = mutableListOf<ImportTrack>()
         val applePlaylists = mutableListOf<Map<String, String>>()
 
         fun source(s: ImportSource) { if (source == null) source = s }
@@ -418,6 +433,10 @@ object ServiceImportParser {
                 val tracks = ids.mapNotNull { appleTracks[it] ?: appleTracks[it.substringBefore('.')] }
                 skipped += ids.size - tracks.size
                 playlist(ImportPlaylist(title.ifBlank { "Apple Music ${index + 1}" }, tracks))
+            }
+            // Songs added to the Apple Music library are what liked songs are on Spotify; keep them as one playlist.
+            appleLibrary.distinctBy { it.key }.takeIf { it.isNotEmpty() }?.let {
+                playlists.add(0, ImportPlaylist(APPLE_LIBRARY_NAME, it))
             }
             return ImportBundle(
                 source = source ?: ImportSource.FILE,

@@ -55,8 +55,6 @@
     <string name="general">Genel</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Varsayılan kitaplık çipini değiştir</string>
-    <string name="set_quick_picks">Hızlı seçimleri ayarla</string>
-    <string name="last_song_listened">Dinlediğiniz son şarkıya göre</string>
     <string name="app_language">Uygulama dili</string>
     <string name="enable_similar_content">Benzer içeriği etkinleştir</string>
     <string name="similar_content_desc">Sıranın sonuna gelindiğinde otomatik olarak benzer şarkılar ekler</string>
@@ -202,7 +200,6 @@
     <string name="lyrics_line_spacing">Şarkı sözü satır aralığı</string>
     <string name="shuffle_playlist_first">Önce listeyi veya albümü karıştır</string>
     <string name="shuffle_playlist_first_desc">Karıştırırken, benzer içeriğe geçmeden önce listedeki tüm şarkıları çalın</string>
-    <string name="show_wrapped_card">Özet kartını göster</string>
     <string name="album_art_for">%s için albüm kapağı</string>
     <string name="wrapped_total_albums_title">Şunları dinledin</string>
     <string name="wrapped_total_albums_subtitle">farklı albüm!</string>
@@ -873,6 +870,14 @@
     <string name="player_pause">Duraklat</string>
     <string name="top_result">En iyi sonuç</string>
     <string name="other">Diğer</string>
+    <string name="edit_home_screen">Ana ekranı düzenle</string>
+    <string name="edit_home_screen_desc">Ana ekrandaki bölümlerin sırasını değiştir</string>
+    <string name="edit_home_screen_hint">Taşımak için bir bölüme basılı tutup sürükle. Ana ekran bu sırayla gösterir.</string>
+    <string name="edit_home_screen_random_note">Açıkken yalnızca kendi bölümlerimiz bu sırada kalır, gerisi karışır</string>
+    <string name="edit_home_screen_reset">Varsayılana dön</string>
+    <string name="home_section_your_mixes">Mikslerin</string>
+    <string name="home_section_similar">Benzerleri…</string>
+    <string name="home_section_youtube">YouTube Music bölümleri</string>
     <!-- Başka uygulamalardan içe aktarma -->
     <string name="import_services">Başka uygulamadan aktar</string>
     <string name="import_services_desc">Spotify, Apple Music ve çalma listesi dosyaları</string>
@@ -924,4 +929,17 @@
     <string name="import_search_manually">YouTube Music\'te yok · Elle ara</string>
     <string name="import_finish">Tamam</string>
     <string name="import_likes_local_note">Beğenilen şarkılar yalnızca Musicard\'a kaydedilir, YouTube hesabına gönderilmez.</string>
+    <string name="logo">Logo</string>
+    <string name="logo_desc">Ana ekrandaki uygulama simgesi</string>
+    <string name="logo_card">Kart</string>
+    <string name="logo_wave">Dalga</string>
+    <string name="logo_vinyl">Plak</string>
+    <string name="logo_notes">Nota</string>
+    <string name="logo_theme">Logo teması</string>
+    <string name="logo_theme_desc">%s · telefon temasından bağımsız</string>
+    <string name="logo_theme_device_desc">Duvar kağıdı renklerine ve temalı simgelere uyar</string>
+    <string name="logo_theme_dark">Koyu</string>
+    <string name="logo_theme_light">Aydınlık</string>
+    <string name="logo_theme_device">Cihaz renkleri</string>
+    <string name="history_duration_desc">Bir şarkı %1$d saniye dinlendikten sonra geçmişine ve istatistiklerine eklenir. Daha önce geçtiğin şarkılar sayılmaz.</string>
 </resources>

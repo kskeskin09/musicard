@@ -22,7 +22,9 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
+import androidx.media3.common.Player
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionCommands
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
@@ -91,24 +93,38 @@ constructor(
         scope.cancel()
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onConnect(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
     ): MediaSession.ConnectionResult {
         val connectionResult = super.onConnect(session, controller)
+        val sessionCommands = connectionResult.availableSessionCommands
+            .buildUpon()
+            .apply { MediaSessionConstants.AllCustomCommands.forEach { add(it) } }
+            .build()
+        if (session.isMediaNotificationController(controller)) {
+            // The notification (and, on Android 13+, the system media controls) gets the buttons
+            // the user picked in Settings > Appearance > Notification center.
+            notificationBasePlayerCommands = connectionResult.availablePlayerCommands
+            notificationSessionCommands = sessionCommands
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(sessionCommands)
+                .setAvailablePlayerCommands(service.notificationPlayerCommands(connectionResult.availablePlayerCommands))
+                .setMediaButtonPreferences(service.notificationButtonPreferences())
+                .build()
+        }
         return MediaSession.ConnectionResult.accept(
-            connectionResult.availableSessionCommands
-                .buildUpon()
-                .add(MediaSessionConstants.CommandToggleLike)
-                .add(MediaSessionConstants.CommandToggleStartRadio)
-                .add(MediaSessionConstants.CommandToggleLibrary)
-                .add(MediaSessionConstants.CommandToggleShuffle)
-                .add(MediaSessionConstants.CommandToggleRepeatMode)
-                .add(MediaSessionConstants.CommandAddToTargetPlaylist)
-                .build(),
+            sessionCommands,
             connectionResult.availablePlayerCommands,
         )
     }
+
+    /** Commands the media notification controller connected with, before the user's button choice. */
+    var notificationBasePlayerCommands: Player.Commands? = null
+        private set
+    var notificationSessionCommands: SessionCommands? = null
+        private set
 
     override fun onCustomCommand(
         session: MediaSession,
@@ -125,6 +141,16 @@ constructor(
 
             MediaSessionConstants.ACTION_TOGGLE_REPEAT_MODE -> session.player.toggleRepeatMode()
             MediaSessionConstants.ACTION_ADD_TO_TARGET_PLAYLIST -> addToTargetPlaylist()
+            MediaSessionConstants.ACTION_SKIP_PREVIOUS -> session.player.seekToPrevious()
+            MediaSessionConstants.ACTION_SKIP_NEXT -> session.player.seekToNext()
+            MediaSessionConstants.ACTION_SEEK_BACK_5 -> session.player.let {
+                it.seekTo((it.currentPosition - MediaSessionConstants.SEEK_STEP_MS).coerceAtLeast(0L))
+            }
+            MediaSessionConstants.ACTION_SEEK_FORWARD_5 -> session.player.let {
+                val target = it.currentPosition + MediaSessionConstants.SEEK_STEP_MS
+                val duration = it.duration
+                it.seekTo(if (duration > 0) target.coerceAtMost(duration) else target)
+            }
         }
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

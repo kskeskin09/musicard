@@ -156,7 +156,6 @@
     <string name="shuffle_playlist_first_desc">Пры мяшанні прайграваць усе трэкі з бягучага плэйліста або альбома перад пераходам да падобнага кантэнту</string>
     <string name="prevent_duplicate_tracks_in_queue">Выключаць дублікаты ў чарзе</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Калі трэк ужо ёсць у чарзе, ён будзе перамешчаны, а не дададзены паўторна</string>
-    <string name="show_wrapped_card">Паказаць картку Wrapped</string>
     <string name="skip_silence_desc">Паскараць узнаўленне ціхіх участкаў трэкаў</string>
     <string name="skip_silence_instant">Імгненна прапускаць цішыню</string>
     <string name="skip_silence_instant_desc">Прапускаць ціхія фрагменты адразу замест іх паскарэння</string>
@@ -174,8 +173,6 @@
     <string name="general">Агульнае</string>
     <string name="proxy">Проксі</string>
     <string name="default_lib_chips">Змяненне чыпа бібліятэкі (па змаўчанні)</string>
-    <string name="set_quick_picks">Выбраць тып рэкамендацый</string>
-    <string name="last_song_listened">На аснове апошняга праслуханага трэка</string>
     <string name="app_language">Мова прыкладання</string>
     <string name="lyrics_provider_priority">Прыярытэт пастаўшчыкоў тэкстаў</string>
     <string name="lyrics_provider_priority_desc">Перацягіце, каб змяніць парадак пастаўшчыкоў. Чым вышэйшая пазіцыя, тым вышэйшы прыярытэт</string>

@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import android.os.Build
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.res.colorResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -63,7 +66,8 @@ import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DensityScale
 import com.metrolist.music.constants.DensityScaleKey
 import com.metrolist.music.constants.DynamicThemeKey
-import com.metrolist.music.constants.EnableDynamicIconKey
+import com.metrolist.music.constants.AppLogoKey
+import com.metrolist.music.constants.LogoThemeKey
 import com.metrolist.music.constants.EnableHighRefreshRateKey
 import com.metrolist.music.constants.EnableLandscapeScalingKey
 import com.metrolist.music.constants.ExperimentalLyricsKey
@@ -119,7 +123,9 @@ import com.metrolist.music.ui.component.StyledSlider
 import com.metrolist.music.ui.theme.DefaultThemeColor
 import com.metrolist.music.ui.theme.PlayerSliderColors
 import com.metrolist.music.ui.utils.backToMain
-import com.metrolist.music.utils.IconUtils
+import com.metrolist.music.utils.AppLogo
+import com.metrolist.music.utils.LogoTheme
+import com.metrolist.music.utils.LogoUtils
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.launch
@@ -137,15 +143,18 @@ fun AppearanceSettings(
             DynamicThemeKey,
             defaultValue = true,
         )
-    val (enableDynamicIcon, onEnableDynamicIconPrefChange) =
-        rememberPreference(
-            EnableDynamicIconKey,
-            defaultValue = true,
-        )
+    val (appLogo, onAppLogoPrefChange) =
+        rememberEnumPreference(AppLogoKey, defaultValue = AppLogo.CARD)
+    val (logoTheme, onLogoThemePrefChange) =
+        rememberEnumPreference(LogoThemeKey, defaultValue = LogoTheme.BLACK)
     val iconContext = LocalContext.current
-    val onEnableDynamicIconChange: (Boolean) -> Unit = { newValue ->
-        onEnableDynamicIconPrefChange(newValue)
-        IconUtils.setIcon(iconContext, newValue)
+    val onAppLogoChange: (AppLogo) -> Unit = { newLogo ->
+        onAppLogoPrefChange(newLogo)
+        LogoUtils.setLogo(iconContext, newLogo, logoTheme)
+    }
+    val onLogoThemeChange: (LogoTheme) -> Unit = { newTheme ->
+        onLogoThemePrefChange(newTheme)
+        LogoUtils.setLogo(iconContext, appLogo, newTheme)
     }
     val (enableHighRefreshRate, onEnableHighRefreshRateChange) =
         rememberPreference(
@@ -927,36 +936,144 @@ fun AppearanceSettings(
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
-                            title = { Text(stringResource(R.string.enable_dynamic_icon)) },
-                            description = { Text(stringResource(R.string.enable_dynamic_icon_desc)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = enableDynamicIcon,
-                                    onCheckedChange = onEnableDynamicIconChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (enableDynamicIcon) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onEnableDynamicIconChange(!enableDynamicIcon) },
-                        ),
-                    )
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.palette),
                             title = { Text(stringResource(R.string.theme)) },
                             description = { Text(stringResource(R.string.theme_desc)) },
                             onClick = { navController.navigate("settings/appearance/theme") },
                         ),
                     )
                 },
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        // Launcher logo: which mark, and its colours (fixed, or following the device).
+        val deviceLogoBackground = colorResource(R.color.logo_bg_device)
+        val deviceLogoForeground = colorResource(R.color.logo_device_fg)
+        val logoColors: (LogoTheme) -> Pair<Color, Color> = { theme ->
+            if (theme == LogoTheme.DEVICE) deviceLogoBackground to deviceLogoForeground else theme.background to theme.foreground
+        }
+        Material3SettingsGroup(
+            title = stringResource(R.string.logo),
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        title = {
+                            Column {
+                                Text(stringResource(R.string.logo))
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    stringResource(R.string.logo_desc),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(Modifier.height(14.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    val (bg, fg) = logoColors(logoTheme)
+                                    AppLogo.entries.forEach { logo ->
+                                        val selected = logo == appLogo
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier =
+                                                Modifier
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .clickable { onAppLogoChange(logo) }
+                                                    .padding(4.dp),
+                                        ) {
+                                            Box(
+                                                contentAlignment = Alignment.Center,
+                                                modifier =
+                                                    Modifier
+                                                        .size(60.dp)
+                                                        .border(
+                                                            width = 2.dp,
+                                                            color = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                                            // Launchers show the icon as a rounded square, so the preview does too.
+                                                            shape = RoundedCornerShape(18.dp),
+                                                        ).padding(4.dp)
+                                                        .clip(RoundedCornerShape(14.dp))
+                                                        .background(bg)
+                                                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(logo.glyph),
+                                                    contentDescription = stringResource(logo.label),
+                                                    tint = fg,
+                                                    // The glyph sits in a 108dp adaptive canvas; draw it larger than the circle like a launcher does.
+                                                    modifier = Modifier.requiredSize(78.dp),
+                                                )
+                                            }
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                stringResource(logo.label),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    ),
+                    Material3SettingsItem(
+                        title = {
+                            Column {
+                                Text(stringResource(R.string.logo_theme))
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    if (logoTheme == LogoTheme.DEVICE) {
+                                        stringResource(R.string.logo_theme_device_desc)
+                                    } else {
+                                        stringResource(R.string.logo_theme_desc, stringResource(logoTheme.label))
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(50))
+                                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                            .padding(3.dp),
+                                ) {
+                                    LogoTheme.entries.forEach { theme ->
+                                        val selected = theme == logoTheme
+                                        val (bg, fg) = logoColors(theme)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier =
+                                                Modifier
+                                                    .weight(1f)
+                                                    .height(38.dp)
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(if (selected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f) else Color.Transparent)
+                                                    .clickable { onLogoThemeChange(theme) },
+                                        ) {
+                                            Box(
+                                                Modifier
+                                                    .size(16.dp)
+                                                    .clip(RoundedCornerShape(5.dp))
+                                                    .background(bg)
+                                                    .border(1.dp, fg.copy(alpha = 0.6f), RoundedCornerShape(5.dp)),
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                stringResource(theme.label),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                maxLines = 1,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    ),
+                ),
         )
 
         Spacer(modifier = Modifier.height(27.dp))
@@ -1086,6 +1203,21 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onMiniPlayerBlurChange(!miniPlayerBlur) },
+                    ),
+                ),
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.notification_center),
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.notification),
+                        title = { Text(stringResource(R.string.notification_center)) },
+                        description = { Text(stringResource(R.string.notification_center_desc)) },
+                        onClick = { navController.navigate("settings/appearance/notification_center") },
                     ),
                 ),
         )

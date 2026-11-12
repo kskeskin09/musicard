@@ -192,7 +192,6 @@
     <string name="shuffle_playlist_first_desc">Kur përzieni këngët, luani të gjitha këngët nga lista aktuale e këngëve ose albumi përpara se të kaloni në përmbajtje të ngjashme</string>
     <string name="prevent_duplicate_tracks_in_queue">Parandalo këngët e dyfishta në radhë</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Kur shtohet një këngë që është gja në radhë, ajo do të zhvendoset nga pozicioni i saj i mëparshëm në vend që të shtohet përsëri</string>
-    <string name="show_wrapped_card">Shfaq kartën Wrapped</string>
     <string name="skip_silence_desc">Anashkalo pjesët të heshtura të këngëve</string>
     <string name="skip_silence_instant">Kapërceje menjëherë heshtjen</string>
     <string name="app_language">Gjuha e aplikacionit</string>
@@ -237,8 +236,6 @@
     <string name="general">Të përgjithshme</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Ndrysho çipin e paracaktuar të bibliotekës</string>
-    <string name="set_quick_picks">Vendos zgjedhjet e shpejta</string>
-    <string name="last_song_listened">Bazuar në këngën e fundit që dëgjove</string>
     <string name="experimental_lyrics_beta_title">Veçori eksperimentale</string>
     <string name="experimental_lyrics_beta_message">Komponenti i ri i teksteve është ende në zhvillim dhe mund të ketë gabime. Jeni i sigurt që doni ta aktivizoni?</string>
     <string name="config_proxy">Cilëso proxy-n</string>

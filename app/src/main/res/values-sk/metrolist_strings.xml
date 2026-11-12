@@ -83,8 +83,6 @@
     <string name="general">Všeobecné</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Zmeniť predvolený čip knižnice</string>
-    <string name="set_quick_picks">Nastaviť rýchle výbery</string>
-    <string name="last_song_listened">Na základe poslednej počúvanej skladby</string>
     <string name="app_language">Jazyk aplikácie</string>
     <string name="enable_similar_content">Povoliť podobný obsah</string>
     <string name="similar_content_desc">Automaticky pridávať ďalšie podobné skladby po dosiahnutí konca frontu</string>
@@ -183,7 +181,6 @@
     <string name="auto_scroll">Znovu synchronizovať</string>
     <string name="shuffle_playlist_first">Najskôr zamiešať playlist alebo album</string>
     <string name="shuffle_playlist_first_desc">Pri náhodnom prehrávaní odohrať všetky skladby z aktuálneho playlistu alebo albumu pred prechodom na podobný obsah</string>
-    <string name="show_wrapped_card">Zobraziť Wrapped kartu</string>
     <string name="google_cast_description">Povoliť prehrávanie zvuku na Chromecast a d\'alšie zariadenia s podporou Cast</string>
     <string name="logging_in">Prihlasovanie…</string>
     <string name="hide_video_songs">Skryť skladby z videa</string>
