@@ -98,6 +98,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.lazy.LazyListState
 import com.metrolist.music.lyrics.lyricsTextLooksSynced
 import com.metrolist.music.lyrics.LyricsUtils
 import com.metrolist.music.lyrics.LyricsEntry
@@ -505,9 +507,8 @@ private fun UpNextList(
     LaunchedEffect(currentWindowIndex, shown.size) {
         if (appliedCurrent[0] == currentWindowIndex) return@LaunchedEffect
         appliedCurrent[0] = currentWindowIndex
-        listState.animateScrollToItem(nextIndex.coerceIn(0, shown.lastIndex))
+        listState.glideTo(nextIndex.coerceIn(0, shown.lastIndex)) { 0 }
     }
-
     // Holding a song picks it up; dropping it moves it in the queue. While dragging, the list
     // shows the moved order; the player is updated once the song is dropped.
     var dragOrder by remember { mutableStateOf<List<androidx.media3.common.Timeline.Window>?>(null) }
@@ -522,6 +523,29 @@ private fun UpNextList(
             dragOrder = list
             dragMove = (dragMove?.first ?: from.index) to to.index
         }
+    // After looking around (for example up at the songs played before), the list goes back to the
+    // next song when the card is made small again or after three seconds without a touch.
+    val upNextOpen = expandFraction() >= 1f
+    val nextTarget by rememberUpdatedState(nextIndex.coerceIn(0, shown.lastIndex))
+    LaunchedEffect(listState, upNextOpen) {
+        if (!upNextOpen) {
+            if (listState.firstVisibleItemIndex != nextTarget || listState.firstVisibleItemScrollOffset != 0) {
+                listState.glideTo(nextTarget) { 0 }
+            }
+            return@LaunchedEffect
+        }
+        snapshotFlow { listState.isScrollInProgress }.collectLatest { scrolling ->
+            if (!scrolling) {
+                delay(AutoReturnMillis)
+                // Not while a song is being held to move it.
+                if (reorderState.isAnyItemDragging) return@collectLatest
+                if (listState.firstVisibleItemIndex != nextTarget || listState.firstVisibleItemScrollOffset != 0) {
+                    listState.glideTo(nextTarget) { 0 }
+                }
+            }
+        }
+    }
+
     LaunchedEffect(reorderState.isAnyItemDragging) {
         if (reorderState.isAnyItemDragging) return@LaunchedEffect
         val move = dragMove
@@ -858,10 +882,27 @@ fun CompactLyrics(
     LaunchedEffect(interactive) {
         if (!interactive) followPaused = false
     }
+    // After the user scrolls the lyrics, they find the current line again by themselves once the
+    // list has been left alone for three seconds.
+    LaunchedEffect(followPaused) {
+        if (!followPaused) return@LaunchedEffect
+        snapshotFlow { listState.isScrollInProgress }.collectLatest { scrolling ->
+            if (!scrolling) {
+                delay(AutoReturnMillis)
+                followPaused = false
+            }
+        }
+    }
+    val returning = remember { booleanArrayOf(false) }
+    if (followPaused) returning[0] = true
     LaunchedEffect(scrollTarget, followPaused) {
         if (scrollTarget < 0 || followPaused) return@LaunchedEffect
         val visible = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollTarget }
-        if (visible != null) {
+        if (returning[0]) {
+            // Back from the user's own scrolling: a quick glide that slows down as it arrives.
+            returning[0] = false
+            listState.glideTo(scrollTarget) { appliedAnchor[0] }
+        } else if (visible != null) {
             // A visible slide (a little slower than the default), like the full lyrics view. The
             // lines grow and shrink while it runs, so each frame aims at where the line is now.
             listState.scroll {
@@ -1137,6 +1178,48 @@ fun CompactLyrics(
 
 /** Whether the opened lyrics stopped following the song because the user scrolled them. */
 @Stable
+private const val AutoReturnMillis = 3000L
+
+/** Quick at first, slowing down as it arrives. */
+private val GlideEasing = androidx.compose.animation.core.CubicBezierEasing(0.15f, 0.85f, 0.25f, 1f)
+
+/**
+ * Slides the list so that item [index] ends [anchorPx] below the top: fast at first, then slowing
+ * to a stop. Each frame aims at where the item is now (sizes may change while it runs), and an
+ * item that is off screen is reached by an estimate that sharpens once it comes into view.
+ */
+private suspend fun LazyListState.glideTo(
+    index: Int,
+    millis: Int = 520,
+    anchorPx: () -> Int,
+) {
+    scroll {
+        var done = 0f
+        Animatable(0f).animateTo(1f, tween(millis, easing = GlideEasing)) {
+            if (done < 1f) {
+                val remaining = distanceTo(index, anchorPx())
+                scrollBy(remaining * ((value - done) / (1f - done)))
+            }
+            done = value
+        }
+    }
+    val settled = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+    if (settled == null || settled.offset != anchorPx()) requestScrollToItem(index, -anchorPx())
+}
+
+private fun LazyListState.distanceTo(
+    index: Int,
+    anchorPx: Int,
+): Float {
+    val info = layoutInfo
+    val items = info.visibleItemsInfo
+    items.firstOrNull { it.index == index }?.let { return (it.offset - anchorPx).toFloat() }
+    if (items.isEmpty()) return 0f
+    val average = items.sumOf { it.size }.toFloat() / items.size + info.mainAxisItemSpacing
+    val reference = if (index < items.first().index) items.first() else items.last()
+    return reference.offset + (index - reference.index) * average - anchorPx
+}
+
 class LyricsFollowState {
     var paused by mutableStateOf(false)
 }

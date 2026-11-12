@@ -2615,7 +2615,9 @@ fun BottomSheetPlayer(
                     // Re-sync: above the play buttons, and down at the bottom while they are hidden.
                     // It stays until it is tapped.
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = cardOpen && cardPage == LyricsPage && lyricsFollow.paused,
+                        // Not shown any more: the lyrics find their place again by themselves
+                        // three seconds after the last touch.
+                        visible = false && cardOpen && cardPage == LyricsPage && lyricsFollow.paused,
                         enter = fadeIn() + scaleIn(initialScale = 0.8f),
                         exit = fadeOut() + scaleOut(targetScale = 0.8f),
                         modifier =
