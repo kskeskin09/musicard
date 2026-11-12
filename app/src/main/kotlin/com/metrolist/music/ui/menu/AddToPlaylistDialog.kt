@@ -418,3 +418,156 @@ private fun SelectCircle(checked: Boolean) {
         }
     }
 }
+
+/**
+ * Picks playlists to export together (the same picker as adding a song to a playlist) and saves
+ * each one as an [format] file ("m3u" or "csv") in Documents/Musicard.
+ */
+@Composable
+fun ExportPlaylistsDialog(
+    format: String,
+    onDismiss: () -> Unit,
+    viewModel: PlaylistsViewModel = hiltViewModel(),
+) {
+    val database = LocalDatabase.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val (librarySort) = rememberEnumPreference(com.metrolist.music.constants.LibrarySortKey, com.metrolist.music.constants.LibrarySortOption.ADDED_NEWEST)
+    val (libraryCustomOrder) = rememberPreference(com.metrolist.music.constants.LibraryCustomOrderKey, "")
+    val (libraryPinned) = rememberPreference(com.metrolist.music.constants.LibraryPinnedKey, "")
+    val allPlaylists by viewModel.allPlaylists.collectAsStateWithLifecycle()
+    val playlists =
+        remember(allPlaylists, librarySort, libraryCustomOrder, libraryPinned) {
+            com.metrolist.music.ui.screens.library.libraryOrder(
+                allPlaylists,
+                librarySort,
+                libraryCustomOrder.split('\n').filter { it.isNotBlank() },
+                libraryPinned.split('\n').filter { it.isNotBlank() },
+            )
+        }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var exporting by remember { mutableStateOf(false) }
+
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        androidx.compose.material3.Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            modifier =
+                Modifier
+                    .padding(horizontal = 24.dp, vertical = 48.dp)
+                    .fillMaxWidth(),
+        ) {
+            androidx.compose.foundation.layout.Column(Modifier.padding(top = 22.dp, bottom = 16.dp)) {
+                Text(
+                    text = stringResource(if (format == "csv") R.string.export_playlists_csv else R.string.export_playlists_m3u),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
+                // Select all / none.
+                val allSelected = playlists.isNotEmpty() && selected.size == playlists.size
+                Text(
+                    text = stringResource(if (allSelected) R.string.export_select_none else R.string.export_select_all),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(50))
+                            .clickable { selected = if (allSelected) emptySet() else playlists.map { it.id }.toSet() }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.weight(1f, fill = false),
+                ) {
+                    items(playlists, key = { it.id }) { playlist ->
+                        val checked = playlist.id in selected
+                        PlaylistListItem(
+                            playlist = playlist,
+                            trailingContent = { SelectCircle(checked) },
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { selected = if (checked) selected - playlist.id else selected + playlist.id },
+                        )
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                ) {
+                    androidx.compose.material3.Surface(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                    ) {
+                        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                            Text(stringResource(R.string.cancel), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    androidx.compose.material3.Surface(
+                        onClick = {
+                            if (exporting || selected.isEmpty()) return@Surface
+                            exporting = true
+                            val targets = playlists.filter { it.id in selected }
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val mime = if (format == "csv") "text/csv" else "audio/x-mpegurl"
+                                var saved = 0
+                                targets.forEach { playlist ->
+                                    val songs = database.playlistSongsBlocking(playlist.id)
+                                    val file =
+                                        if (format == "csv") {
+                                            com.metrolist.music.utils.PlaylistExporter.exportPlaylistAsCSV(context, playlist.playlist.name, songs)
+                                        } else {
+                                            com.metrolist.music.utils.PlaylistExporter.exportPlaylistAsM3U(context, playlist.playlist.name, songs)
+                                        }
+                                    file.getOrNull()?.let { f ->
+                                        if (com.metrolist.music.utils.saveToPublicDocuments(context, f, mime, "Musicard").isSuccess) saved++
+                                    }
+                                }
+                                withContext(Dispatchers.Main) {
+                                    android.widget.Toast
+                                        .makeText(
+                                            context,
+                                            if (saved > 0) {
+                                                context.resources.getQuantityString(R.plurals.export_playlists_done, saved, saved)
+                                            } else {
+                                                context.getString(R.string.export_failed)
+                                            },
+                                            android.widget.Toast.LENGTH_LONG,
+                                        ).show()
+                                    onDismiss()
+                                }
+                            }
+                        },
+                        enabled = selected.isNotEmpty() && !exporting,
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        contentColor = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.weight(1f).height(48.dp).graphicsLayer { alpha = if (selected.isEmpty()) 0.4f else 1f },
+                    ) {
+                        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text =
+                                    if (selected.isEmpty()) {
+                                        stringResource(R.string.export_action)
+                                    } else {
+                                        stringResource(R.string.export_action_count, selected.size)
+                                    },
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

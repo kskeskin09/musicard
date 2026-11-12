@@ -647,18 +647,7 @@ fun YouTubePlaylistMenu(
                                 },
                             )
                         }
-                        add(
-                            Material3MenuItemData(
-                                title = { Text(text = stringResource(R.string.export_playlist)) },
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.share),
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = { showExportDialog = true },
-                            ),
-                        )
+                        // Export moved to Settings > Backup and restore.
                         add(
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.share)) },

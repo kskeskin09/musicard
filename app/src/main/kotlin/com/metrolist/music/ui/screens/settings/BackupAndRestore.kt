@@ -109,6 +109,11 @@ fun BackupAndRestore(
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    // "m3u" or "csv" while the playlist picker for exporting is open.
+    var exportFormat by rememberSaveable { mutableStateOf<String?>(null) }
+    exportFormat?.let { format ->
+        com.metrolist.music.ui.menu.ExportPlaylistsDialog(format = format, onDismiss = { exportFormat = null })
+    }
 
     val backupLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
@@ -214,6 +219,16 @@ fun BackupAndRestore(
                                 arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain"),
                             )
                         },
+                    ),
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.export_playlists_m3u)) },
+                        icon = painterResource(R.drawable.share),
+                        onClick = { exportFormat = "m3u" },
+                    ),
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.export_playlists_csv)) },
+                        icon = painterResource(R.drawable.share),
+                        onClick = { exportFormat = "csv" },
                     ),
                 ),
         )

@@ -225,8 +225,18 @@
     <string name="remember_shuffle_and_repeat_desc">Remember shuffle and repeat settings when the app is restarted</string>
     <string name="percentage_format">%d%%</string>
 
-    <string name="import_online">Import an M3U playlist</string>
-    <string name="import_csv">Import a CSV playlist</string>
+    <string name="import_online">Import playlists as M3U</string>
+    <string name="import_csv">Import playlists as CSV</string>
+    <string name="export_playlists_m3u">Export playlists as M3U</string>
+    <string name="export_playlists_csv">Export playlists as CSV</string>
+    <string name="export_select_all">Select all</string>
+    <string name="export_select_none">Select none</string>
+    <string name="export_action">Export</string>
+    <string name="export_action_count">Export (%d)</string>
+    <plurals name="export_playlists_done">
+        <item quantity="one">%d playlist saved to Documents/Musicard</item>
+        <item quantity="other">%d playlists saved to Documents/Musicard</item>
+    </plurals>
     <string name="playlist_unavailable">Playlist unavailable</string>
     <string name="playlist_created_locally">YouTube sync failed. Playlist created locally.</string>
     <string name="playlist_add_local_to_synced_note">NOTE: Adding local songs to synced or remote playlists is not supported. Any other combination is valid</string>

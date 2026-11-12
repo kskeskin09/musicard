@@ -581,19 +581,7 @@ fun PlaylistMenu(
                                 },
                             )
                         }
-                        // Export playlist
-                        add(
-                            Material3MenuItemData(
-                                title = { Text(text = stringResource(R.string.export_playlist)) },
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.share),
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = { showExportDialog = true },
-                            ),
-                        )
+                        // Export moved to Settings > Backup and restore (several playlists at once).
                         if (autoPlaylist != true && !isGuest) {
                             add(
                                 Material3MenuItemData(
