@@ -537,7 +537,7 @@ private fun SearchBrowsePage(
 
 /** A mood or genre: a rounded tile in a calm version of its YouTube color, with its name. */
 @Composable
-private fun GenreTile(
+internal fun GenreTile(
     title: String,
     stripeColor: Color,
     pageBackground: Color,

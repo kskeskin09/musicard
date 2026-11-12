@@ -2518,26 +2518,28 @@ fun HomeScreen(
                                     )
                                 }
                                 item(key = "mood_and_genres_list") {
+                                    // The same colored tiles as the Genres page in Search, two rows
+                                    // that scroll sideways.
+                                    val pageBackground = MaterialTheme.colorScheme.background
                                     LazyHorizontalGrid(
                                         state = com.metrolist.music.ui.utils.TabStates.grid("home/mood_and_genres_list"),
-                                        rows = GridCells.Fixed(4),
-                                        contentPadding = PaddingValues(6.dp),
-                                        modifier =
-                                            Modifier
-                                                .height((MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp),
+                                        rows = GridCells.Fixed(2),
+                                        contentPadding = PaddingValues(horizontal = 20.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.height(84.dp * 2 + 12.dp),
                                     ) {
                                         items(moodAndGenres.distinctBy { "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }, key = { "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }) {
-                                            MoodAndGenresButton(
+                                            com.metrolist.music.ui.screens.search.GenreTile(
                                                 title = it.title,
+                                                stripeColor = androidx.compose.ui.graphics.Color(it.stripeColor),
+                                                pageBackground = pageBackground,
                                                 onClick = {
                                                     navController.navigate(
                                                         "youtube_browse/${it.endpoint.browseId}?params=${it.endpoint.params}",
                                                     )
                                                 },
-                                                modifier =
-                                                    Modifier
-                                                        .padding(6.dp)
-                                                        .width(180.dp),
+                                                modifier = Modifier.width(170.dp),
                                             )
                                         }
                                     }

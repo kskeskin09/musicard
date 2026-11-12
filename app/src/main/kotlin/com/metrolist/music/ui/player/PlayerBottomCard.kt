@@ -135,6 +135,7 @@ import com.metrolist.music.constants.PlayerHorizontalPadding
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import com.metrolist.music.utils.rememberEnumPreference
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -222,11 +223,18 @@ fun PlayerBottomCard(
                     .fillMaxWidth()
                     // Opened, the row moves down below the art and title header and stays usable.
                     .padding(top = (statusTop + OpenHeaderHeight) * expandFraction().coerceIn(0f, 1f))
-                    .padding(start = 18.dp, end = 16.dp, top = CardHeaderTopPadding)
+                    // While the row hides it gives its height to the lyrics below, so they move up
+                    // into its place, and it slides down a little as it fades.
+                    .layout { measurable, constraints ->
+                        val a = headerAlpha().coerceIn(0f, 1f)
+                        val placeable = measurable.measure(constraints)
+                        layout(placeable.width, (placeable.height * a).roundToInt()) { placeable.place(0, 0) }
+                    }.padding(start = 18.dp, end = 16.dp, top = CardHeaderTopPadding)
                     .height(CardHeaderRowHeight)
                     .graphicsLayer {
                         val a = headerAlpha()
                         alpha = a
+                        translationY = (1f - a) * 10.dp.toPx()
                         // Hidden, the row is moved away so it doesn't catch touches.
                         if (a == 0f) translationY = -100_000f
                     },
@@ -671,7 +679,8 @@ private fun UpNextRow(
                 .then(
                     when {
                         dragging -> Modifier.background(contentColor.copy(alpha = 0.16f))
-                        isCurrent -> Modifier.background(contentColor.copy(alpha = 0.08f))
+                        // No tint on the playing row: scrolled just past it, its edge showed as a
+                        // faint line at the top of the list. The moving bars on its cover remain.
                         else -> Modifier
                     },
                 ).then(dragModifier)
@@ -932,8 +941,10 @@ fun CompactLyrics(
     }
     // After the user scrolls the lyrics, they find the current line again by themselves once the
     // list has been left alone for three seconds.
+    // In the player, the follow state is shared and the lyrics come back together with the hiding
+    // controls, three seconds after the last touch, so this timer is only for other callers.
     LaunchedEffect(followPaused) {
-        if (!followPaused) return@LaunchedEffect
+        if (!followPaused || followState != null) return@LaunchedEffect
         snapshotFlow { listState.isScrollInProgress }.collectLatest { scrolling ->
             if (!scrolling) {
                 delay(AutoReturnMillis)

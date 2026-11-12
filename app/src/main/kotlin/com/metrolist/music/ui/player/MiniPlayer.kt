@@ -114,6 +114,10 @@ import com.metrolist.music.ui.theme.albumBackgroundColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.flow.first
+import com.metrolist.music.extensions.metadata
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
@@ -235,6 +239,23 @@ private fun NewMiniPlayer(
 
     // Swipe animation state
     val offsetXAnimatable = remember { Animatable(0f) }
+    // Width of the sliding part, and the songs on either side shown while swiping.
+    var swipeWidthPx by remember { mutableFloatStateOf(0f) }
+    val currentMediaId by rememberUpdatedState(mediaMetadata?.id)
+    val previousMetadata =
+        remember(mediaMetadata?.id) {
+            runCatching {
+                val player = playerConnection.player
+                player.previousMediaItemIndex.takeIf { it != -1 }?.let { player.getMediaItemAt(it).metadata }
+            }.getOrNull()
+        }
+    val nextMetadata =
+        remember(mediaMetadata?.id) {
+            runCatching {
+                val player = playerConnection.player
+                player.nextMediaItemIndex.takeIf { it != -1 }?.let { player.getMediaItemAt(it).metadata }
+            }.getOrNull()
+        }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
 
@@ -299,7 +320,7 @@ private fun NewMiniPlayer(
             com.metrolist.music.ui.theme.PageFadeColors.current
                 ?.let { com.metrolist.music.ui.theme.raisedPageColor(it) }
                 ?: MaterialTheme.colorScheme.surfaceContainer,
-        animationSpec = androidx.compose.animation.core.tween(300),
+        animationSpec = androidx.compose.animation.core.tween(200),
         label = "miniThemePill",
     )
     val backgroundColor =
@@ -369,15 +390,33 @@ private fun NewMiniPlayer(
                                         (kotlin.math.abs(currentOffset) > minDistanceThreshold && velocity > velocityThreshold) ||
                                             (kotlin.math.abs(currentOffset) > autoSwipeThreshold)
 
-                                    if (shouldChangeSong) {
-                                        if (currentOffset > 0 && canSkipPrevious) {
-                                            playerConnection.player.seekToPreviousMediaItem()
-                                        } else if (currentOffset <= 0 && canSkipNext) {
-                                            playerConnection.player.seekToNext()
-                                        }
-                                    }
+                                    val canSkipPrevious = playerConnection.player.previousMediaItemIndex != -1
+                                    val canSkipNext = playerConnection.player.nextMediaItemIndex != -1
+                                    val goPrevious = shouldChangeSong && currentOffset > 0 && canSkipPrevious
+                                    val goNext = shouldChangeSong && currentOffset <= 0 && canSkipNext
                                     coroutineScope.launch {
-                                        offsetXAnimatable.animateTo(0f, animationSpec)
+                                        if ((goPrevious || goNext) && swipeWidthPx > 0f) {
+                                            // The other song slides all the way in, then becomes the current
+                                            // one; the offset goes back to 0 once it is showing, so nothing jumps.
+                                            val oldId = currentMediaId
+                                            offsetXAnimatable.animateTo(
+                                                if (goPrevious) swipeWidthPx else -swipeWidthPx,
+                                                androidx.compose.animation.core.tween(160),
+                                            )
+                                            if (goPrevious) {
+                                                playerConnection.player.seekToPreviousMediaItem()
+                                            } else {
+                                                playerConnection.player.seekToNext()
+                                            }
+                                            kotlinx.coroutines.withTimeoutOrNull(600) {
+                                                androidx.compose.runtime.snapshotFlow { currentMediaId }.first { it != oldId }
+                                            }
+                                            offsetXAnimatable.snapTo(0f)
+                                        } else {
+                                            if (goPrevious) playerConnection.player.seekToPreviousMediaItem()
+                                            if (goNext) playerConnection.player.seekToNext()
+                                            offsetXAnimatable.animateTo(0f, animationSpec)
+                                        }
                                     }
                                 },
                             )
@@ -433,19 +472,42 @@ private fun NewMiniPlayer(
                 modifier = Modifier.fillMaxSize().padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             ) {
                 // Swiping moves only the cover and the song info, both ways; the pill, the progress
-                // line and the buttons stay put and switch to the new song once it changes.
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                // line and the buttons stay put and switch to the new song once it changes. The
+                // next (or previous) song's cover and info slide in from the other side.
+                Box(
                     modifier =
                         Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .clipToBounds()
-                            .graphicsLayer {
+                            .onSizeChanged { swipeWidthPx = it.width.toFloat() },
+                ) {
+                    MiniSwipePreview(
+                        metadata = previousMetadata,
+                        onSurfaceColor = onSurfaceColor,
+                        modifier =
+                            Modifier.graphicsLayer {
                                 val offset = offsetXAnimatable.value
-                                translationX = offset
-                                alpha = (1f - kotlin.math.abs(offset) / (size.width * 0.8f)).coerceIn(0f, 1f)
+                                translationX = offset - size.width
+                                alpha = if (offset > 0f) 1f else 0f
                             },
+                    )
+                    MiniSwipePreview(
+                        metadata = nextMetadata,
+                        onSurfaceColor = onSurfaceColor,
+                        modifier =
+                            Modifier.graphicsLayer {
+                                val offset = offsetXAnimatable.value
+                                translationX = offset + size.width
+                                alpha = if (offset < 0f) 1f else 0f
+                            },
+                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { translationX = offsetXAnimatable.value },
                 ) {
                 // Album art: tap to play / pause - isolated composable
                 NewMiniPlayerPlayButton(
@@ -469,6 +531,7 @@ private fun NewMiniPlayer(
                     errorColor = errorColor,
                     modifier = Modifier.weight(1f),
                 )
+                }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -822,6 +885,50 @@ private fun MiniGlassBackground(thumbnailUrl: String?) {
                             }.blur(40.dp),
                 )
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.36f)))
+            }
+        }
+    }
+}
+
+/** The cover and title of the song next to the current one, shown while the mini player is swiped. */
+@Composable
+private fun MiniSwipePreview(
+    metadata: MediaMetadata?,
+    onSurfaceColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    if (metadata == null) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        AsyncImage(
+            model = metadata.thumbnailUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier =
+                Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(verticalArrangement = Arrangement.Center, modifier = Modifier.weight(1f)) {
+            Text(
+                text = metadata.title,
+                color = onSurfaceColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+            )
+            if (metadata.artists.any { it.name.isNotBlank() }) {
+                Text(
+                    text = metadata.artists.joinToString { it.name },
+                    color = onSurfaceColor.copy(alpha = 0.7f),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                )
             }
         }
     }
