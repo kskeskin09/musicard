@@ -21,6 +21,8 @@ val DarkModeKey = stringPreferencesKey("darkMode")
 val PureBlackKey = booleanPreferencesKey("pureBlack")
 val PureBlackMiniPlayerKey = booleanPreferencesKey("pureBlackMiniPlayer")
 val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
+val MiniPlayerBlackoutKey = booleanPreferencesKey("miniPlayerBlackout")
+val MiniPlayerBlurKey = booleanPreferencesKey("miniPlayerBlur")
 
 enum class MiniPlayerBackgroundStyle {
     DEFAULT,

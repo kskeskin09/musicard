@@ -168,6 +168,7 @@ import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.constants.LyricsProviderOrderKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
+import com.metrolist.music.ui.component.bottomEdgeBlur
 import com.metrolist.music.constants.NavigationBarAnimationSpec
 import com.metrolist.music.constants.NavigationBarHeight
 import com.metrolist.music.constants.PauseListenHistoryKey
@@ -182,7 +183,6 @@ import com.metrolist.music.constants.SlimNavBarHeight
 import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.UpdateNotificationsEnabledKey
-import com.metrolist.music.constants.UseNewMiniPlayerDesignKey
 import com.metrolist.music.constants.VideoThumbnailMigrationDoneKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
@@ -782,7 +782,8 @@ class MainActivity : FragmentActivity() {
                 }
                 val (forceBottomNav) = rememberPreference(ForceBottomNavBarKey, defaultValue = false)
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
-                val (useNewMiniPlayerDesign) = rememberPreference(UseNewMiniPlayerDesignKey, defaultValue = true)
+                val miniPlayerBlackout by rememberPreference(com.metrolist.music.constants.MiniPlayerBlackoutKey, defaultValue = true)
+                val miniPlayerBlur by rememberPreference(com.metrolist.music.constants.MiniPlayerBlurKey, defaultValue = false)
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
                 val defaultOpenTab = remember(defaultOpenTabInt) {
                     try {
@@ -881,7 +882,7 @@ class MainActivity : FragmentActivity() {
                         collapsedBound =
                             bottomInset +
                                 (if (!showRail && shouldShowNavigationBar) navPadding else 0.dp) +
-                                (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
+                                MiniPlayerBottomSpacing +
                                 MiniPlayerHeight,
                         expandedBound = maxHeight,
                     )
@@ -1139,6 +1140,18 @@ class MainActivity : FragmentActivity() {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
                     }
 
+                    // How far up from the bottom the page darkens / blurs: the tab bar and the mini
+                    // player (when showing) plus a short lead-in above them.
+                    val bottomFadeHeight =
+                        run {
+                            val miniPlayerShown = activePlayerConnection != null && !playerBottomSheetState.isDismissed
+                            val tabBar = if (!showRail) navigationBarHeight else 0.dp
+                            if (!miniPlayerShown && (showRail || !shouldShowNavigationBar)) {
+                                0.dp
+                            } else {
+                                bottomInset + tabBar + (if (miniPlayerShown) MiniPlayerHeight else 0.dp) + 14.dp
+                            }
+                        }
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
@@ -1313,11 +1326,11 @@ class MainActivity : FragmentActivity() {
                                 Box {
                                     // The page fades darker toward the tab bar (and the mini player
                                     // above it, when one is showing), like the fade under the title.
-                                    if (shouldShowNavigationBar) {
+                                    // Settings pages have no tab bar: the fade still runs under the mini
+                                    // player, starting at the same point above it. Blackout turns it off.
+                                    if (miniPlayerBlackout && bottomFadeHeight > 14.dp) {
                                         val fadeColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
-                                        val miniPlayerShown = activePlayerConnection != null && !playerBottomSheetState.isDismissed
-                                        val coveredHeight =
-                                            bottomInset + navigationBarHeight + if (miniPlayerShown) MiniPlayerHeight else 0.dp
+                                        val coveredHeight = bottomFadeHeight - 14.dp
                                         Box(
                                             modifier =
                                                 Modifier
@@ -1402,7 +1415,7 @@ class MainActivity : FragmentActivity() {
                                                     val progress = playerBottomSheetState.progress
                                                     alpha =
                                                         if (progress > 0f ||
-                                                            (useNewMiniPlayerDesign && !shouldShowNavigationBar)
+                                                            !shouldShowNavigationBar
                                                         ) {
                                                             0f
                                                         } else {
@@ -1432,7 +1445,7 @@ class MainActivity : FragmentActivity() {
                                             .graphicsLayer {
                                                 val progress = playerBottomSheetState.progress
                                                 alpha =
-                                                    if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar)) 0f else 1f
+                                                    if (progress > 0f || !shouldShowNavigationBar) 0f else 1f
                                             }.background(baseBg),
                                 )
                             }
@@ -1487,7 +1500,16 @@ class MainActivity : FragmentActivity() {
                                     onHomeLongHold = { showAccountDialog = true },
                                 )
                             }
-                            Box(Modifier.weight(1f)) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .then(
+                                        Modifier.bottomEdgeBlur(
+                                            enabled = miniPlayerBlur && bottomFadeHeight > 14.dp && currentRoute != "wrapped",
+                                            startFromBottomPx = { with(density) { bottomFadeHeight.toPx() } },
+                                        ),
+                                    ),
+                            ) {
                                 // NavHost with animations (Material 3 Expressive style)
                                 // Lets album covers grow from a card into the album page.
                                 androidx.compose.animation.SharedTransitionLayout {

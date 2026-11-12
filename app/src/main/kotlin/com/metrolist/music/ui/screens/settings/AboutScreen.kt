@@ -228,8 +228,9 @@ fun AboutScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(windowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+            .windowInsetsPadding(windowInsets.only(WindowInsetsSides.Horizontal))
             .verticalScroll(rememberScrollState())
+            .windowInsetsPadding(windowInsets.only(WindowInsetsSides.Bottom))
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

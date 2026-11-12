@@ -3108,7 +3108,7 @@ private fun PlayerControlButton(
     }
 }
 
-private val DefaultAlbumBackground = Color(0xFF2B2A30)
+internal val DefaultAlbumBackground = Color(0xFF2B2A30)
 
 /**
  * Glass player background: the album cover, centered, enlarged and blurred until only its colors
@@ -3170,7 +3170,7 @@ private fun GlassCoverBackground(
 }
 
 /** Softens an album art color into a calm, mid-dark tone that white text reads well on. */
-private fun albumBackgroundBrush(color: Color): Brush =
+internal fun albumBackgroundBrush(color: Color): Brush =
     Brush.verticalGradient(
         listOf(
             lerp(color, Color.White, 0.06f),

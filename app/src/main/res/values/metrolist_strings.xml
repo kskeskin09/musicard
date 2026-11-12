@@ -446,6 +446,11 @@
     <string name="equalizer_desc">Open the audio equalizer</string>
     <string name="mini_player">Mini-player</string>
     <string name="mini_player_background_style">Mini-player background style</string>
+    <string name="follow_background">Follow background</string>
+    <string name="mini_player_blackout">Blackout</string>
+    <string name="mini_player_blackout_desc">The page darkens toward the mini-player and the tab bar</string>
+    <string name="mini_player_blur">Blur</string>
+    <string name="mini_player_blur_desc">The page blurs toward the mini-player and the tab bar</string>
     <string name="transparent">Transparent</string>
     <string name="mini_player_background_not_available">Unavailable when the new mini-player design is disabled</string>
     <string name="cache_size_warning_title">Hold on!</string>
@@ -1049,7 +1054,7 @@
     <string name="stats_minutes">%1$d min</string>
     <string name="stats_hours_minutes">%1$dh %2$dm</string>
     <string name="stats_empty">Nothing played in this period yet</string>
-    <string name="music_player_appearance">Music player appearance</string>
+    <string name="music_player_appearance">Music player</string>
     <string name="player_background">Player background</string>
     <string name="lyric_style">Lyric style</string>
     <string name="style_classic">Classic</string>
