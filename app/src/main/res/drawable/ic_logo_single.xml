@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Musicard logo glyph. Generated, see LogoUtils.kt. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M38.68 73.19C37.19 69.5 39.8 64.97 44.51 63.06C46.67 62.19 48.89 62.02 50.81 62.45V30.74H57.01V31.38C66.42 33.88 71.46 41.39 69.21 51.74C67.06 46.57 63.42 44 57.01 43.39V70.74H55.75C54.9 73.09 52.8 75.25 49.91 76.42C45.2 78.32 40.17 76.87 38.68 73.19Z" />
+</vector>

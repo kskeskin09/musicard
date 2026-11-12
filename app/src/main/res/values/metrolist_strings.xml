@@ -1167,15 +1167,13 @@
     <string name="import_likes_local_note">Liked songs are saved in Musicard only and are not sent to your YouTube account.</string>
     <string name="logo">Logo</string>
     <string name="logo_desc">The app icon on your home screen</string>
-    <string name="logo_card">Card</string>
+    <string name="logo_single_note">Single note</string>
     <string name="logo_wave">Wave</string>
     <string name="logo_vinyl">Vinyl</string>
-    <string name="logo_notes">Notes</string>
+    <string name="logo_double_note">Double note</string>
     <string name="logo_theme">Logo theme</string>
     <string name="logo_theme_desc">%s · independent of the phone theme</string>
-    <string name="logo_theme_device_desc">Follows your wallpaper colours and themed icons</string>
     <string name="logo_theme_dark">Dark</string>
     <string name="logo_theme_light">Light</string>
-    <string name="logo_theme_device">Device colours</string>
     <string name="history_duration_desc">A song is added to your history and stats after you listen to it for %1$d seconds. Songs you skip sooner are not counted.</string>
 </resources>

@@ -13,16 +13,15 @@ enum class AppLogo(
     @DrawableRes val glyph: Int,
     @StringRes val label: Int,
 ) {
-    CARD(R.drawable.ic_logo_card, R.string.logo_card),
+    SINGLE_NOTE(R.drawable.ic_logo_single, R.string.logo_single_note),
+    DOUBLE_NOTE(R.drawable.ic_logo_double, R.string.logo_double_note),
     WAVE(R.drawable.ic_logo_wave, R.string.logo_wave),
     VINYL(R.drawable.ic_logo_vinyl, R.string.logo_vinyl),
-    NOTES(R.drawable.ic_logo_notes, R.string.logo_notes),
 }
 
 /**
- * Colour of the launcher logo. [BLACK] (dark) and [WHITE] (light) are fixed, so the icon looks
- * the same whatever the phone's theme, wallpaper or themed-icons setting is. [DEVICE] follows
- * the wallpaper colours (Android 12+) and the launcher's themed icons.
+ * Colour of the launcher logo. Both are fixed colours with no monochrome layer, so the icon
+ * looks the same whatever the phone's theme, wallpaper or themed-icons setting is.
  */
 enum class LogoTheme(
     val background: Color,
@@ -31,20 +30,32 @@ enum class LogoTheme(
 ) {
     BLACK(Color(0xFF000000), Color.White, R.string.logo_theme_dark),
     WHITE(Color.White, Color(0xFF000000), R.string.logo_theme_light),
-    DEVICE(Color(0xFF000000), Color.White, R.string.logo_theme_device),
 }
+
+// Matches the alias names in AndroidManifest.xml, e.g. .LogoNotesBlack. The names come from
+// earlier builds (Card was the single note's old name, Notes the double note's) so the enabled
+// alias carries over on update.
+private val AppLogo.aliasPart: String
+    get() = when (this) {
+        AppLogo.SINGLE_NOTE -> "Card"
+        AppLogo.DOUBLE_NOTE -> "Notes"
+        AppLogo.WAVE -> "Wave"
+        AppLogo.VINYL -> "Vinyl"
+    }
 
 object LogoUtils {
     // Aliases are declared in AndroidManifest.xml relative to the namespace, not the application id.
     private const val PACKAGE = "com.metrolist.music"
 
+    // Retired "device colours" aliases; always disabled once the user picks a logo.
+    private val retiredAliases =
+        listOf("MainActivityStatic", "LogoNotesDevice", "LogoWaveDevice", "LogoVinylDevice").map { "$PACKAGE.$it" }
+
     private fun aliasName(logo: AppLogo, theme: LogoTheme): String =
         when {
-            // Legacy names kept so icons pinned by older builds keep working.
-            logo == AppLogo.CARD && theme == LogoTheme.BLACK -> "$PACKAGE.MainActivityAlias"
-            logo == AppLogo.CARD && theme == LogoTheme.DEVICE -> "$PACKAGE.MainActivityStatic"
-            else -> "$PACKAGE.Logo${logo.name.lowercase().replaceFirstChar { it.uppercase() }}" +
-                theme.name.lowercase().replaceFirstChar { it.uppercase() }
+            // Legacy name kept so icons pinned by older builds keep working.
+            logo == AppLogo.SINGLE_NOTE && theme == LogoTheme.BLACK -> "$PACKAGE.MainActivityAlias"
+            else -> "$PACKAGE.Logo${logo.aliasPart}${theme.name.lowercase().replaceFirstChar { it.uppercase() }}"
         }
 
     /** Shows [logo] in [theme] on the home screen and hides every other launcher alias. */
@@ -57,17 +68,13 @@ object LogoUtils {
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
             PackageManager.DONT_KILL_APP,
         )
-        AppLogo.entries.forEach { l ->
-            LogoTheme.entries.forEach { t ->
-                val name = aliasName(l, t)
-                if (name != target) {
-                    pm.setComponentEnabledSetting(
-                        ComponentName(context, name),
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        PackageManager.DONT_KILL_APP,
-                    )
-                }
-            }
+        val others = AppLogo.entries.flatMap { l -> LogoTheme.entries.map { t -> aliasName(l, t) } } + retiredAliases
+        others.filter { it != target }.forEach { name ->
+            pm.setComponentEnabledSetting(
+                ComponentName(context, name),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP,
+            )
         }
     }
 }

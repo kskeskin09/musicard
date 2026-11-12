@@ -3,7 +3,4 @@
 <resources>
     <color name="logo_bg_black">#FF000000</color>
     <color name="logo_bg_white">#FFFFFFFF</color>
-    <!-- "Device" follows the wallpaper colours on Android 12+ (values-v31), black and white before that. -->
-    <color name="logo_bg_device">#FF000000</color>
-    <color name="logo_device_fg">#FFFFFFFF</color>
 </resources>
