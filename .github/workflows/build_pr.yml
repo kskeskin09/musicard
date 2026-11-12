@@ -40,15 +40,33 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # Test builds from this repository are signed with the release key and use
+      # the release application id, so each one installs as an update over the
+      # previous build (or over the release) and keeps the user's data.
+      # PRs from forks get no secrets; they fall back to a separate app with a
+      # per-PR key so they can never replace the real install.
+      - name: Prepare signing key
+        id: signing
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+        run: |
+          if [ -n "$KEYSTORE" ]; then
+            echo "$KEYSTORE" | base64 -d > app/release-signing.keystore
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=pr" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore PR debug keystore
         id: pr_keystore
+        if: steps.signing.outputs.mode == 'pr'
         uses: actions/cache/restore@v6
         with:
           path: app/pr-debug.keystore
           key: pr-debug-keystore-${{ github.event.number }}
 
       - name: Generate PR debug keystore if not cached
-        if: steps.pr_keystore.outputs.cache-hit != 'true'
+        if: steps.signing.outputs.mode == 'pr' && steps.pr_keystore.outputs.cache-hit != 'true'
         run: |
           keytool -genkeypair -v \
             -keystore app/pr-debug.keystore \
@@ -61,14 +79,31 @@ jobs:
             -dname "CN=Musicard PR ${{ github.event.number }},O=Musicard,C=US"
 
       - name: Save PR debug keystore
-        if: steps.pr_keystore.outputs.cache-hit != 'true'
+        if: steps.signing.outputs.mode == 'pr' && steps.pr_keystore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: app/pr-debug.keystore
           key: ${{ steps.pr_keystore.outputs.cache-primary-key }}
 
       # Optimized (R8, non-debuggable) build so the test APK runs as fast as a release.
-      - name: Build GMS Preview APK
+      - name: Build GMS Preview APK (Musicard Nightly)
+        if: steps.signing.outputs.mode == 'release'
+        run: ./gradlew --console=plain assembleGmsPreview --warning-mode summary
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          METROLIST_APPLICATION_ID: com.kskeskin09.musicard
+          METROLIST_APP_NAME: Musicard Nightly
+          METROLIST_BUILD_COMMIT: ${{ github.event.pull_request.head.sha }}
+          METROLIST_DEBUG_KEYSTORE_PATH: release-signing.keystore
+          METROLIST_DEBUG_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          METROLIST_DEBUG_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          METROLIST_DEBUG_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          PULL_REQUEST: "true"
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Build GMS Preview APK (fork PR)
+        if: steps.signing.outputs.mode == 'pr'
         run: ./gradlew --console=plain assembleGmsPreview --warning-mode summary
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -79,8 +114,19 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
+      - name: Rename APK
+        run: |
+          cd app/build/outputs/apk/gms/preview
+          APK=$(ls *.apk | head -1)
+          if [ "${{ steps.signing.outputs.mode }}" = "release" ]; then
+            mv "$APK" "Musicard-Nightly-PR-${{ github.event.number }}.apk"
+          else
+            mv "$APK" "Musicard-PR-${{ github.event.number }}.apk"
+          fi
+          ls -la
+
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: app-universal-debug-pr-${{ github.event.number }}
+          name: ${{ steps.signing.outputs.mode == 'release' && 'Musicard-Nightly' || 'Musicard' }}-PR-${{ github.event.number }}
           path: app/build/outputs/apk/gms/preview/*.apk
