@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Musicard</title>
+<meta name="description" content="Musicard: sade, siyah-beyaz arayüzlü, reklamsız Android müzik uygulaması.">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23000'/%3E%3Ccircle cx='32' cy='32' r='16' fill='none' stroke='%23fff' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #000;
+    --surface: #111;
+    --surface-2: #1c1c1c;
+    --line: #262626;
+    --text: #fff;
+    --muted: #a3a3a3;
+    --faint: #6b6b6b;
+    --tint: #5e3f4f;
+    --tint-2: #a24868;
+    --radius: 28px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(0,0,0,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid transparent; transition: border-color .2s; }
+  nav.scrolled { border-color: var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+  .mark { width: 28px; height: 28px; border-radius: 50%; border: 5px solid #fff; display: grid; place-items: center; }
+  .mark::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+  .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; color: var(--muted); }
+  .nav-links a:hover { color: var(--text); }
+  .lang { display: flex; background: var(--surface-2); border-radius: 999px; padding: 3px; }
+  .lang button { border: 0; background: none; color: var(--muted); font: 600 12px/1 inherit; font-family: inherit; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+  .lang button.on { background: #fff; color: #000; }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 26px; border-radius: 999px; font-weight: 600; font-size: 16px; transition: transform .15s, background .15s; }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: #fff; color: #000; }
+  .btn-primary:hover { background: #e5e5e5; }
+  .btn-ghost { background: var(--surface-2); color: #fff; }
+  .btn-ghost:hover { background: #2a2a2a; }
+  .btn svg { width: 20px; height: 20px; }
+
+  /* hero */
+  .hero { padding: 88px 0 40px; text-align: center; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); padding: 6px 14px; border-radius: 999px; margin-bottom: 28px; }
+  .pill i { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  h1 { font-size: clamp(44px, 8vw, 88px); line-height: 1; letter-spacing: -.045em; font-weight: 800; }
+  h1 .dim { color: var(--faint); }
+  .lead { max-width: 560px; margin: 24px auto 36px; font-size: 18px; color: var(--muted); }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .note { margin-top: 16px; font-size: 13px; color: var(--faint); }
+
+  /* phones */
+  .phones { display: flex; justify-content: center; align-items: flex-end; gap: 28px; padding: 64px 0 24px; perspective: 1400px; text-align: left; }
+  .phone { width: 280px; height: 580px; flex: none; border-radius: 44px; background: #000; border: 1px solid #2a2a2a; box-shadow: 0 0 0 8px #0d0d0d, 0 0 0 9px #2a2a2a, 0 40px 80px -20px rgba(255,255,255,.08); position: relative; overflow: hidden; }
+  .phone.side { transform: translateY(24px) scale(.92); opacity: .9; }
+  .phone::before { content: ""; position: absolute; top: 10px; left: 50%; translate: -50% 0; width: 84px; height: 24px; background: #000; border-radius: 20px; z-index: 5; }
+  .screen { position: absolute; inset: 0; padding: 48px 18px 16px; display: flex; flex-direction: column; }
+
+  /* library screen */
+  .lib-head { display: flex; justify-content: space-between; align-items: center; }
+  .lib-head b { font-size: 32px; letter-spacing: -.03em; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #8a8a8a, #3a3a3a); }
+  .search { margin-top: 14px; height: 40px; border-radius: 999px; background: var(--surface-2); display: flex; align-items: center; padding: 0 14px; gap: 8px; font-size: 12.5px; color: var(--faint); }
+  .search svg { width: 14px; height: 14px; }
+  .chips { display: flex; gap: 6px; margin: 12px 0 6px; }
+  .chip { font-size: 11.5px; font-weight: 600; padding: 7px 12px; border-radius: 999px; background: var(--surface-2); }
+  .chip.on { background: #fff; color: #000; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #161616; }
+  .art { width: 46px; height: 46px; border-radius: 10px; flex: none; }
+  .row .t { font-size: 13.5px; font-weight: 600; }
+  .row .s { font-size: 11.5px; color: var(--muted); }
+  .a-liked { background: #fff; display: grid; place-items: center; }
+  .a-liked svg { width: 18px; height: 18px; }
+  .a1 { background: linear-gradient(135deg, #555, #222); }
+  .a2 { background: conic-gradient(#777 0 25%, #444 0 50%, #999 0 75%, #333 0); }
+  .a3 { background: linear-gradient(135deg, #bbb, #555); border-radius: 50%; }
+  .a4 { background: linear-gradient(160deg, #6a6a6a, #1f1f1f); }
+  .mini { margin-top: auto; height: 56px; border-radius: 999px; background: var(--surface-2); display: flex; align-items: center; gap: 10px; padding: 0 8px; position: relative; overflow: hidden; }
+  .mini .art { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--tint-2), #5a2338); }
+  .mini .t { font-size: 12.5px; font-weight: 600; }
+  .mini .s { font-size: 11px; color: var(--muted); }
+  .mini .ctl { margin-left: auto; margin-right: 10px; display: flex; gap: 14px; }
+  .mini .ctl svg { width: 16px; height: 16px; }
+  .mini::after { content: ""; position: absolute; left: 22px; bottom: 0; width: 38%; height: 2px; background: #fff; border-radius: 2px; }
+  .tabs { margin-top: 8px; height: 52px; border-radius: 999px; background: #121212; display: flex; align-items: center; justify-content: space-around; font-size: 10px; color: var(--faint); font-weight: 600; padding: 0 6px; }
+  .tabs span { padding: 8px 12px; border-radius: 999px; }
+  .tabs .on { background: #2a2a2a; color: #fff; }
+
+  /* player screen */
+  .player { background: linear-gradient(180deg, #6b4659 0%, #4a3140 55%, #3a2633 100%); }
+  .p-art { width: 190px; height: 190px; border-radius: 22px; margin: 18px auto 0; background: radial-gradient(circle at 30% 25%, #d06a8c, #8b2f50 55%, #4d1a2d); box-shadow: 0 24px 50px -10px rgba(0,0,0,.5); }
+  .p-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+  .p-meta b { font-size: 19px; display: block; letter-spacing: -.01em; }
+  .p-meta span { font-size: 13px; color: rgba(255,255,255,.65); }
+  .heart { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; }
+  .heart svg { width: 18px; height: 18px; }
+  .bar { height: 4px; background: rgba(255,255,255,.22); border-radius: 4px; margin-top: 18px; position: relative; }
+  .bar::before { content: ""; position: absolute; inset: 0 66% 0 0; background: #fff; border-radius: 4px; }
+  .times { display: flex; justify-content: space-between; font-size: 10.5px; color: rgba(255,255,255,.55); margin-top: 6px; }
+  .controls { display: flex; justify-content: space-between; align-items: center; margin: 10px 14px 0; }
+  .controls svg { width: 24px; height: 24px; }
+  .play { width: 56px; height: 56px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .play svg { fill: #000; }
+  .sheet { margin: auto -6px 0; background: rgba(255,255,255,.1); border-radius: 22px; padding: 14px 16px 22px; }
+  .sheet-tabs { display: flex; gap: 12px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.5); align-items: center; }
+  .sheet-tabs b { color: #fff; }
+  .sheet-tabs i { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; font-style: normal; font-size: 12px; letter-spacing: 1px; }
+  .sheet p { font-size: 14px; font-weight: 700; margin-top: 12px; }
+  .sheet small { display: block; font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.45); margin-top: 4px; }
+
+  /* lyrics screen */
+  .lyrics { background: linear-gradient(180deg, #3d2c45 0%, #2b2033 100%); }
+  .ly-head { display: flex; align-items: center; gap: 10px; }
+  .ly-head .art { width: 40px; height: 40px; background: linear-gradient(135deg, #b25e88, #5a2a48); }
+  .ly-head b { font-size: 13px; display: block; }
+  .ly-head span { font-size: 11px; color: rgba(255,255,255,.6); }
+  .ly-head i { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.12); }
+  .ly { margin-top: 26px; display: flex; flex-direction: column; gap: 16px; }
+  .ly p { font-size: 20px; line-height: 1.18; font-weight: 800; letter-spacing: -.02em; color: rgba(255,255,255,.28); }
+  .ly p.now { color: #fff; }
+
+  /* sections */
+  section { padding: 120px 0 0; }
+  .eyebrow { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--faint); margin-bottom: 14px; }
+  h2 { font-size: clamp(32px, 5vw, 52px); line-height: 1.05; letter-spacing: -.035em; font-weight: 800; max-width: 680px; }
+  .sub { color: var(--muted); font-size: 17px; margin-top: 16px; max-width: 560px; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 48px; }
+  .card { background: var(--surface); border: 1px solid #1a1a1a; border-radius: var(--radius); padding: 28px; transition: border-color .2s, transform .2s; }
+  .card:hover { border-color: #333; transform: translateY(-2px); }
+  .ico { width: 44px; height: 44px; border-radius: 14px; background: var(--surface-2); display: grid; place-items: center; margin-bottom: 20px; }
+  .ico svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .card h3 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  .card p { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
+
+  .download { margin-top: 120px; background: #fff; color: #000; border-radius: 40px; padding: 72px 48px; text-align: center; }
+  .download h2 { margin: 0 auto; }
+  .download .sub { color: #555; margin: 16px auto 36px; }
+  .download .btn-primary { background: #000; color: #fff; }
+  .download .btn-primary:hover { background: #222; }
+  .download .btn-ghost { background: #ececec; color: #000; }
+  .download .btn-ghost:hover { background: #ddd; }
+  .download .note { color: #777; }
+  .download .note a { text-decoration: underline; text-underline-offset: 3px; }
+
+  footer { margin-top: 96px; border-top: 1px solid var(--line); padding: 36px 0 48px; color: var(--faint); font-size: 13.5px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #444; }
+  footer a:hover { color: #fff; }
+  .foot-links { display: flex; gap: 20px; }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  [data-en] { display: none; }
+  html[lang="en"] [data-tr] { display: none; }
+  html[lang="en"] [data-en] { display: revert; }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .phone.side { display: none; }
+    .nav-links a { display: none; }
+  }
+  @media (max-width: 600px) {
+    .wrap { padding: 0 16px; }
+    .hero { padding-top: 56px; }
+    .grid { grid-template-columns: 1fr; }
+    .download { padding: 56px 24px; border-radius: 32px; }
+    .btn { width: 100%; justify-content: center; }
+    section { padding-top: 88px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="wrap">
+    <a href="#" class="brand"><span class="mark"></span>Musicard</a>
+    <div class="nav-links">
+      <a href="#features"><span data-tr>Özellikler</span><span data-en>Features</span></a>
+      <a href="#download"><span data-tr>İndir</span><span data-en>Download</span></a>
+      <a href="https://github.com/kskeskin09/musicard">GitHub</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="tr" class="on">TR</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="pill"><i></i><span data-tr>Android için ücretsiz ve açık kaynak</span><span data-en>Free and open source for Android</span></div>
+    <h1><span data-tr>Müzik,<br><span class="dim">sade haliyle.</span></span><span data-en>Music,<br><span class="dim">kept simple.</span></span></h1>
+    <p class="lead">
+      <span data-tr>Musicard, siyah-beyaz ve sade bir arayüzle müziğe odaklanan, reklamsız bir YouTube Music istemcisi. Kapak rengine bürünen oynatıcı, kart halinde şarkı sözleri ve dinleme istatistikleri bir arada.</span>
+      <span data-en>Musicard is an ad-free YouTube Music client with a clean black-and-white interface. A player that takes on the album's colour, lyrics in a card, and your listening stats, all in one place.</span>
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/kskeskin09/musicard/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>
+        <span data-tr>APK indir</span><span data-en>Download APK</span>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/kskeskin09/musicard">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 00-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 015.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0012 .5z"/></svg>
+        <span data-tr>Kaynak kod</span><span data-en>Source code</span>
+      </a>
+    </div>
+    <p class="note"><span data-tr>Android 8.0 ve üzeri</span><span data-en>Android 8.0 and up</span></p>
+
+    <div class="phones reveal">
+      <!-- Library -->
+      <div class="phone side" aria-hidden="true">
+        <div class="screen">
+          <div class="lib-head"><b>Library</b><span class="avatar"></span></div>
+          <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Search songs, artists, albums</div>
+          <div class="chips"><span class="chip on">Playlists</span><span class="chip">Artists</span><span class="chip">Albums</span></div>
+          <div class="row"><span class="art a-liked"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.1 0 3.6 1.2 5.2 3 1.6-1.8 3.1-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z"/></svg></span><div><div class="t">Liked</div><div class="s">Playlist</div></div></div>
+          <div class="row"><span class="art a2"></span><div><div class="t">Yol şarkıları</div><div class="s">Playlist · 32 songs</div></div></div>
+          <div class="row"><span class="art a1"></span><div><div class="t">Teoman</div><div class="s">Album · 11 songs</div></div></div>
+          <div class="row"><span class="art a3"></span><div><div class="t">Duman</div><div class="s">Artist · 24 songs</div></div></div>
+          <div class="mini"><span class="art"></span><div><div class="t">Senden Daha Güzel</div><div class="s">Duman</div></div><div class="ctl"><svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div></div>
+          <div class="tabs"><span>Home</span><span>Explore</span><span class="on">Library</span><span>Search</span></div>
+        </div>
+      </div>
+
+      <!-- Player -->
+      <div class="phone" aria-hidden="true">
+        <div class="screen player">
+          <div class="p-art"></div>
+          <div class="p-meta"><div><b>Senden Daha Güzel</b><span>Duman</span></div><span class="heart"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.1 0 3.6 1.2 5.2 3 1.6-1.8 3.1-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z"/></svg></span></div>
+          <div class="bar"></div>
+          <div class="times"><span>1:24</span><span>4:12</span></div>
+          <div class="controls">
+            <svg viewBox="0 0 24 24" fill="#fff"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+            <span class="play"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></span>
+            <svg viewBox="0 0 24 24" fill="#fff"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+          </div>
+          <div class="sheet">
+            <div class="sheet-tabs"><b>Lyrics</b><span>Up next</span><i>•••</i></div>
+            <p>Senden daha güzel</p>
+            <small>Bir şey yok bu dünyada</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lyrics -->
+      <div class="phone side" aria-hidden="true">
+        <div class="screen lyrics">
+          <div class="ly-head"><span class="art"></span><div><b>Senden Daha Güzel</b><span>Duman</span></div><i></i></div>
+          <div class="ly">
+            <p>Kaybolmuşum bir zaman</p>
+            <p>Gözlerinde yorgun</p>
+            <p class="now">Senden daha güzel</p>
+            <p>Bir şey yok bu dünyada</p>
+            <p>Ne zaman baksam</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="features">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span data-tr>Özellikler</span><span data-en>Features</span></p>
+        <h2><span data-tr>Gereken her şey, fazlası değil.</span><span data-en>Everything you need, nothing more.</span></h2>
+        <p class="sub"><span data-tr>Gürültüsüz bir arayüz, müziğin önüne geçmeyen detaylar.</span><span data-en>A quiet interface, with details that never get in the way of the music.</span></p>
+      </div>
+      <div class="grid">
+        <div class="card reveal">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z" fill="#fff"/></svg></div>
+          <h3><span data-tr>Kapağa uyan oynatıcı</span><span data-en>Album-tinted player</span></h3>
+          <p><span data-tr>Çalan şarkının kapak rengi, oynatıcının ve sıranın tamamına yayılır.</span><span data-en>The cover's colour flows through the whole player and queue.</span></p>
+        </div>
+        <div class="card reveal">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></div>
+          <h3><span data-tr>Kart halinde sözler</span><span data-en>Lyrics in a card</span></h3>
+          <p><span data-tr>Senkron sözler oynatıcının altında; yukarı çekince tam ekrana büyür.</span><span data-en>Synced lyrics sit under the player and grow to full screen with a swipe.</span></p>
+        </div>
+        <div class="card reveal">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+          <h3><span data-tr>Dinleme istatistikleri</span><span data-en>Listening stats</span></h3>
+          <p><span data-tr>En çok dinlediklerin, dinleme serin ve profil kartın tek bakışta.</span><span data-en>Your top tracks, listening streak and profile card at a glance.</span></p>
+        </div>
+        <div class="card reveal">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div>
+          <h3><span data-tr>Çevrimdışı dinle</span><span data-en>Listen offline</span></h3>
+          <p><span data-tr>Şarkıları indir, internet olmadan da çal.</span><span data-en>Download songs and play them without a connection.</span></p>
+        </div>
+        <div class="card reveal">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg></div>
+          <h3><span data-tr>Düzenli kütüphane</span><span data-en>A tidy library</span></h3>
+          <p><span data-tr>Filtreler, sıralama ve sabitleme ile istediğin listeyi hemen bul.</span><span data-en>Filters, sorting and pinning put the right playlist one tap away.</span></p>
+        </div>
+        <div class="card reveal">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg></div>
+          <h3><span data-tr>Reklamsız, açık kaynak</span><span data-en>Ad-free and open source</span></h3>
+          <p><span data-tr>Reklam yok, takip yok. Kodun tamamı GitHub'da.</span><span data-en>No ads, no tracking. All of the code is on GitHub.</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="download reveal">
+        <p class="eyebrow"><span data-tr>İndir</span><span data-en>Download</span></p>
+        <h2><span data-tr>Hemen dinlemeye başla.</span><span data-en>Start listening now.</span></h2>
+        <p class="sub"><span data-tr>Son sürümü GitHub Releases'ten indir. Chromecast kullanıyorsan Google Cast'li sürümü seç.</span><span data-en>Get the latest version from GitHub Releases. Pick the Google Cast build if you use Chromecast.</span></p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard.apk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>
+            Musicard.apk
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard-with-Google-Cast.apk">
+            <span data-tr>Google Cast'li sürüm</span><span data-en>With Google Cast</span>
+          </a>
+        </div>
+        <p class="note"><a href="https://github.com/kskeskin09/musicard/releases"><span data-tr>Tüm sürümler ve değişiklikler</span><span data-en>All releases and changelogs</span></a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      <span data-tr>Musicard, <a href="https://github.com/MetrolistGroup/Metrolist">Metrolist</a> projesinin bir fork'udur ve <a href="https://github.com/kskeskin09/musicard/blob/main/LICENSE">GPL-3.0</a> lisansıyla dağıtılır. YouTube Music ile bağlantılı değildir.</span>
+      <span data-en>Musicard is a fork of <a href="https://github.com/MetrolistGroup/Metrolist">Metrolist</a>, licensed under the <a href="https://github.com/kskeskin09/musicard/blob/main/LICENSE">GPL-3.0</a>. Not affiliated with YouTube Music.</span>
+    </p>
+    <div class="foot-links">
+      <a href="https://github.com/kskeskin09/musicard">GitHub</a>
+      <a href="https://github.com/kskeskin09/musicard/releases">Releases</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var buttons = document.querySelectorAll('[data-lang]');
+    function setLang(lang) {
+      root.lang = lang;
+      buttons.forEach(function (b) { b.classList.toggle('on', b.dataset.lang === lang); });
+      try { localStorage.setItem('lang', lang); } catch (e) {}
+    }
+    var saved = null;
+    try { saved = localStorage.getItem('lang'); } catch (e) {}
+    if (saved === 'tr' || saved === 'en') setLang(saved);
+    else if (!/^tr/i.test(navigator.language || '')) setLang('en');
+    buttons.forEach(function (b) { b.addEventListener('click', function () { setLang(b.dataset.lang); }); });
+
+    var nav = document.getElementById('nav');
+    addEventListener('scroll', function () { nav.classList.toggle('scrolled', scrollY > 8); }, { passive: true });
+
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+      }, { threshold: 0.12 });
+      document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+    } else {
+      document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+    }
+  })();
+</script>
+</body>
+</html>
