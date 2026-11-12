@@ -940,4 +940,25 @@
     <string name="logo_theme_dark">Koyu</string>
     <string name="logo_theme_light">Aydınlık</string>
     <string name="history_duration_desc">Bir şarkı %1$d saniye dinlendikten sonra geçmişine ve istatistiklerine eklenir. Daha önce geçtiğin şarkılar sayılmaz.</string>
+    <string name="battery_optimization">Pil optimizasyonu</string>
+    <string name="battery_optimization_summary">Pil %%%1$d altına inince ağır efektleri kapatır</string>
+    <string name="battery_optimization_enable_desc">Pil sınırın altına inince devreye girer. Şarj olurken girmez.</string>
+    <string name="battery_optimization_threshold">Şarj alt sınırı: %%%1$d</string>
+    <string name="battery_optimization_threshold_desc">Bu seviyenin altında efektler kısılır</string>
+    <string name="battery_optimization_follow_system">Sistem pil tasarrufu açıkken de</string>
+    <string name="battery_optimization_follow_system_desc">Telefonun kendi pil tasarrufu modunu takip et</string>
+    <string name="battery_optimization_turn_off">Optimizasyonda kapatılacaklar</string>
+    <string name="battery_optimization_status_active">Şu an: %%%1$d · optimizasyon açık</string>
+    <string name="battery_optimization_status_idle">Şu an: %%%1$d · optimizasyon bekliyor</string>
+    <string name="battery_optimization_status_charging">Şu an: %%%1$d · şarj oluyor</string>
+    <string name="battery_optimization_status_off">Optimizasyon kapalı</string>
+    <string name="battery_optimization_status_desc">Kayıtlı ayarların değişmez; pil toparlanınca ya da şarja takınca efektler geri gelir.</string>
+    <string name="battery_opt_blur">Bulanıklık efektleri</string>
+    <string name="battery_opt_blur_desc">Alt kenar blur, cam ve bulanık oynatıcı arka planı, söz blur</string>
+    <string name="battery_opt_dynamic_colors">Dinamik renkler</string>
+    <string name="battery_opt_dynamic_colors_desc">Kapaktan alınan uygulama renkleri</string>
+    <string name="battery_opt_lyrics_animations">Şarkı sözü animasyonları</string>
+    <string name="battery_opt_lyrics_animations_desc">Kelime animasyonları ve parlama sade sözlere döner</string>
+    <string name="battery_opt_refresh_rate">Yüksek yenileme hızı</string>
+    <string name="battery_opt_refresh_rate_desc">Ekran 60 Hz\'e düşürülür</string>
 </resources>

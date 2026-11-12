@@ -765,7 +765,8 @@ fun CompactLyrics(
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val lyricsTextPosition by rememberEnumPreference(LyricsTextPositionKey, LyricsPosition.CENTER)
     val modern = rememberEnumPreference(LyricStyleKey, LyricStyle.CLASSIC).value == LyricStyle.MODERN
-    val lyricsBlur by rememberPreference(LyricsBlurKey, false)
+    val lyricsBlurPreference by rememberPreference(LyricsBlurKey, false)
+    val lyricsBlur = lyricsBlurPreference && !com.metrolist.music.utils.LocalBatterySaver.current.blur
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
     val allLines =
         remember(lyrics) {
