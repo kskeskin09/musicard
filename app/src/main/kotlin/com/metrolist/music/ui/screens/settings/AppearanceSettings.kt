@@ -94,6 +94,8 @@ import com.metrolist.music.constants.MiniPlayerBackgroundStyle
 import com.metrolist.music.constants.MiniPlayerBackgroundStyleKey
 import com.metrolist.music.constants.MiniPlayerBlackoutKey
 import com.metrolist.music.constants.MiniPlayerBlurKey
+import com.metrolist.music.constants.MiniPlayerEdgeEffect
+import com.metrolist.music.constants.MiniPlayerEdgeEffectKey
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerButtonsStyle
@@ -212,6 +214,10 @@ fun AppearanceSettings(
     val (lyricStyle, onLyricStyleChange) =
         rememberEnumPreference(LyricStyleKey, defaultValue = LyricStyle.CLASSIC)
     val (lyricsBlur, onLyricsBlurChange) = rememberPreference(LyricsBlurKey, defaultValue = false)
+    val (lyricsBlurKeepNeighbors, onLyricsBlurKeepNeighborsChange) =
+        rememberPreference(com.metrolist.music.constants.LyricsBlurKeepNeighborsKey, defaultValue = true)
+    val (lyricsBlurStrength, onLyricsBlurStrengthChange) =
+        rememberPreference(com.metrolist.music.constants.LyricsBlurStrengthKey, defaultValue = 1f)
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -603,6 +609,29 @@ fun AppearanceSettings(
                     PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
                 }
             },
+        )
+    }
+
+    val (oldMiniPlayerBlackout, _) = rememberPreference(MiniPlayerBlackoutKey, defaultValue = true)
+    val (oldMiniPlayerBlur, _) = rememberPreference(MiniPlayerBlurKey, defaultValue = false)
+    val (miniPlayerEdgeEffect, onMiniPlayerEdgeEffectChange) =
+        rememberEnumPreference(
+            MiniPlayerEdgeEffectKey,
+            defaultValue = MiniPlayerEdgeEffect.fromOld(oldMiniPlayerBlackout, oldMiniPlayerBlur),
+        )
+    var showMiniPlayerEdgeEffectDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showMiniPlayerEdgeEffectDialog) {
+        EnumDialog(
+            onDismiss = { showMiniPlayerEdgeEffectDialog = false },
+            onSelect = {
+                onMiniPlayerEdgeEffectChange(it)
+                showMiniPlayerEdgeEffectDialog = false
+            },
+            title = stringResource(R.string.mini_player_edge_effect),
+            current = miniPlayerEdgeEffect,
+            values = MiniPlayerEdgeEffect.values().toList(),
+            valueText = { miniPlayerEdgeEffectText(it) },
         )
     }
 
@@ -1162,15 +1191,62 @@ fun AppearanceSettings(
                         },
                         onClick = { onLyricsBlurChange(!lyricsBlur) },
                     ),
-                ),
+                ) +
+                    if (lyricsBlur) {
+                        listOf(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.lyrics),
+                                title = { Text(stringResource(R.string.lyrics_blur_keep_neighbors)) },
+                                description = { Text(stringResource(R.string.lyrics_blur_keep_neighbors_desc)) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = lyricsBlurKeepNeighbors,
+                                        onCheckedChange = onLyricsBlurKeepNeighborsChange,
+                                        thumbContent = {
+                                            Icon(
+                                                painter =
+                                                    painterResource(
+                                                        id = if (lyricsBlurKeepNeighbors) R.drawable.check else R.drawable.close,
+                                                    ),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                                            )
+                                        },
+                                    )
+                                },
+                                onClick = { onLyricsBlurKeepNeighborsChange(!lyricsBlurKeepNeighbors) },
+                            ),
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.blur_on),
+                                title = {
+                                    Text(
+                                        stringResource(
+                                            R.string.lyrics_blur_strength,
+                                            (lyricsBlurStrength * 100).roundToInt(),
+                                        ),
+                                    )
+                                },
+                                description = {
+                                    // The new value is saved when the finger lifts.
+                                    var tempStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
+                                    StyledSlider(
+                                        value = tempStrength,
+                                        onValueChange = { tempStrength = it },
+                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempStrength) },
+                                        valueRange = 0.5f..2f,
+                                        steps = 5,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                },
+                            ),
+                        )
+                    } else {
+                        emptyList()
+                    },
         )
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        val (miniPlayerBlackout, onMiniPlayerBlackoutChange) =
-            rememberPreference(MiniPlayerBlackoutKey, defaultValue = true)
-        val (miniPlayerBlur, onMiniPlayerBlurChange) =
-            rememberPreference(MiniPlayerBlurKey, defaultValue = false)
 
         Material3SettingsGroup(
             title = stringResource(id = R.string.mini_player),
@@ -1191,48 +1267,10 @@ fun AppearanceSettings(
                         onClick = { showMiniPlayerBackgroundDialog = true },
                     ),
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.contrast),
-                        title = { Text(stringResource(R.string.mini_player_blackout)) },
-                        description = { Text(stringResource(R.string.mini_player_blackout_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = miniPlayerBlackout,
-                                onCheckedChange = onMiniPlayerBlackoutChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (miniPlayerBlackout) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onMiniPlayerBlackoutChange(!miniPlayerBlackout) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.blur_on),
-                        title = { Text(stringResource(R.string.mini_player_blur)) },
-                        description = { Text(stringResource(R.string.mini_player_blur_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = miniPlayerBlur,
-                                onCheckedChange = onMiniPlayerBlurChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (miniPlayerBlur) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onMiniPlayerBlurChange(!miniPlayerBlur) },
+                        icon = painterResource(if (miniPlayerEdgeEffect == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
+                        title = { Text(stringResource(R.string.mini_player_edge_effect)) },
+                        description = { Text(miniPlayerEdgeEffectText(miniPlayerEdgeEffect)) },
+                        onClick = { showMiniPlayerEdgeEffectDialog = true },
                     ),
                 ),
         )
@@ -1834,4 +1872,12 @@ private fun sliderStyleName(style: SliderStyle): String =
     when (style) {
         SliderStyle.SLIM -> stringResource(R.string.slider_style_classic)
         SliderStyle.DEFAULT -> stringResource(R.string.slider_style_old)
+    }
+
+@Composable
+private fun miniPlayerEdgeEffectText(effect: MiniPlayerEdgeEffect): String =
+    when (effect) {
+        MiniPlayerEdgeEffect.BLACKOUT -> stringResource(R.string.mini_player_blackout)
+        MiniPlayerEdgeEffect.BLUR -> stringResource(R.string.mini_player_blur)
+        MiniPlayerEdgeEffect.NONE -> stringResource(R.string.mini_player_edge_none)
     }

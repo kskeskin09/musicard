@@ -457,6 +457,8 @@
     <string name="mini_player_blackout">Blackout</string>
     <string name="mini_player_blackout_desc">The page darkens toward the mini-player and the tab bar</string>
     <string name="mini_player_blur">Blur</string>
+    <string name="mini_player_edge_effect">Edge effect</string>
+    <string name="mini_player_edge_none">Nothing</string>
     <string name="mini_player_blur_desc">The page blurs toward the mini-player and the tab bar</string>
     <string name="transparent">Transparent</string>
     <string name="mini_player_background_not_available">Unavailable when the new mini-player design is disabled</string>
@@ -1076,6 +1078,9 @@
     <string name="style_glass">Glass</string>
     <string name="style_modern">Modern</string>
     <string name="lyrics_blur">Lyrics blur</string>
+    <string name="lyrics_blur_keep_neighbors">Keep nearby lines clear</string>
+    <string name="lyrics_blur_keep_neighbors_desc">The lines just before and after the current one are not blurred</string>
+    <string name="lyrics_blur_strength">Blur strength: %1$d%%</string>
     <string name="lyrics_blur_desc">Blur lines the farther they are from the current one. Requires Android 12</string>
     <string name="like_icon_color">Like icon color</string>
     <string name="like_icon_color_white">White</string>
@@ -1109,7 +1114,7 @@
     <string name="edit_home_screen">Edit home screen</string>
     <string name="edit_home_screen_desc">Change the order of the sections on Home</string>
     <string name="edit_home_screen_hint">Hold a section and drag it to move it. Home shows them in this order.</string>
-    <string name="edit_home_screen_random_note">When on, only our own sections keep this order and the rest is shuffled</string>
+    <string name="edit_home_screen_random_note">When on, the sections are shuffled again on every refresh. Moving a section turns it off</string>
     <string name="edit_home_screen_reset">Reset to default</string>
     <string name="home_section_your_mixes">Your mixes</string>
     <string name="home_section_similar">Similar to…</string>

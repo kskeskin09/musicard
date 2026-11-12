@@ -562,6 +562,19 @@ fun LocalPlaylistScreen(
                                         sortDescending -> LibrarySortOption.ADDED_NEWEST
                                         else -> LibrarySortOption.ADDED_OLDEST
                                     }
+                                // The lock only matters for the Custom order: open, songs can be held and
+                                // moved. It sits left of the sort button.
+                                if (editable && sortType == PlaylistSongSortType.CUSTOM) {
+                                    IconButton(
+                                        onClick = { locked = !locked },
+                                        modifier = Modifier.padding(end = 4.dp),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
+                                            contentDescription = null,
+                                        )
+                                    }
+                                }
                                 LibrarySortButton(
                                     selected = sortOption,
                                     onSelect = { option ->
@@ -587,18 +600,6 @@ fun LocalPlaylistScreen(
                                     maxLines = 1,
                                     modifier = Modifier.weight(1f),
                                 )
-                                // The lock only matters for the Custom order: open, songs can be held and moved.
-                                if (editable && sortType == PlaylistSongSortType.CUSTOM) {
-                                    IconButton(
-                                        onClick = { locked = !locked },
-                                        modifier = Modifier.padding(horizontal = 6.dp),
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
-                                            contentDescription = null,
-                                        )
-                                    }
-                                }
                             }
                         }
                     }

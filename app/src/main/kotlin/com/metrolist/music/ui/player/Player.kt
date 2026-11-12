@@ -981,7 +981,9 @@ fun BottomSheetPlayer(
         cardControlsShown = true
         if (cardOpen && cardPage == LyricsPage) {
             delay(ControlsAutoHideMillis)
+            // The controls hide and the lyrics find the current line again at the same moment.
             cardControlsShown = false
+            lyricsFollow.paused = false
         }
     }
 
@@ -2418,6 +2420,8 @@ fun BottomSheetPlayer(
                                     }.graphicsLayer {
                                         translationY = cardExpand * playbackTravelPx()
                                         alpha = cardControlsAlpha
+                                        // They slide down a little as they fade out (and back up).
+                                        translationY += (1f - cardControlsAlpha) * 16.dp.toPx()
                                         // Hidden controls are moved away so they don't catch touches.
                                         if (cardControlsAlpha == 0f) translationY += OffscreenOffsetPx
                                     },

@@ -23,7 +23,26 @@ val PureBlackMiniPlayerKey = booleanPreferencesKey("pureBlackMiniPlayer")
 val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
 val MiniPlayerBlackoutKey = booleanPreferencesKey("miniPlayerBlackout")
 val MiniPlayerBlurKey = booleanPreferencesKey("miniPlayerBlur")
+val MiniPlayerEdgeEffectKey = stringPreferencesKey("miniPlayerEdgeEffect")
 val NotificationButtonsKey = stringPreferencesKey("notificationButtons")
+
+// What the page does where it meets the mini player and the tab bar. Only one can be on at a time.
+// Before this setting there were two switches, so the old Blackout / Blur values give the default.
+enum class MiniPlayerEdgeEffect {
+    BLACKOUT,
+    BLUR,
+    NONE,
+    ;
+
+    companion object {
+        fun fromOld(blackout: Boolean, blur: Boolean) =
+            when {
+                blur -> BLUR
+                blackout -> BLACKOUT
+                else -> NONE
+            }
+    }
+}
 
 enum class MiniPlayerBackgroundStyle {
     DEFAULT,
@@ -441,6 +460,8 @@ enum class PlayerCardBackground {
 
 val LyricStyleKey = stringPreferencesKey("lyricStyle")
 val LyricsBlurKey = booleanPreferencesKey("lyricsBlur")
+val LyricsBlurKeepNeighborsKey = booleanPreferencesKey("lyricsBlurKeepNeighbors")
+val LyricsBlurStrengthKey = floatPreferencesKey("lyricsBlurStrength")
 
 enum class LyricStyle {
     CLASSIC,

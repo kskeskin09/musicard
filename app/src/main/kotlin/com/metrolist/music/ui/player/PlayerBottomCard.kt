@@ -135,6 +135,7 @@ import com.metrolist.music.constants.PlayerHorizontalPadding
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import com.metrolist.music.utils.rememberEnumPreference
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -222,11 +223,18 @@ fun PlayerBottomCard(
                     .fillMaxWidth()
                     // Opened, the row moves down below the art and title header and stays usable.
                     .padding(top = (statusTop + OpenHeaderHeight) * expandFraction().coerceIn(0f, 1f))
-                    .padding(start = 18.dp, end = 16.dp, top = CardHeaderTopPadding)
+                    // While the row hides it gives its height to the lyrics below, so they move up
+                    // into its place, and it slides down a little as it fades.
+                    .layout { measurable, constraints ->
+                        val a = headerAlpha().coerceIn(0f, 1f)
+                        val placeable = measurable.measure(constraints)
+                        layout(placeable.width, (placeable.height * a).roundToInt()) { placeable.place(0, 0) }
+                    }.padding(start = 18.dp, end = 16.dp, top = CardHeaderTopPadding)
                     .height(CardHeaderRowHeight)
                     .graphicsLayer {
                         val a = headerAlpha()
                         alpha = a
+                        translationY = (1f - a) * 10.dp.toPx()
                         // Hidden, the row is moved away so it doesn't catch touches.
                         if (a == 0f) translationY = -100_000f
                     },
@@ -671,7 +679,8 @@ private fun UpNextRow(
                 .then(
                     when {
                         dragging -> Modifier.background(contentColor.copy(alpha = 0.16f))
-                        isCurrent -> Modifier.background(contentColor.copy(alpha = 0.08f))
+                        // No tint on the playing row: scrolled just past it, its edge showed as a
+                        // faint line at the top of the list. The moving bars on its cover remain.
                         else -> Modifier
                     },
                 ).then(dragModifier)
@@ -767,6 +776,8 @@ fun CompactLyrics(
     val modern = rememberEnumPreference(LyricStyleKey, LyricStyle.CLASSIC).value == LyricStyle.MODERN
     val lyricsBlurPreference by rememberPreference(LyricsBlurKey, false)
     val lyricsBlur = lyricsBlurPreference && !com.metrolist.music.utils.LocalBatterySaver.current.blur
+    val lyricsBlurKeepNeighbors by rememberPreference(com.metrolist.music.constants.LyricsBlurKeepNeighborsKey, true)
+    val lyricsBlurStrength by rememberPreference(com.metrolist.music.constants.LyricsBlurStrengthKey, 1f)
     val synced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
     val allLines =
         remember(lyrics) {
@@ -838,7 +849,10 @@ fun CompactLyrics(
             var anchorPos = 0L
             var anchorFrameMs = 0L
             while (isActive) {
-                val smooth = isPlaying && (hasWordTimings || activeGap != null)
+                // While the audio output changes the song is held for a moment; the lyrics wait too.
+                val smooth =
+                    isPlaying && (hasWordTimings || activeGap != null) &&
+                        !com.metrolist.music.ui.component.AudioOutputChoice.switching.value
                 if (smooth) {
                     androidx.compose.runtime.withFrameMillis { frameMs ->
                         val sample = positionProvider() + lyricsOffset
@@ -933,8 +947,10 @@ fun CompactLyrics(
     }
     // After the user scrolls the lyrics, they find the current line again by themselves once the
     // list has been left alone for three seconds.
+    // In the player, the follow state is shared and the lyrics come back together with the hiding
+    // controls, three seconds after the last touch, so this timer is only for other callers.
     LaunchedEffect(followPaused) {
-        if (!followPaused) return@LaunchedEffect
+        if (!followPaused || followState != null) return@LaunchedEffect
         snapshotFlow { listState.isScrollInProgress }.collectLatest { scrolling ->
             if (!scrolling) {
                 delay(AutoReturnMillis)
@@ -1134,13 +1150,26 @@ fun CompactLyrics(
                     val blurRadius by animateDpAsState(
                         targetValue =
                             if (lyricsBlur && synced && !followPaused) {
-                                val away = abs(index - currentIndex)
+                                // During a break the dots count as the current line, so one line
+                                // above and one below them stay clear, like around a sung line.
+                                val gap = activeGap
+                                val away =
+                                    if (gap != null) {
+                                        if (index <= gap.afterLine) gap.afterLine - index + 1 else index - gap.afterLine
+                                    } else {
+                                        abs(index - currentIndex)
+                                    }
                                 val compactBlur = LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps)
                                 // Opened, the text is much larger, so the same look needs a wider
-                                // blur. The lines right next to the current one stay easy to read.
+                                // blur. The lines right next to the current one stay easy to read
+                                // unless that is switched off in the settings.
                                 val fullBlur =
-                                    if (away <= 1) LyricsBlurStep * away else compactBlur * FullLyricsBlurScale
-                                lerp(compactBlur, fullBlur, fraction)
+                                    if (away <= 1 && lyricsBlurKeepNeighbors) {
+                                        LyricsBlurStep * away
+                                    } else {
+                                        LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps) * FullLyricsBlurScale
+                                    }
+                                lerp(compactBlur, fullBlur, fraction) * lyricsBlurStrength
                             } else {
                                 0.dp
                             },

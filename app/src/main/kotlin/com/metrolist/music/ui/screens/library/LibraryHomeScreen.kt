@@ -53,6 +53,7 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
@@ -325,10 +326,9 @@ fun LibraryHomeScreen(
                         onSelect = { kind = if (kind == it) null else it },
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(Modifier.width(10.dp))
-                    LibrarySortButton(selected = sortOption, onSelect = { sortOption = it })
+                    // In the Custom order the lock sits left of the sort button.
                     if (sortOption == LibrarySortOption.CUSTOM) {
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(10.dp))
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier =
@@ -346,6 +346,8 @@ fun LibraryHomeScreen(
                             )
                         }
                     }
+                    Spacer(Modifier.width(if (sortOption == LibrarySortOption.CUSTOM) 8.dp else 10.dp))
+                    LibrarySortButton(selected = sortOption, onSelect = { sortOption = it })
                 }
             }
 
@@ -774,9 +776,15 @@ private fun LibraryRow(
 @Composable
 private fun AutoPlaylistCover(auto: AutoPlaylist) {
     // Liked stands out: filled with the text color, heart in the background color.
-    // Liked: the light tile takes on a soft red.
-    val background = if (auto.highlighted) androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.onSurface, androidx.compose.ui.graphics.Color(0xFFF0455A), 0.14f) else MaterialTheme.colorScheme.surfaceContainerHigh
-    val tint = if (auto.highlighted) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
+    // Liked: a pure white tile (on a light theme the heart turns black so it still shows).
+    val background = if (auto.highlighted) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.surfaceContainerHigh
+    val surface = MaterialTheme.colorScheme.surface
+    val tint =
+        when {
+            !auto.highlighted -> MaterialTheme.colorScheme.onSurface
+            surface.luminance() > 0.5f -> androidx.compose.ui.graphics.Color.Black
+            else -> surface
+        }
     Box(
         contentAlignment = Alignment.Center,
         modifier =

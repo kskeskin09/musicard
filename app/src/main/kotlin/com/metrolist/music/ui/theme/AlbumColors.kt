@@ -233,20 +233,37 @@ fun TintedPageColors(
 object PageFadeColors {
     private class Entry(color: Color) {
         var color by mutableStateOf(color)
+
+        // Set once the page starts going away (it was shown and is now being left), so the
+        // colors switch back right as the page change starts instead of after it ends.
+        var leaving by mutableStateOf(false)
     }
 
     private val entries = mutableStateListOf<Entry>()
 
     val current: Color?
-        get() = entries.lastOrNull()?.color
+        get() = entries.lastOrNull { !it.leaving }?.color
 
     @Composable
     fun Register(tint: Color) {
         val entry = remember { Entry(tint) }
         SideEffect { entry.color = tint }
-        DisposableEffect(entry) {
+        val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+        DisposableEffect(entry, lifecycle) {
             entries.add(entry)
-            onDispose { entries.remove(entry) }
+            val observer =
+                androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    when (event) {
+                        androidx.lifecycle.Lifecycle.Event.ON_RESUME -> entry.leaving = false
+                        androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> entry.leaving = true
+                        else -> Unit
+                    }
+                }
+            lifecycle.addObserver(observer)
+            onDispose {
+                lifecycle.removeObserver(observer)
+                entries.remove(entry)
+            }
         }
     }
 }
