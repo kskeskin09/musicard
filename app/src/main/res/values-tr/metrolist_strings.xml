@@ -964,6 +964,4 @@
     <string name="battery_opt_lyrics_animations_desc">Kelime animasyonları ve parlama sade sözlere döner</string>
     <string name="battery_opt_refresh_rate">Yüksek yenileme hızı</string>
     <string name="battery_opt_refresh_rate_desc">Ekran 60 Hz\'e düşürülür</string>
-    <string name="ai_auto_translate">Sözleri otomatik çevir</string>
-    <string name="ai_auto_translate_desc">Hedef dilden farklı dildeki sözler açıldığında çevrilir. Zaten hedef dildeki sözler atlanır</string>
 </resources>
