@@ -1304,7 +1304,8 @@ private fun SweepingWordsLine(
                     val lifted = if (liftSungPart) liftedLetters(textLayout, words, built.second, positionSec) else emptyList()
                     val liftedPath = Path()
                     lifted.forEach { liftedPath.addRect(it.box) }
-                    clipPath(liftedPath, clipOp = ClipOp.Difference) {
+                    // Same for the lifted letters: only cut them out when there are any.
+                    clipPath(if (liftedPath.isEmpty) FarAwayPath else liftedPath, clipOp = ClipOp.Difference) {
                     this@drawWithContent.drawContent()
                     val sungPath = Path()
                     words.forEachIndexed { index, word ->
@@ -1334,12 +1335,14 @@ private fun SweepingWordsLine(
                             // Only the part already sung lights up: fully bright behind a soft edge
                             // that trails the fill point, so nothing ahead of it brightens early.
                             val edgeStart = (fillX - edgeWidthPx).coerceAtLeast(left)
-                            if (edgeStart > left) {
+                            // Clips thinner than a pixel are skipped (nothing to show, and a clip that
+                            // rounds to nothing is not reliable everywhere).
+                            if (edgeStart - left >= 1f) {
                                 clipRect(left, top, edgeStart, bottom) {
                                     drawText(textLayout, color = bright)
                                 }
                             }
-                            if (fillX > edgeStart) {
+                            if (fillX - edgeStart >= 1f) {
                                 val strips = 8
                                 val stripWidth = (fillX - edgeStart) / strips
                                 for (i in 0 until strips) {
@@ -1353,8 +1356,14 @@ private fun SweepingWordsLine(
                             }
                         }
                     }
-                    clipPath(sungPath) {
-                        drawText(textLayoutResult = textLayout, color = bright)
+                    // Never clip to an empty path: some phones ignore an empty clip, and the text
+                    // view then draws its first row in full (the lines it thinks are in view),
+                    // which showed as the whole first row lighting up for a moment, mostly while
+                    // the first word of a line was being sung (nothing fully sung yet).
+                    if (!sungPath.isEmpty) {
+                        clipPath(sungPath) {
+                            drawText(textLayoutResult = textLayout, color = bright)
+                        }
                     }
                     }
                     // The lifted letters are drawn on their own: dim first, then the sung part.
@@ -1409,6 +1418,9 @@ private class LiftedLetter(
 )
 
 private const val LiftGrow = 0.12f
+
+// A tiny rectangle far outside any text, cut out instead of an empty path (see SweepingWordsLine).
+private val FarAwayPath = Path().apply { addRect(Rect(-100_000f, -100_000f, -99_999f, -99_999f)) }
 private const val LiftRise = 0.05f
 
 /**
