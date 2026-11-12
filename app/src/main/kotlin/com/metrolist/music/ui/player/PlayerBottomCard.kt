@@ -1084,9 +1084,12 @@ fun CompactLyrics(
                                     bottom = lerp(5.dp, if (line.isBackground) 2.dp else 12.dp, fraction),
                                 ),
                     ) {
-                        if (active && !words.isNullOrEmpty()) {
+                        // A line that stops being current keeps its word fill while it fades, so
+                        // the part not sung yet never lights up for a moment.
+                        if (synced && !words.isNullOrEmpty() && (active || activeness > 0.01f)) {
                             SweepingWordsLine(
                                 words = words,
+                                sungAlpha = { if (active) 1f else activeness },
                                 positionMsProvider = { position },
                                 color = color,
                                 dimAlpha = dimAlpha,
@@ -1173,17 +1176,20 @@ private fun findInterludes(lines: List<LyricsEntry>): List<Interlude> {
     val result = mutableListOf<Interlude>()
     var shownIndex = -1
     lines.forEachIndexed { i, entry ->
-        if (entry.text.isNotBlank()) shownIndex++
-        if (i >= lines.size - 1 || shownIndex < 0) return@forEachIndexed
-        val nextStart = lines[i + 1].time
+        if (entry.text.isBlank()) return@forEachIndexed
+        shownIndex++
+        // A break always runs up to the next line that has text. Ending it at a blank line in
+        // between made the next line count as current too early, drop back and flash.
+        val next = (i + 1..lines.lastIndex).firstOrNull { lines[it].text.isNotBlank() } ?: return@forEachIndexed
         val currentEnd =
             when {
                 !entry.words.isNullOrEmpty() -> (entry.words.last().endTime * 1000).toLong()
-                entry.text.isBlank() -> entry.time
+                next > i + 1 -> lines[i + 1].time
                 else -> null
             }
+        val nextStart = lines[next].time
         if (currentEnd != null && nextStart - currentEnd > InterludeMinMs) {
-            result.add(Interlude(shownIndex, currentEnd, nextStart, lines[i + 1].agent))
+            result.add(Interlude(shownIndex, currentEnd, nextStart, lines[next].agent))
         }
     }
     return result
@@ -1253,6 +1259,8 @@ private fun SweepingWordsLine(
     modifier: Modifier = Modifier,
     // Modern lyric style: the letters being sung right now rise and grow a little.
     liftSungPart: Boolean = false,
+    // Opacity of the sung part on top of the dim text; below 1 while the line fades out.
+    sungAlpha: () -> Float = { 1f },
 ) {
     val built =
         remember(words) {
@@ -1285,6 +1293,8 @@ private fun SweepingWordsLine(
                         return@drawWithContent
                     }
                     val positionSec = positionMsProvider() / 1000.0
+                    val sung = sungAlpha().coerceIn(0f, 1f)
+                    val bright = color.copy(alpha = sung)
                     val lifted = if (liftSungPart) liftedLetters(textLayout, words, built.second, positionSec) else emptyList()
                     val liftedPath = Path()
                     lifted.forEach { liftedPath.addRect(it.box) }
@@ -1320,7 +1330,7 @@ private fun SweepingWordsLine(
                             val edgeStart = (fillX - edgeWidthPx).coerceAtLeast(left)
                             if (edgeStart > left) {
                                 clipRect(left, top, edgeStart, bottom) {
-                                    drawText(textLayout, color = color)
+                                    drawText(textLayout, color = bright)
                                 }
                             }
                             if (fillX > edgeStart) {
@@ -1331,14 +1341,14 @@ private fun SweepingWordsLine(
                                     val t = (i + 0.5f) / strips
                                     val stripAlpha = 1f - t
                                     clipRect(edgeStart + stripWidth * i, top, edgeStart + stripWidth * (i + 1), bottom) {
-                                        drawText(textLayout, color = color.copy(alpha = stripAlpha))
+                                        drawText(textLayout, color = color.copy(alpha = stripAlpha * sung))
                                     }
                                 }
                             }
                         }
                     }
                     clipPath(sungPath) {
-                        drawText(textLayoutResult = textLayout, color = color)
+                        drawText(textLayoutResult = textLayout, color = bright)
                     }
                     }
                     // The lifted letters are drawn on their own: dim first, then the sung part.
@@ -1359,7 +1369,7 @@ private fun SweepingWordsLine(
                             val brightEnd = edgeStart.coerceAtMost(box.right)
                             if (brightEnd > box.left) {
                                 clipRect(box.left, box.top, brightEnd, box.bottom) {
-                                    drawText(textLayout, color = color)
+                                    drawText(textLayout, color = bright)
                                 }
                             }
                             val edgeEnd = letter.fillX.coerceAtMost(letter.wordRight)
@@ -1371,7 +1381,7 @@ private fun SweepingWordsLine(
                                     val stripRight = (edgeStart + stripWidth * (i + 1)).coerceAtMost(box.right)
                                     if (stripRight <= stripLeft) continue
                                     clipRect(stripLeft, box.top, stripRight, box.bottom) {
-                                        drawText(textLayout, color = color.copy(alpha = 1f - (i + 0.5f) / strips))
+                                        drawText(textLayout, color = color.copy(alpha = (1f - (i + 0.5f) / strips) * sung))
                                     }
                                 }
                             }
