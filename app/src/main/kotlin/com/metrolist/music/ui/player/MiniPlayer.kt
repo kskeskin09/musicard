@@ -294,9 +294,18 @@ private fun NewMiniPlayer(
         animationSpec = androidx.compose.animation.core.tween(800),
         label = "miniAlbumColor",
     )
+    val themePillColor by androidx.compose.animation.animateColorAsState(
+        targetValue =
+            com.metrolist.music.ui.theme.PageFadeColors.current
+                ?.let { com.metrolist.music.ui.theme.raisedPageColor(it) }
+                ?: MaterialTheme.colorScheme.surfaceContainer,
+        animationSpec = androidx.compose.animation.core.tween(300),
+        label = "miniThemePill",
+    )
     val backgroundColor =
         when {
-            !followBackground -> MaterialTheme.colorScheme.surfaceContainer
+            // On a cover-tinted page (stats, playlists, albums) the pill takes the page's raised color.
+            !followBackground -> themePillColor
             playerCardBackground == PlayerCardBackground.GLASS -> DefaultAlbumBackground
             else -> albumColor
         }
