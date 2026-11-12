@@ -11,7 +11,10 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -193,55 +196,244 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
         }
     }
 
-    if (options.size <= 3) {
-        // The first choice on the left edge, the last on the right, the third (if any) between.
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = modifier.fillMaxWidth(),
-        ) {
-            options.forEach { option -> OutputChip(option, option.key == selectedKey, onPick) }
+    // At most three choices: System auto, the phone and one connected output (the one picked, or
+    // else Bluetooth before wired).
+    val shown =
+        buildList {
+            addAll(options.filter { it.key == null || it.device?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER })
+            val external = options.filter { it.key != null && it.device?.type != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            (external.firstOrNull { it.key == selectedKey } ?: external.minByOrNull { outputRank(it.device) })?.let { add(it) }
         }
-    } else {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        ) {
-            options.forEach { option -> OutputChip(option, option.key == selectedKey, onPick) }
+    val selectedIndex = shown.indexOfFirst { it.key == selectedKey }.coerceAtLeast(0)
+
+    androidx.compose.foundation.layout.Column(modifier = modifier.fillMaxWidth()) {
+        OutputBar(shown, selectedIndex, onPick)
+        ActiveOutputLine(
+            devices = devices,
+            selected = shown.getOrNull(selectedIndex),
+            phoneLabel = phoneLabel,
+        )
+    }
+}
+
+/** Lower is preferred: Bluetooth, then wired and USB, then anything else. */
+private fun outputRank(device: AudioDeviceInfo?): Int =
+    when (device?.type) {
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 26, 27 -> 0
+        AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> 1
+        AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_USB_DEVICE -> 2
+        else -> 3
+    }
+
+private val OutputSize = 66.dp
+
+/**
+ * The choices inside one rounded bar (like the Library filters). The first sits at the left end,
+ * the last at the right end, a third in the middle; a white circle marks the one in use and slides
+ * over to a new choice.
+ */
+@Composable
+private fun OutputBar(
+    options: List<OutputOption>,
+    selectedIndex: Int,
+    onPick: (OutputOption) -> Unit,
+) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(OutputSize)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        val count = options.size
+        val step = if (count > 1) (maxWidth - OutputSize) / (count - 1) else 0.dp
+        val indicatorX by androidx.compose.animation.core.animateDpAsState(
+            targetValue = step * selectedIndex,
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.85f, stiffness = 700f),
+            label = "outputIndicator",
+        )
+        // The white circle under the chosen symbol.
+        androidx.compose.foundation.layout.Box(
+            Modifier
+                .offset(x = indicatorX)
+                .size(OutputSize)
+                .clip(CircleShape)
+                .background(onSurface),
+        )
+        options.forEachIndexed { index, option ->
+            val chosen = index == selectedIndex
+            val tint by androidx.compose.animation.animateColorAsState(
+                targetValue = if (chosen) MaterialTheme.colorScheme.surface else onSurface,
+                label = "outputTint",
+            )
+            androidx.compose.foundation.layout.Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .offset(x = step * index)
+                        .size(OutputSize)
+                        .clip(CircleShape)
+                        .clickable { onPick(option) }
+                        .semantics { contentDescription = option.label },
+            ) {
+                if (option.key == null) {
+                    Text(
+                        text = "AUTO",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = tint,
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(option.icon),
+                        contentDescription = null,
+                        tint = tint,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
         }
     }
 }
 
-/** A round button with just the output's symbol ("AUTO" for System auto). */
+/** The device the sound is going to now, when the system decides. */
+private fun activeOutput(
+    context: Context,
+    devices: List<AudioDeviceInfo>,
+): AudioDeviceInfo? {
+    if (android.os.Build.VERSION.SDK_INT >= 33) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val attributes =
+            android.media.AudioAttributes
+                .Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+        runCatching { audioManager.getAudioDevicesForAttributes(attributes) }
+            .getOrNull()
+            ?.firstOrNull()
+            ?.let { routed -> return devices.firstOrNull { it.id == routed.id } ?: routed }
+    }
+    // Older Android: the system plays on the newest kind of output connected.
+    return devices.filter { it.type != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }.minByOrNull { outputRank(it) }
+        ?: devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+}
+
+private fun isBluetooth(device: AudioDeviceInfo) =
+    device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || device.type == 26 || device.type == 27
+
+private fun hasBluetoothPermission(context: Context) =
+    android.os.Build.VERSION.SDK_INT < 31 ||
+        androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) ==
+        android.content.pm.PackageManager.PERMISSION_GRANTED
+
+/**
+ * Battery of a Bluetooth output, as Android reports it (one number for the whole device; the
+ * left / right earbud levels are not given to apps). Null when unknown.
+ */
+@android.annotation.SuppressLint("MissingPermission", "DiscouragedPrivateApi")
+private fun bluetoothBattery(
+    context: Context,
+    device: AudioDeviceInfo,
+): Int? {
+    if (android.os.Build.VERSION.SDK_INT < 28 || !hasBluetoothPermission(context)) return null
+    val address = device.address.takeIf { it.isNotBlank() } ?: return null
+    return runCatching {
+        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
+        val remote = manager.adapter?.getRemoteDevice(address) ?: return null
+        val level = remote.javaClass.getMethod("getBatteryLevel").invoke(remote) as Int
+        level.takeIf { it in 0..100 }
+    }.getOrNull()
+}
+
+private fun phoneBattery(context: Context): Int? {
+    val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+    return batteryManager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY).takeIf { it in 0..100 }
+}
+
+/** Under the bar: the name of the device playing now and its battery. */
 @Composable
-private fun OutputChip(
-    option: OutputOption,
-    selected: Boolean,
-    onPick: (OutputOption) -> Unit,
+private fun ActiveOutputLine(
+    devices: List<AudioDeviceInfo>,
+    selected: OutputOption?,
+    phoneLabel: String,
 ) {
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    Surface(
-        onClick = { onPick(option) },
-        shape = CircleShape,
-        color = if (selected) onSurface else MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = if (selected) MaterialTheme.colorScheme.surface else onSurface,
-        modifier = Modifier.size(66.dp).semantics { contentDescription = option.label },
-    ) {
-        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
-            if (option.key == null) {
-                Text(
-                    text = "AUTO",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-            } else {
-                Icon(
-                    painter = painterResource(option.icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                )
+    val context = LocalContext.current
+    // Battery news from Bluetooth devices, and a slow refresh for the phone's own battery.
+    var tick by remember { mutableStateOf(0) }
+    DisposableEffect(context) {
+        val receiver =
+            object : android.content.BroadcastReceiver() {
+                override fun onReceive(
+                    c: Context?,
+                    intent: android.content.Intent?,
+                ) {
+                    tick++
+                }
             }
+        val filter =
+            android.content.IntentFilter().apply {
+                addAction("android.bluetooth.device.action.BATTERY_LEVEL_CHANGED")
+                addAction(android.content.Intent.ACTION_BATTERY_CHANGED)
+            }
+        androidx.core.content.ContextCompat.registerReceiver(
+            context,
+            receiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+        )
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
+    var permissionAsked by remember { mutableStateOf(false) }
+    val permissionLauncher =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        ) { tick++ }
+
+    val device = selected?.device ?: remember(devices, tick) { activeOutput(context, devices) }
+    device ?: return
+    val name =
+        if (device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+            phoneLabel
+        } else {
+            device.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Audio"
+        }
+    val battery =
+        remember(device, tick) {
+            when {
+                device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> phoneBattery(context)
+                isBluetooth(device) -> bluetoothBattery(context, device)
+                else -> null
+            }
+        }
+    val needsPermission = isBluetooth(device) && !hasBluetoothPermission(context) && !permissionAsked
+    Row(
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+    ) {
+        Text(
+            text = if (battery != null) "$name · $battery%" else name,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (needsPermission && android.os.Build.VERSION.SDK_INT >= 31) {
+            Text(
+                text = " · " + stringResource(R.string.audio_output_show_battery),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier =
+                    Modifier.clickable {
+                        permissionAsked = true
+                        permissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+                    },
+            )
         }
     }
 }
