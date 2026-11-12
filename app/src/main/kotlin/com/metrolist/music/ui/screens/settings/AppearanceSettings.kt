@@ -785,30 +785,36 @@ fun AppearanceSettings(
                                     showSliderOptionDialog = false
                                 }.padding(horizontal = 14.dp, vertical = 4.dp),
                     ) {
-                        if (style == SliderStyle.SLIM) {
-                            val sliderState = remember { SliderState(value = 0.62f) }
-                            Slider(
-                                state = sliderState,
-                                thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-                                track = { sliderState ->
-                                    PlayerSliderTrack(
-                                        sliderState = sliderState,
-                                        colors = sliderPreviewColors,
-                                    )
-                                },
-                                colors = sliderPreviewColors,
-                                enabled = false,
-                                modifier = Modifier.fillMaxWidth().height(24.dp),
-                            )
-                        } else {
-                            Slider(
-                                value = 0.35f,
-                                valueRange = 0f..1f,
-                                onValueChange = { /* preview only */ },
-                                colors = sliderPreviewColors,
-                                enabled = false,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                        // Same fixed height for both previews, so the cards match.
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                        ) {
+                            if (style == SliderStyle.SLIM) {
+                                val sliderState = remember { SliderState(value = 0.62f) }
+                                Slider(
+                                    state = sliderState,
+                                    thumb = { Spacer(modifier = Modifier.size(0.dp)) },
+                                    track = { sliderState ->
+                                        PlayerSliderTrack(
+                                            sliderState = sliderState,
+                                            colors = sliderPreviewColors,
+                                        )
+                                    },
+                                    colors = sliderPreviewColors,
+                                    enabled = false,
+                                    modifier = Modifier.fillMaxWidth().height(24.dp),
+                                )
+                            } else {
+                                Slider(
+                                    value = 0.35f,
+                                    valueRange = 0f..1f,
+                                    onValueChange = { /* preview only */ },
+                                    colors = sliderPreviewColors,
+                                    enabled = false,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
                         Text(
                             text = sliderStyleName(style),
