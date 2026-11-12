@@ -40,6 +40,9 @@ jobs:
           # extra coverage.
           - variant: gms
             variantName: Gms
+          # Secondary "without Google Cast" nightly for phones without Play services.
+          - variant: foss
+            variantName: Foss
 
     steps:
       - uses: actions/checkout@v7
@@ -84,16 +87,16 @@ jobs:
           OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
           mkdir -p "$OUTPUT_DIR/out"
           if [ "${{ matrix.variant }}" = "gms" ]; then
-            TARGET_NAME="Musicard-Nightly-with-Google-Cast.apk"
-          else
             TARGET_NAME="Musicard-Nightly.apk"
+          else
+            TARGET_NAME="Musicard-Nightly-without-Google-Cast.apk"
           fi
           find "$OUTPUT_DIR" -name "*-signed.apk" -o -name "*-unsigned-signed.apk" | xargs -I{} mv {} "$OUTPUT_DIR/out/$TARGET_NAME"
 
       - name: Upload Signed APK
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.variant == 'gms' && 'Musicard-Nightly-with-Google-Cast' || 'Musicard-Nightly' }}
+          name: ${{ matrix.variant == 'gms' && 'Musicard-Nightly' || 'Musicard-Nightly-without-Google-Cast' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*
 
   build_debug:
@@ -183,10 +186,11 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Download Signed APK
+      - name: Download Signed APKs
         uses: actions/download-artifact@v8
         with:
-          name: Musicard-Nightly-with-Google-Cast
+          pattern: Musicard-Nightly*
+          merge-multiple: true
           path: nightly
 
       - name: Publish Nightly Release
@@ -212,7 +216,8 @@ jobs:
           fi
 
           gh release create nightly \
-            nightly/Musicard-Nightly-with-Google-Cast.apk \
+            nightly/Musicard-Nightly.apk \
+            nightly/Musicard-Nightly-without-Google-Cast.apk \
             --target "$GITHUB_SHA" \
             --title "Musicard Nightly" \
             --notes-file nightly-notes.md \

@@ -102,8 +102,10 @@ object Updater {
             
             // Parse architecture and variant from filename
             val (arch, variant) = when {
-                name == "Musicard.apk" || name == "Metrolist.apk" -> "universal" to "foss"
-                name == "Musicard-with-Google-Cast.apk" || name == "Metrolist-with-Google-Cast.apk" -> "universal" to "gms"
+                // Musicard.apk is the Google Cast (gms) build; the plain build is
+                // published as Musicard-without-Google-Cast.apk.
+                name == "Musicard.apk" || name == "Metrolist-with-Google-Cast.apk" -> "universal" to "gms"
+                name == "Musicard-without-Google-Cast.apk" || name == "Metrolist.apk" -> "universal" to "foss"
                 name.startsWith("app-") && name.endsWith("-release.apk") -> {
                     val arch = name.removePrefix("app-").removeSuffix("-release.apk")
                     arch to "foss"
