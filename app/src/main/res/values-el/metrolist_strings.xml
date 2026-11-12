@@ -55,8 +55,6 @@
     <string name="general">Γενικά</string>
     <string name="proxy">Διακομιστής μεσολάβησης</string>
     <string name="default_lib_chips">Αλλαγή προεπιλεγμένου τσιπ βιβλιοθήκης</string>
-    <string name="set_quick_picks">Ορισμός γρήγορων επιλογών</string>
-    <string name="last_song_listened">Με βάση στο τελευταίο τραγούδι που ακούστηκε</string>
     <string name="app_language">Γλώσσα εφαρμογής</string>
     <string name="enable_similar_content">Ενεργοποίηση Παρόμοιου Περιεχομένου</string>
     <string name="similar_content_desc">Αυτόματη προσθήκη περισσότερων παρόμοιων τραγουδιών όταν φτάσει στο τέλος της ουράς</string>

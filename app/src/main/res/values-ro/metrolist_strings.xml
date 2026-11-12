@@ -69,8 +69,6 @@
     <string name="more_content">Mai mult conținut</string>
     <string name="general">General</string>
     <string name="proxy">Proxy</string>
-    <string name="set_quick_picks">Setează alegerile rapide</string>
-    <string name="last_song_listened">Bazate pe ultima melodie ascultată</string>
     <string name="app_language">Limba aplicației</string>
     <string name="enable_similar_content">Activează conținut similar</string>
     <string name="similar_content_desc">Adaugă automat mai multe melodii similare atunci când se ajunge la finalul cozii</string>

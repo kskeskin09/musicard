@@ -215,7 +215,6 @@
     <string name="edit_playlist_cover_note_wait">이미지 선택 후 새 커버가 재생목록에 반영될 때까지 잠시 기다려 주십시오</string>
     <string name="choose_from_library">라이브러리에서 선택</string>
     <string name="remove_custom_image">커스텀 이미지 제거</string>
-    <string name="last_song_listened">마지막으로 들은 곡 기준</string>
     <string name="lyrics_provider_priority">가사 제공자 우선순위</string>
     <string name="lyrics_provider_priority_desc">가사 제공자를 선호하는 순서대로 드래그하십시오. 상단에 있을수록 우선순위가 높습니다</string>
     <string name="experimental_lyrics">실험실 가사</string>
@@ -733,7 +732,6 @@
     <string name="more_content">추가 콘텐츠</string>
     <string name="general">일반</string>
     <string name="default_lib_chips">기본 라이브러리 탭 변경</string>
-    <string name="set_quick_picks">빠른 선곡 설정</string>
     <string name="top_length">\'나의 Top\' 목록 길이</string>
     <string name="history_duration">시청 기록 기간</string>
     <string name="crossfade_duration">크로스페이드 길이</string>

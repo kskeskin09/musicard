@@ -143,8 +143,6 @@
     <string name="general">כללי</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">שנה את צ\'יפ הספרייה המוגדר כברירת מחדל</string>
-    <string name="set_quick_picks">הגדר בחירות מהירות</string>
-    <string name="last_song_listened">בהתבסס על השיר האחרון שהאזנתי לו</string>
     <string name="app_language">שפת האפליקציה</string>
     <string name="lyrics_provider_priority">עדיפות לספק מילות השיר</string>
     <string name="lyrics_provider_priority_desc">גרור כדי לסדר מחדש ספקים לפי העדפה. מיקום גבוה יותר -&gt; עדיפות גבוהה יותר.</string>

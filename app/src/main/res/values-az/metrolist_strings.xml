@@ -163,8 +163,6 @@
     <string name="general">Ümumi</string>
     <string name="proxy">Proksi</string>
     <string name="default_lib_chips">Defolt kitabxana çipini dəyişdirin</string>
-    <string name="set_quick_picks">Tez seçimləri təyin edin</string>
-    <string name="last_song_listened">Dinlədiyiniz son mahnıya əsasən</string>
     <string name="app_language">Tətbiq dili</string>
     <string name="lyrics_provider_priority">Mahnı sözləri təchizatçısının prioriteti</string>
     <string name="lyrics_provider_priority_desc">Provayderlərin ardıcıllığını üstünlüyə görə dəyişmək üçün onları sürüşdürün. Daha yuxarı mövqe daha yüksək prioritet deməkdir</string>

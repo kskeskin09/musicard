@@ -86,8 +86,6 @@
     <string name="general">Orokorra</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Liburutegi lehenetsiaren chip-a aldatu</string>
-    <string name="set_quick_picks">Hautatze arinak ezarri</string>
-    <string name="last_song_listened">Enztun duzun azken abestian oinarritua</string>
     <string name="app_language">Aplikazio hizkuntza</string>
     <string name="config_proxy">Proxy-a ezarri</string>
     <string name="proxy_username">Proxy erabiltzaile izena</string>

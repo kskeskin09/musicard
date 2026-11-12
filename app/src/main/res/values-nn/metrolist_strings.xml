@@ -90,8 +90,6 @@
     <string name="general">Ålment</string>
     <string name="proxy">Proxytenar</string>
     <string name="default_lib_chips">Brigd standardvisning i samlinga</string>
-    <string name="set_quick_picks">Still inn snarval</string>
-    <string name="last_song_listened">Basert på siste song høyrd på</string>
     <string name="app_language">Appmål</string>
     <string name="config_proxy">Konfigurer proxytenar</string>
     <string name="proxy_username">Proxytenarbrukarnamn</string>

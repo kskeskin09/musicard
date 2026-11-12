@@ -54,8 +54,6 @@
     <string name="token_adv_login_description">这是高级登录方法。您可以直接输入或更新您的登录令牌，无需使用网页门户。这对于跨多个设备快速登录非常有用。格式无法识别的令牌将被拒绝</string>
     <string name="general">常规</string>
     <string name="proxy">代理</string>
-    <string name="set_quick_picks">设置猜你喜欢</string>
-    <string name="last_song_listened">根据最后听的那首歌</string>
     <string name="enable_similar_content">启用相似内容</string>
     <string name="similar_content_desc">在待播列表快结束时，自动添加更多相似歌曲</string>
     <string name="percentage_format">%d%%</string>

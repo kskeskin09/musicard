@@ -237,8 +237,6 @@
     <string name="general">Të përgjithshme</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Ndrysho çipin e paracaktuar të bibliotekës</string>
-    <string name="set_quick_picks">Vendos zgjedhjet e shpejta</string>
-    <string name="last_song_listened">Bazuar në këngën e fundit që dëgjove</string>
     <string name="experimental_lyrics_beta_title">Veçori eksperimentale</string>
     <string name="experimental_lyrics_beta_message">Komponenti i ri i teksteve është ende në zhvillim dhe mund të ketë gabime. Jeni i sigurt që doni ta aktivizoni?</string>
     <string name="config_proxy">Cilëso proxy-n</string>

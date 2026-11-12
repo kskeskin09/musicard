@@ -119,9 +119,7 @@
     <string name="general">ทั่วไป</string>
     <string name="proxy">พร็อกซี</string>
     <string name="default_lib_chips">เปลี่ยนแท็บเริ่มต้นในคลัง</string>
-    <string name="last_song_listened">อิงจากเพลงล่าสุดที่ฟัง</string>
     <string name="app_language">ภาษาของแอป</string>
-    <string name="set_quick_picks">ตั้งค่าการเลือกด่วน</string>
     <string name="config_proxy">ตั้งค่าพร็อกซี</string>
     <string name="proxy_username">ชื่อผู้ใช้พร็อกซี</string>
     <string name="proxy_password">รหัสผ่านพร็อกซี</string>

@@ -40,8 +40,6 @@
     <string name="general">一般</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">更改預設媒體庫標籤</string>
-    <string name="set_quick_picks">設定快速選取</string>
-    <string name="last_song_listened">根據上次聆聽的歌曲</string>
     <string name="app_language">應用程式語言</string>
     <string name="enable_similar_content">啟用相似內容</string>
     <string name="similar_content_desc">當播放佇列快結束時，自動加入更多相似歌曲</string>

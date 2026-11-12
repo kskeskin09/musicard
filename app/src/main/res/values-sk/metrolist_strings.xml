@@ -83,8 +83,6 @@
     <string name="general">Všeobecné</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Zmeniť predvolený čip knižnice</string>
-    <string name="set_quick_picks">Nastaviť rýchle výbery</string>
-    <string name="last_song_listened">Na základe poslednej počúvanej skladby</string>
     <string name="app_language">Jazyk aplikácie</string>
     <string name="enable_similar_content">Povoliť podobný obsah</string>
     <string name="similar_content_desc">Automaticky pridávať ďalšie podobné skladby po dosiahnutí konca frontu</string>

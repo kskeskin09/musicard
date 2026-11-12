@@ -384,6 +384,10 @@ fun NavGraphBuilder.navigationBuilder(
         com.metrolist.music.ui.screens.settings.LyricsProviderSettings(navController)
     }
 
+    composable("settings/content/home_layout") {
+        com.metrolist.music.ui.screens.settings.HomeLayoutSettings(navController)
+    }
+
     composable("settings/content/romanization") {
         RomanizationSettings(navController)
     }

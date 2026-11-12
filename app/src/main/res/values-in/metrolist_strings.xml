@@ -87,8 +87,6 @@
     <string name="more_content">Konten lainnya</string>
     <string name="proxy">Proksi</string>
     <string name="default_lib_chips">Ubah chip pustaka default</string>
-    <string name="set_quick_picks">Atur pilihan cepat</string>
-    <string name="last_song_listened">Berdasarkan lagu terakhir yang Anda dengarkan</string>
     <string name="enable_similar_content">Aktifkan konten serupa</string>
     <string name="similar_content_desc">Secara otomatis menambahkan lebih banyak lagu serupa saat akhir antrean tercapai</string>
     <string name="percentage_format">%d%%</string>

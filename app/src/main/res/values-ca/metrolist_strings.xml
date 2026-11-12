@@ -107,8 +107,6 @@
     <string name="general">General</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Canvia el xip de biblioteca predeterminat</string>
-    <string name="set_quick_picks">Establir selecció ràpida</string>
-    <string name="last_song_listened">Basat en l\'última cançó escoltada</string>
     <string name="app_language">Llengua de l\'aplicació</string>
     <string name="config_proxy">Configurar proxy</string>
     <string name="proxy_username">Usuari de proxy</string>

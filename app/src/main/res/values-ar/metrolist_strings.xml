@@ -73,8 +73,6 @@
     <string name="general">عام</string>
     <string name="proxy">الوكيل</string>
     <string name="default_lib_chips">تغيير الشريحة الافتراضية للمكتبة</string>
-    <string name="set_quick_picks">ضبط الاختيارات السريعة</string>
-    <string name="last_song_listened">بناءً على آخر أغنية استمعت إليها</string>
     <string name="app_language">لغة التطبيق</string>
     <string name="enable_similar_content">تفعيل المحتوى المشابه</string>
     <string name="similar_content_desc">إضافة المزيد من الأغاني المشابهة تلقائيًا عند الوصول إلى نهاية قائمة الانتظار</string>

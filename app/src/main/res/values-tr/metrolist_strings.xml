@@ -55,8 +55,6 @@
     <string name="general">Genel</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Varsayılan kitaplık çipini değiştir</string>
-    <string name="set_quick_picks">Hızlı seçimleri ayarla</string>
-    <string name="last_song_listened">Dinlediğiniz son şarkıya göre</string>
     <string name="app_language">Uygulama dili</string>
     <string name="enable_similar_content">Benzer içeriği etkinleştir</string>
     <string name="similar_content_desc">Sıranın sonuna gelindiğinde otomatik olarak benzer şarkılar ekler</string>
@@ -873,4 +871,12 @@
     <string name="player_pause">Duraklat</string>
     <string name="top_result">En iyi sonuç</string>
     <string name="other">Diğer</string>
+    <string name="edit_home_screen">Ana ekranı düzenle</string>
+    <string name="edit_home_screen_desc">Ana ekrandaki bölümlerin sırasını değiştir</string>
+    <string name="edit_home_screen_hint">Taşımak için bir bölüme basılı tutup sürükle. Ana ekran bu sırayla gösterir.</string>
+    <string name="edit_home_screen_random_note">Açıkken yalnızca kendi bölümlerimiz bu sırada kalır, gerisi karışır</string>
+    <string name="edit_home_screen_reset">Varsayılana dön</string>
+    <string name="home_section_your_mixes">Mikslerin</string>
+    <string name="home_section_similar">Benzerleri…</string>
+    <string name="home_section_youtube">YouTube Music bölümleri</string>
 </resources>

@@ -73,8 +73,6 @@
     <string name="general">Splošno</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Sprememba privzetega knjižničnega čipa</string>
-    <string name="set_quick_picks">Prilagajanje hitrih izbir</string>
-    <string name="last_song_listened">Na podlagi zadnje poslušane pesmi</string>
     <string name="app_language">Jezik aplikacije</string>
     <string name="enable_similar_content">Omogoči podobno vsebino</string>
     <string name="similar_content_desc">Samodejno dodajanje podobnih skladb, ko je dosežen konec čakalne vrste</string>

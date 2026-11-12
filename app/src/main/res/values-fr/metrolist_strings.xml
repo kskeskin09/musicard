@@ -8,8 +8,6 @@
     <string name="sort_by_last_updated">Date de mise à jour</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Choix de la bibliothèque par défaut</string>
-    <string name="set_quick_picks">Choix des sélections rapides</string>
-    <string name="last_song_listened">En fonction du dernier titre que vous avez écouté</string>
     <string name="all_time">Tout le temps</string>
     <string name="past_24_hours">Dernières 24 heures</string>
     <string name="past_week">Semaine dernière</string>

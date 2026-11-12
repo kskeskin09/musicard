@@ -71,8 +71,6 @@
     <string name="general">Általános</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Alap könyvtár chip változtatása</string>
-    <string name="set_quick_picks">Gyors voksok kiválasztása</string>
-    <string name="last_song_listened">Vegye alapul a legutolsó lejátszott dalt</string>
     <string name="app_language">App nyelve</string>
     <string name="enable_similar_content">Hasonló tartalom engedélyezése</string>
     <string name="similar_content_desc">Automatikusan hozzáad hasonló zenéket ha a lista a végéhez ért</string>

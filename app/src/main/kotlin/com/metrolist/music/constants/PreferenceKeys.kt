@@ -253,7 +253,8 @@ val AlbumViewTypeKey = stringPreferencesKey("albumViewType")
 val PlaylistViewTypeKey = stringPreferencesKey("playlistViewType")
 
 val PlaylistEditLockKey = booleanPreferencesKey("playlistEditLock")
-val QuickPicksKey = stringPreferencesKey("discover")
+// The home screen sections in the order chosen under Content > Edit home screen (comma-separated ids).
+val HomeSectionOrderKey = stringPreferencesKey("home_section_order")
 val PreferredLyricsProviderKey = stringPreferencesKey("lyricsProvider")
 val LyricsProviderOrderKey = stringPreferencesKey("lyricsProviderOrder")
 val SimpMusicMigrationDoneKey = booleanPreferencesKey("simpMusicMigrationDone")
@@ -407,11 +408,6 @@ enum class MyTopFilter {
                 LocalDateTime.of(1970, 1, 1, 0, 0)
             }
         }
-}
-
-enum class QuickPicks {
-    QUICK_PICKS,
-    LAST_LISTEN,
 }
 
 enum class PreferredLyricsProvider {

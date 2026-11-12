@@ -76,7 +76,6 @@
     <string name="past_year">Viimase aasta jooksul</string>
     <string name="app_language">Rakenduse keel</string>
     <string name="auto_playlists">Automaatsed esitusloendid</string>
-    <string name="last_song_listened">Põhineb sinu viimasel kuulatud lool</string>
     <string name="open_app_settings_error">Rakenduse seadistuste avamine ei õnnestunud</string>
     <string name="release_notes">Muudatuste logi</string>
     <string name="history_duration">Ajaloo kestus</string>
@@ -102,7 +101,6 @@
     <string name="edit_playlist_cover">Muuda esitusloendi kaanepilti</string>
     <string name="choose_from_library">Vali meediakogust</string>
     <string name="remove_custom_image">Eemalda sinu valitud pilt</string>
-    <string name="set_quick_picks">Lisa kiirvalikud</string>
     <string name="config_proxy">Seadista proksiserverit</string>
     <string name="proxy_username">Puhverserveri kasutajanimi</string>
     <string name="proxy_password">Puhverserveri salasõna</string>

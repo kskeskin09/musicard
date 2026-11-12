@@ -60,8 +60,6 @@
     <string name="more_content">Повече съдържание</string>
     <string name="general">Общи</string>
     <string name="proxy">Прокси</string>
-    <string name="set_quick_picks">Задайте бързи избори</string>
-    <string name="last_song_listened">На база последно слушана песен</string>
     <string name="app_language">Език на приложението</string>
     <string name="percentage_format">%d%%</string>
     <string name="past_week">Последната седмица</string>

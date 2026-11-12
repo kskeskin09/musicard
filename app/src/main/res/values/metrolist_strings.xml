@@ -192,8 +192,6 @@
     <string name="general">General</string>
     <string name="proxy">Proxy</string>
     <string name="default_lib_chips">Change default library chip</string>
-    <string name="set_quick_picks">Set quick picks</string>
-    <string name="last_song_listened">Based on the last song you listened to</string>
     <string name="app_language">App language</string>
     <string name="lyrics_provider">Lyrics provider</string>
     <string name="home_recents">Recents</string>
@@ -1098,4 +1096,12 @@
     <string name="genre_filter_for_you">For You</string>
     <string name="genre_filter_popular">Popular</string>
     <string name="genre_filter_new">New</string>
+    <string name="edit_home_screen">Edit home screen</string>
+    <string name="edit_home_screen_desc">Change the order of the sections on Home</string>
+    <string name="edit_home_screen_hint">Hold a section and drag it to move it. Home shows them in this order.</string>
+    <string name="edit_home_screen_random_note">When on, only our own sections keep this order and the rest is shuffled</string>
+    <string name="edit_home_screen_reset">Reset to default</string>
+    <string name="home_section_your_mixes">Your mixes</string>
+    <string name="home_section_similar">Similar to…</string>
+    <string name="home_section_youtube">YouTube Music sections</string>
 </resources>

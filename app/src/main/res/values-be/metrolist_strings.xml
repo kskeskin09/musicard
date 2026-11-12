@@ -174,8 +174,6 @@
     <string name="general">Агульнае</string>
     <string name="proxy">Проксі</string>
     <string name="default_lib_chips">Змяненне чыпа бібліятэкі (па змаўчанні)</string>
-    <string name="set_quick_picks">Выбраць тып рэкамендацый</string>
-    <string name="last_song_listened">На аснове апошняга праслуханага трэка</string>
     <string name="app_language">Мова прыкладання</string>
     <string name="lyrics_provider_priority">Прыярытэт пастаўшчыкоў тэкстаў</string>
     <string name="lyrics_provider_priority_desc">Перацягіце, каб змяніць парадак пастаўшчыкоў. Чым вышэйшая пазіцыя, тым вышэйшы прыярытэт</string>
