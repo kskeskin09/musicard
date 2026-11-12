@@ -51,7 +51,6 @@ import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.BatteryOptReduceBlurKey
 import com.metrolist.music.utils.BatteryOptReduceDynamicColorsKey
 import com.metrolist.music.utils.BatteryOptReduceLyricsAnimationsKey
-import com.metrolist.music.utils.BatteryOptReduceRefreshRateKey
 import com.metrolist.music.utils.BatteryOptimizationFollowSystemKey
 import com.metrolist.music.utils.BatteryOptimizationKey
 import com.metrolist.music.utils.BatteryOptimizationThresholdKey
@@ -181,13 +180,6 @@ fun BatteryOptimizationSettings(navController: NavController) {
                         R.drawable.lyrics,
                         R.string.battery_opt_lyrics_animations,
                         R.string.battery_opt_lyrics_animations_desc,
-                        enabled,
-                    ),
-                    effectItem(
-                        BatteryOptReduceRefreshRateKey,
-                        R.drawable.refresh,
-                        R.string.battery_opt_refresh_rate,
-                        R.string.battery_opt_refresh_rate_desc,
                         enabled,
                     ),
                 ),
