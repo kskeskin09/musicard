@@ -182,10 +182,12 @@ private fun NewMiniPlayer(
     )
     // Follow background (stored as BLUR): the mini player takes the player's own background, the
     // glass cover or the album color. Older choices (transparent, gradient, black) follow the theme.
-    val playerCardBackground by rememberEnumPreference(
+    val playerCardBackgroundPreference by rememberEnumPreference(
         PlayerCardBackgroundKey,
         defaultValue = PlayerCardBackground.CLASSIC,
     )
+    val playerCardBackground =
+        if (com.metrolist.music.utils.LocalBatterySaver.current.blur) PlayerCardBackground.CLASSIC else playerCardBackgroundPreference
     val followBackground = miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR
     val context = LocalContext.current
     var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }

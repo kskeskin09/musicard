@@ -378,6 +378,10 @@ fun NavGraphBuilder.navigationBuilder(
         ThemeScreen(navController)
     }
 
+    composable("settings/appearance/battery_optimization") {
+        com.metrolist.music.ui.screens.settings.BatteryOptimizationSettings(navController)
+    }
+
     composable("settings/appearance/notification_center") {
         com.metrolist.music.ui.screens.settings.NotificationCenterSettings(navController)
     }

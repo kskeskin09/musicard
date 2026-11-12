@@ -1178,4 +1178,25 @@
     <string name="logo_theme_light">Light</string>
     <string name="logo_theme_device">Device colours</string>
     <string name="history_duration_desc">A song is added to your history and stats after you listen to it for %1$d seconds. Songs you skip sooner are not counted.</string>
+    <string name="battery_optimization">Battery optimization</string>
+    <string name="battery_optimization_summary">Turns off heavy effects below %1$d%% battery</string>
+    <string name="battery_optimization_enable_desc">Kicks in when the battery drops below the limit. Never while charging.</string>
+    <string name="battery_optimization_threshold">Battery limit: %1$d%%</string>
+    <string name="battery_optimization_threshold_desc">Effects are turned down below this level</string>
+    <string name="battery_optimization_follow_system">Also with system battery saver</string>
+    <string name="battery_optimization_follow_system_desc">Follow the phone\'s own battery saver mode</string>
+    <string name="battery_optimization_turn_off">Turned off during optimization</string>
+    <string name="battery_optimization_status_active">Now: %1$d%% · optimization on</string>
+    <string name="battery_optimization_status_idle">Now: %1$d%% · optimization waiting</string>
+    <string name="battery_optimization_status_charging">Now: %1$d%% · charging</string>
+    <string name="battery_optimization_status_off">Optimization is off</string>
+    <string name="battery_optimization_status_desc">Saved settings stay as they are; effects come back when the battery recovers or the phone charges.</string>
+    <string name="battery_opt_blur">Blur effects</string>
+    <string name="battery_opt_blur_desc">Bottom edge blur, glass and blurred player backgrounds, lyrics blur</string>
+    <string name="battery_opt_dynamic_colors">Dynamic colors</string>
+    <string name="battery_opt_dynamic_colors_desc">App colors taken from the album cover</string>
+    <string name="battery_opt_lyrics_animations">Lyrics animations</string>
+    <string name="battery_opt_lyrics_animations_desc">Word animations and glow become plain lyrics</string>
+    <string name="battery_opt_refresh_rate">High refresh rate</string>
+    <string name="battery_opt_refresh_rate_desc">Screen drops to 60 Hz</string>
 </resources>

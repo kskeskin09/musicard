@@ -51,9 +51,10 @@ private fun Modifier.bottomEdgeBlurImpl(
 ): Modifier {
     val sharp = rememberGraphicsLayer()
     val blurred = rememberGraphicsLayer()
+    val batterySaverOff = com.metrolist.music.utils.LocalBatterySaver.current.blur
     return drawWithContent {
         val region = startFromBottomPx().coerceIn(0f, size.height)
-        if (!enabled || blurBroken || region < 1f || size.width < 1f) {
+        if (!enabled || batterySaverOff || blurBroken || region < 1f || size.width < 1f) {
             drawContent()
             return@drawWithContent
         }

@@ -300,12 +300,20 @@ fun BottomSheetPlayer(
     )
     // The card layout always uses a soft color taken from the album art (light text on top),
     // so it runs through the GRADIENT code paths for colors and palette extraction.
+    // Battery optimization swaps the blurred backgrounds for the plain album color.
+    val batterySaverBlurOff = com.metrolist.music.utils.LocalBatterySaver.current.blur
     val playerBackground =
-        if (useCardLayout) PlayerBackgroundStyle.GRADIENT else playerBackgroundPreference
-    val playerCardBackground by rememberEnumPreference(
+        if (useCardLayout || (batterySaverBlurOff && playerBackgroundPreference == PlayerBackgroundStyle.BLUR)) {
+            PlayerBackgroundStyle.GRADIENT
+        } else {
+            playerBackgroundPreference
+        }
+    val playerCardBackgroundPreference by rememberEnumPreference(
         key = PlayerCardBackgroundKey,
         defaultValue = PlayerCardBackground.CLASSIC,
     )
+    val playerCardBackground =
+        if (batterySaverBlurOff) PlayerCardBackground.CLASSIC else playerCardBackgroundPreference
     val playerButtonsStyle by rememberEnumPreference(
         key = PlayerButtonsStyleKey,
         defaultValue = PlayerButtonsStyle.DEFAULT,
