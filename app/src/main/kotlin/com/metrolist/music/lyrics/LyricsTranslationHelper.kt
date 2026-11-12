@@ -88,12 +88,39 @@ object LyricsTranslationHelper {
     }
 
     fun triggerManualTranslation() {
+        currentSongId?.let { autoTranslateDismissed.remove(it) }
         _manualTrigger.tryEmit(Unit)
     }
+
+    // Songs automatic translation has already started for in this session (several lyrics views
+    // can be on screen at once; only one starts it).
+    private val autoTranslateStarted: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /** True once for each song: the caller may start the automatic translation. */
+    fun claimAutoTranslation(songId: String): Boolean = autoTranslateStarted.add(songId)
 
     fun triggerClearTranslations() {
         _clearTranslationsTrigger.tryEmit(Unit)
         _hasActiveTranslations.value = false
+        // Turned off by hand: automatic translation leaves this song alone from now on.
+        currentSongId?.let { autoTranslateDismissed.add(it) }
+    }
+
+    /** The song whose lyrics are on screen (set by the lyrics view). */
+    @Volatile
+    var currentSongId: String? = null
+
+    /** Songs whose translation was switched off by hand; automatic translation skips them. */
+    val autoTranslateDismissed: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * A translated line, or null when it only repeats the original (the line was already in the
+     * target language), so the same text isn't printed twice.
+     */
+    fun distinctTranslation(original: String, translated: String?): String? {
+        if (translated.isNullOrBlank()) return translated
+        fun norm(text: String) = text.lowercase(Locale.ROOT).filter { it.isLetterOrDigit() }
+        return if (norm(original) == norm(translated)) null else translated
     }
 
     fun clearTranslations(lyrics: LyricsEntity): LyricsEntity {
@@ -160,7 +187,7 @@ object LyricsTranslationHelper {
             var transIndex = 0
             lyrics.forEach { entry ->
                 if (entry.text.isNotBlank() && transIndex < translatedLines.size) {
-                    entry.translatedTextFlow.value = translatedLines[transIndex]
+                    entry.translatedTextFlow.value = distinctTranslation(entry.text, translatedLines[transIndex])
                     transIndex++
                 }
             }
@@ -232,7 +259,7 @@ object LyricsTranslationHelper {
                         // Use cached translations
                         nonEmptyEntries.forEachIndexed { idx, (originalIndex, _) ->
                             if (idx < cachedTranslations.size) {
-                                lyrics[originalIndex].translatedTextFlow.value = cachedTranslations[idx]
+                                lyrics[originalIndex].translatedTextFlow.value = distinctTranslation(lyrics[originalIndex].text, cachedTranslations[idx])
                             }
                         }
                         _hasActiveTranslations.value = true
@@ -324,7 +351,7 @@ object LyricsTranslationHelper {
                                                 partialResult.forEachIndexed { idx, translation ->
                                                     if (idx < nonEmptyEntries.size && translation.isNotBlank()) {
                                                         val originalIndex = nonEmptyEntries[idx].first
-                                                        lyrics[originalIndex].translatedTextFlow.value = translation
+                                                        lyrics[originalIndex].translatedTextFlow.value = distinctTranslation(lyrics[originalIndex].text, translation)
                                                     }
                                                 }
                                                 _status.value = TranslationStatus.Translating
@@ -404,7 +431,7 @@ object LyricsTranslationHelper {
                                 translatedLines.size >= expectedCount -> {
                                     // Perfect match or more - map to non-empty entries
                                     nonEmptyEntries.forEachIndexed { idx, (originalIndex, _) ->
-                                        lyrics[originalIndex].translatedTextFlow.value = translatedLines[idx]
+                                        lyrics[originalIndex].translatedTextFlow.value = distinctTranslation(lyrics[originalIndex].text, translatedLines[idx])
                                     }
                                     _hasActiveTranslations.value = true
                                     _status.value = TranslationStatus.Success
@@ -415,7 +442,7 @@ object LyricsTranslationHelper {
                                     translatedLines.forEachIndexed { idx, translation ->
                                         if (idx < nonEmptyEntries.size) {
                                             val originalIndex = nonEmptyEntries[idx].first
-                                            lyrics[originalIndex].translatedTextFlow.value = translation
+                                            lyrics[originalIndex].translatedTextFlow.value = distinctTranslation(lyrics[originalIndex].text, translation)
                                         }
                                     }
                                     _hasActiveTranslations.value = true

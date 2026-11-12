@@ -218,6 +218,9 @@ fun AppearanceSettings(
         rememberPreference(com.metrolist.music.constants.LyricsBlurKeepNeighborsKey, defaultValue = true)
     val (lyricsBlurStrength, onLyricsBlurStrengthChange) =
         rememberPreference(com.metrolist.music.constants.LyricsBlurStrengthKey, defaultValue = 1f)
+    // The slider's value while dragging: the percentage follows the finger, the blur itself is
+    // saved (and redrawn) only when the finger lifts.
+    var tempLyricsBlurStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -1223,17 +1226,15 @@ fun AppearanceSettings(
                                     Text(
                                         stringResource(
                                             R.string.lyrics_blur_strength,
-                                            (lyricsBlurStrength * 100).roundToInt(),
+                                            (tempLyricsBlurStrength * 100).roundToInt(),
                                         ),
                                     )
                                 },
                                 description = {
-                                    // The new value is saved when the finger lifts.
-                                    var tempStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
                                     StyledSlider(
-                                        value = tempStrength,
-                                        onValueChange = { tempStrength = it },
-                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempStrength) },
+                                        value = tempLyricsBlurStrength,
+                                        onValueChange = { tempLyricsBlurStrength = it },
+                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempLyricsBlurStrength) },
                                         valueRange = 0.5f..2f,
                                         steps = 5,
                                         modifier = Modifier.fillMaxWidth(),
