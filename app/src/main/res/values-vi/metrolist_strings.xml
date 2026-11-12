@@ -157,7 +157,6 @@
     <string name="show_uploaded_playlist">Hiển danh sách phát đã tải lên</string>
     <string name="shuffle_playlist_first">Phát ngẫu nhiên danh sách phát hoặc album đầu tiên</string>
     <string name="shuffle_playlist_first_desc">Khi kích hoạt phát ngẫu nhiên, nó sẽ phát tất cả các bài hát từ danh sách phát / Album trước, sau đó mới phát nội dung tương tự</string>
-    <string name="show_wrapped_card">Hiển thị thẻ Wrapped</string>
     <string name="updater">Trình cập nhật</string>
     <string name="check_for_updates">Tự động kiểm tra cập nhật</string>
     <string name="update_notifications">Bật thông báo về cập nhật</string>

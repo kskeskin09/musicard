@@ -192,7 +192,6 @@
     <string name="shuffle_playlist_first_desc">Kur përzieni këngët, luani të gjitha këngët nga lista aktuale e këngëve ose albumi përpara se të kaloni në përmbajtje të ngjashme</string>
     <string name="prevent_duplicate_tracks_in_queue">Parandalo këngët e dyfishta në radhë</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Kur shtohet një këngë që është gja në radhë, ajo do të zhvendoset nga pozicioni i saj i mëparshëm në vend që të shtohet përsëri</string>
-    <string name="show_wrapped_card">Shfaq kartën Wrapped</string>
     <string name="skip_silence_desc">Anashkalo pjesët të heshtura të këngëve</string>
     <string name="skip_silence_instant">Kapërceje menjëherë heshtjen</string>
     <string name="app_language">Gjuha e aplikacionit</string>

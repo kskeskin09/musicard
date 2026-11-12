@@ -166,7 +166,6 @@
     <string name="playlist_position_beginning_desc">Newly added songs appear before existing songs</string>
     <string name="playlist_position_end">End of playlist</string>
     <string name="playlist_position_end_desc">Newly added songs appear after existing songs</string>
-    <string name="show_wrapped_card">Show Wrapped card</string>
     <string name="skip_silence_desc">Fast-forward through silent parts of songs</string>
     <string name="skip_silence_instant">Instantly skip silence</string>
     <string name="skip_silence_instant_desc">Jump ahead during silent moments instead of speeding up playback</string>
@@ -1155,4 +1154,5 @@
     <string name="import_search_manually">Not on YouTube Music · Search by hand</string>
     <string name="import_finish">Done</string>
     <string name="import_likes_local_note">Liked songs are saved in Musicard only and are not sent to your YouTube account.</string>
+    <string name="history_duration_desc">A song is added to your history and stats after you listen to it for %1$d seconds. Songs you skip sooner are not counted.</string>
 </resources>

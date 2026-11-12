@@ -145,7 +145,6 @@
     <string name="auto_scroll">Újraszinkronizálás</string>
     <string name="shuffle_playlist_first">Először ezen lista vagy album keverése</string>
     <string name="shuffle_playlist_first_desc">Keverés esetén először a lejátszási listát vagy albumot játssza le a hasonló tartalom ajánlás előtt</string>
-    <string name="show_wrapped_card">Wrapped kártya megjelenítése</string>
     <string name="edit_playlist_cover_note">MEGJEGYZÉS: A lejátszási lista borítójának módosításához össze kell kapcsolnia a fiókját egy telefonszámmal, és hitelesíteni kell a YouTube Music-on</string>
     <string name="edit_playlist_cover_note_wait">Kérem legyen türelemmel amíg a kiválasztott kép megjelenik a lejátszási lista borítóján</string>
     <string name="choose_from_library">Választás mappából</string>

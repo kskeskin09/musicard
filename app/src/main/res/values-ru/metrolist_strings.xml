@@ -206,7 +206,6 @@
     <string name="shuffle_playlist_first_desc">При перемешивании проигрывать все треки из текущего плейлиста или альбома перед переходом к похожему контенту</string>
     <string name="lyrics_glow_effect">Включить эффект свечения текста</string>
     <string name="lyrics_glow_effect_desc">Добавляет свечение и эффект отскока для текущей строки</string>
-    <string name="show_wrapped_card">Показать карточку Wrapped</string>
     <string name="album_art_for">Обложка альбома для %s</string>
     <string name="wrapped_total_albums_title">Вы прослушали</string>
     <string name="wrapped_total_albums_subtitle">уникальных альбомов!</string>

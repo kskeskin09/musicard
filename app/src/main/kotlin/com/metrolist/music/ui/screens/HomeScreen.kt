@@ -762,9 +762,6 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
 
-    val shouldShowWrappedCard by viewModel.showWrappedCard.collectAsStateWithLifecycle()
-    val wrappedState by viewModel.wrappedManager.state.collectAsStateWithLifecycle()
-    val isWrappedDataReady = wrappedState.isDataReady
 
     val isLoggedIn =
         remember(innerTubeCookie) {
@@ -823,11 +820,6 @@ fun HomeScreen(
     val scrollToTop =
         backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
 
-    val wrappedDismissed by backStackEntry
-        ?.savedStateHandle
-        ?.getStateFlow("wrapped_seen", false)
-        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
-
     var randomSeed by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
 
     // The mood chips (Energize, Commute...) stay hidden until the list is pulled down again
@@ -857,17 +849,6 @@ fun HomeScreen(
         if (isRefreshing) {
             randomSeed = System.currentTimeMillis()
             if (selectedChip == null) showChips = false
-        }
-    }
-
-    val foundInSettings = stringResource(R.string.found_in_settings_content)
-    LaunchedEffect(wrappedDismissed) {
-        if (wrappedDismissed) {
-            viewModel.markWrappedAsSeen()
-            scope.launch {
-                snackbarHostState.showSnackbar(foundInSettings)
-            }
-            backStackEntry?.savedStateHandle?.set("wrapped_seen", false) // Reset the value
         }
     }
 
@@ -1476,69 +1457,6 @@ fun HomeScreen(
                                 ) {
                                     items(sectionData.items.distinctBy { it.id }, key = { "home_chip_section_${it.id}" }) { item ->
                                         ytGridItem(item)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (selectedChip == null) {
-                    item(key = "wrapped_card") {
-                        AnimatedVisibility(visible = shouldShowWrappedCard) {
-                            Card(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                colors =
-                                    CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    ),
-                            ) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth(),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (isWrappedDataReady) {
-                                        val bbhFont =
-                                            try {
-                                                FontFamily(Font(R.font.bbh_bartle_regular))
-                                            } catch (e: Exception) {
-                                                FontFamily.Default
-                                            }
-                                        Column(
-                                            modifier = Modifier.padding(16.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.wrapped_ready_title),
-                                                style =
-                                                    MaterialTheme.typography.headlineLarge.copy(
-                                                        fontFamily = bbhFont,
-                                                        textAlign = TextAlign.Center,
-                                                    ),
-                                            )
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            Text(
-                                                text = stringResource(R.string.wrapped_ready_subtitle),
-                                                style =
-                                                    MaterialTheme.typography.bodyLarge.copy(
-                                                        textAlign = TextAlign.Center,
-                                                    ),
-                                            )
-                                            Spacer(modifier = Modifier.height(16.dp))
-                                            Button(onClick = {
-                                                navController.navigate("wrapped")
-                                            }) {
-                                                Text(stringResource(R.string.open))
-                                            }
-                                        }
-                                    } else {
-                                        ContainedLoadingIndicator()
                                     }
                                 }
                             }

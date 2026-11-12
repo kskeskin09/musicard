@@ -159,7 +159,6 @@
     <string name="auto_scroll">Sincronizar de nuevo</string>
     <string name="shuffle_playlist_first">Reproducir en orden aleatorio la lista de reproducción o el álbum primero</string>
     <string name="shuffle_playlist_first_desc">Al reproducir en modo aleatorio, reproducir todas las canciones de la lista de reproducción o álbum actual antes de pasar al contenido similar</string>
-    <string name="show_wrapped_card">Mostrar tarjeta de Recap</string>
     <string name="updater">Actualizador</string>
     <string name="check_for_updates">Buscar actualizaciones automáticamente</string>
     <string name="update_notifications">Habilitar las notificaciones de actualización</string>

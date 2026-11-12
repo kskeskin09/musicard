@@ -100,7 +100,6 @@
     <string name="show_uploaded_playlist">แสดงเพลย์ลิสต์ที่อัปโหลดแล้ว</string>
     <string name="shuffle_playlist_first">เล่นแบบสุ่มจากเพลย์ลิสต์หรืออัลบั้มก่อน</string>
     <string name="shuffle_playlist_first_desc">เมื่อเปิดโหมดสุ่ม ระบบจะเล่นเพลงทั้งหมดจากเพลย์ลิสต์หรืออัลบั้มปัจจุบันให้ครบก่อน แล้วจึงเล่นเนื้อหาที่คล้ายกัน</string>
-    <string name="show_wrapped_card">แสดงการ์ด Wrapped</string>
     <string name="skip_silence_desc">ข้ามช่วงที่เงียบของเพลงอย่างรวดเร็ว</string>
     <string name="skip_silence_instant">ข้ามช่วงเงียบทันที</string>
     <string name="skip_silence_instant_desc">กระโดดข้ามช่วงเงียบแทนการเร่งความเร็วการเล่น</string>

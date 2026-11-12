@@ -214,7 +214,6 @@
     <string name="shuffle_playlist_first_desc">При разбъркване, възпроизвеждайте всички песни от текущия плейлист или албум, преди да преминете към подобно съдържание</string>
     <string name="prevent_duplicate_tracks_in_queue">Премахване на дубликати в опашката</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Ако песента вече е в опашката, тя ще бъде преместена, а не добавена отново</string>
-    <string name="show_wrapped_card">Покажи „Wrapped“ карта</string>
     <string name="skip_silence_desc">Ускорете възпроизвеждането на тихи части от песните</string>
     <string name="skip_silence_instant">Незабавно пропускане на тишината</string>
     <string name="skip_silence_instant_desc">Прескачайте напред по време на тихи моменти, вместо да ускорявате възпроизвеждането</string>

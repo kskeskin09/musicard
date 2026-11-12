@@ -123,7 +123,6 @@
     <string name="lyrics_provider_selection_desc">בחר איזה ספק מילות שיר מופעל</string>
     <string name="enable_song_cache">הפעלת מטמון שירים</string>
     <string name="enable_song_cache_desc">שמירת שירים במטמון אוטומטית לצורך השמעה עתידית מהירה יותר</string>
-    <string name="show_wrapped_card">הצג כרטיס עטוף</string>
     <string name="skip_silence_desc">הרצה קדימה בחלקים השקטים של השירים</string>
     <string name="skip_silence_instant">דילוג מיידי על שתיקה</string>
     <string name="skip_silence_instant_desc">קפיצה קדימה ברגעים שקטים במקום להאיץ את ההפעלה</string>

@@ -115,7 +115,6 @@
     <string name="auto_scroll">Attsynkroniser</string>
     <string name="shuffle_playlist_first">Blanda speleliste/album fyrst</string>
     <string name="shuffle_playlist_first_desc">Når du blandar, skal alle songar frå den opphavlege spelelista/album verta spela av fyrst, og så liknande innhald</string>
-    <string name="show_wrapped_card">Syn Wrapped-kort</string>
     <string name="playlist_add_local_to_synced_note">Obs! Det er ikkje støtt å leggja lokale songar inn i synkroniserte/fjerre spelelister. Alle andre samanblandingar funkar</string>
     <string name="auto_download_on_like">Lad sjølvverkande ned ved å lika</string>
     <string name="auto_download_on_like_desc">Lad sjølvverkande ned songar når du likar dei</string>

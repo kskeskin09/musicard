@@ -186,7 +186,6 @@
     <string name="auto_scroll">Επανασυγχρονισμός</string>
     <string name="shuffle_playlist_first">Τυχαία λίστα αναπαραγωγής/άλμπουμ πρώτα</string>
     <string name="shuffle_playlist_first_desc">Κατά την τυχαία αναπαραγωγή, παίξτε πρώτα όλα τα τραγούδια από την αρχική λίστα αναπαραγωγής/άλμπουμ και μετά παρόμοιο περιεχόμενο</string>
-    <string name="show_wrapped_card">Εμφάνιση κάρτας Wrapped</string>
     <string name="skip_silence_desc">Γρήγορη προώθηση στα σιωπηλά μέρη τραγουδιών</string>
     <string name="skip_silence_instant">Άμεση παράλειψη σιωπής</string>
     <string name="skip_silence_instant_desc">Μετάβαση μπροστά κατά τη διάρκεια των σιωπηλών στιγμών αντί να επιταχύνετε την αναπαραγωγή</string>

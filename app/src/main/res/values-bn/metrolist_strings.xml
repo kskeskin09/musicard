@@ -119,7 +119,6 @@
     <string name="show_top_playlist">টপ প্লেলিস্ট দেখান</string>
     <string name="prevent_duplicate_tracks_in_queue">সারিতে সদৃশ গান প্রতিরোধ করুন</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">সারিতে আগে থেকেই থাকা কোনো গান যোগ করার সময়, সেটিকে পুনরায় যোগ না করে তার আগের অবস্থান থেকে সরানো হবে</string>
-    <string name="show_wrapped_card">Wrapped কার্ড দেখান</string>
     <string name="skip_silence_desc">গানের নীরব অংশগুলোতে দ্রুত এগিয়ে যান</string>
     <string name="skip_silence_instant">তাৎক্ষণিকভাবে নীরবতা এড়িয়ে যান</string>
     <string name="skip_silence_instant_desc">প্লেব্যাকের গতি না বাড়িয়ে নীরব মুহূর্তগুলোতে এগিয়ে যান</string>

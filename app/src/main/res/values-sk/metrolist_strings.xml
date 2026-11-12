@@ -181,7 +181,6 @@
     <string name="auto_scroll">Znovu synchronizovať</string>
     <string name="shuffle_playlist_first">Najskôr zamiešať playlist alebo album</string>
     <string name="shuffle_playlist_first_desc">Pri náhodnom prehrávaní odohrať všetky skladby z aktuálneho playlistu alebo albumu pred prechodom na podobný obsah</string>
-    <string name="show_wrapped_card">Zobraziť Wrapped kartu</string>
     <string name="google_cast_description">Povoliť prehrávanie zvuku na Chromecast a d\'alšie zariadenia s podporou Cast</string>
     <string name="logging_in">Prihlasovanie…</string>
     <string name="hide_video_songs">Skryť skladby z videa</string>

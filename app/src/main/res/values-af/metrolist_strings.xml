@@ -143,7 +143,6 @@
     <string name="shuffle_playlist_first_desc">Wanneer deurmekaar gespeel word, speel alle liedjies van die huidige snitlys of album voordat na soortgelyke inhoud beweeg word</string>
     <string name="prevent_duplicate_tracks_in_queue">Voorkom duplikaatsnitte in die tou</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Wanneer \'n snit bygevoeg word wat reeds in die tou is, sal dit van sy vorige posisie geskuif word eerder as om weer bygevoeg te word</string>
-    <string name="show_wrapped_card">Wys Wrapped-kaart</string>
     <string name="skip_silence_desc">Spoel vinnig deur stil dele van liedjies</string>
     <string name="skip_silence_instant">Slaan stilte onmiddellik oor</string>
     <string name="skip_silence_instant_desc">Spring vorentoe tydens stil oomblikke in plaas daarvan om afspeel te versnel</string>

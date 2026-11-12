@@ -361,7 +361,7 @@ fun PlayerSettings(
                     title = { Text(stringResource(R.string.history_duration)) },
                     description = {
                         Column {
-                            Text(historyDuration.roundToInt().toString())
+                            Text(stringResource(R.string.history_duration_desc, historyDuration.roundToInt()))
                             Slider(
                                 value = historyDuration,
                                 onValueChange = onHistoryDurationChange,

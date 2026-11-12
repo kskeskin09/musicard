@@ -175,7 +175,6 @@
     <string name="auto_scroll">重新同步</string>
     <string name="shuffle_playlist_first">隨機播放清單/專輯</string>
     <string name="shuffle_playlist_first_desc">隨機播放時，先播放原播放清單/專輯中的所有歌曲，然後再播放內容相似的歌曲</string>
-    <string name="show_wrapped_card">展示「年度播放」卡片</string>
     <string name="google_cast_description">啟用向 Chromecast 和其他支援投影功能的裝置投屏音頻</string>
     <string name="logging_in">正在登錄…</string>
     <string name="hide_video_songs">隱藏帶影片的音樂</string>

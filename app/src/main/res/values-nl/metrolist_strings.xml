@@ -155,7 +155,6 @@
     <string name="sync_playlist_desc">Synchroniseer afspeellijst met YouTube Music</string>
     <string name="lyrics_text_size">Songtekst lettergrootte</string>
     <string name="lyrics_line_spacing">Songtekst regel afstand</string>
-    <string name="show_wrapped_card">Toon Wrapped</string>
     <string name="progress_percent">Vooruitgang %s%%</string>
     <string name="copied_title">Titel gekopieerd</string>
     <string name="copied_artist">Artiest gekopieerd</string>

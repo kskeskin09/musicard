@@ -224,7 +224,6 @@
     <string name="copied_artist">Artis disalin</string>
     <string name="error_playing">Kesalahan pemutaran</string>
     <string name="failed_to_parse_proxy">Gagal mengurai URL proksi</string>
-    <string name="show_wrapped_card">Tampilkan kartu Wrapped</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Kirim audio ke Chromecast dan perangkat berkemampuan Cast lainnya</string>
     <string name="last_fm_send_likes">Sinkronkan Loved dan Unloved</string>

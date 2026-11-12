@@ -211,7 +211,6 @@
     <string name="wrapped_top_5_songs_title">I tuoi migliori brani di quest\'anno</string>
     <string name="wrapped_top_song_album_art_content_description">Copertina</string>
     <string name="wrapped_top_artist_title">Il tuo migliore artista dell\'anno è</string>
-    <string name="show_wrapped_card">Mostra la schermata Wrapped</string>
     <string name="album_art_for">Copertina dell\'album di %s</string>
     <string name="wrapped_total_albums_title">L\'hai ascoltato per</string>
     <string name="wrapped_total_albums_subtitle">album unici!</string>

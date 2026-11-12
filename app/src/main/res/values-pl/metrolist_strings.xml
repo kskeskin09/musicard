@@ -200,7 +200,6 @@
     <string name="enable_better_lyrics_desc">Tekst piosenki zsynchronizowany na poziomie sylab, idealny do karaoke</string>
     <string name="shuffle_playlist_first">Najpierw odtwórz losowo playlistę lub album</string>
     <string name="shuffle_playlist_first_desc">Podczas odtwarzania losowego najpierw odtwarzaj wszystkie utwory z bieżącej playlisty lub albumu, przed przejściem do podobnych utworów</string>
-    <string name="show_wrapped_card">Wyświetl kartę Wrapped</string>
     <string name="scrobble_min_track_duration">Scrobbluj utwory dłuższe niż (sekundy)</string>
     <string name="scrobble_delay_percent">Procent opóźnienia scrobblowania</string>
     <string name="scrobble_delay_minutes">Opóźnienie scrobblowania w minutach</string>

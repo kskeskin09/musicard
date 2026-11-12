@@ -173,7 +173,6 @@
     <string name="auto_scroll">Neu synchronisieren</string>
     <string name="shuffle_playlist_first">Playliste oder Album zuerst mischen</string>
     <string name="shuffle_playlist_first_desc">Gibt beim Mischen zuerst alle Songs der aktuellen Playliste oder des aktuellen Albums wieder, bevor ähnliche Inhalte kommen</string>
-    <string name="show_wrapped_card">Wrapped-Tab anzeigen</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Audioübertragung auf Chromecast und andere Cast-fähige Geräte aktivieren</string>
     <string name="last_fm_send_likes">Likes/Dislikes synchronisieren</string>

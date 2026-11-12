@@ -772,7 +772,6 @@
     <string name="shuffle_playlist_first_desc">Ao usar o modo aleatorio, reproduce todas as cancións da lista de reprodución ou álbum actual antes de pasar ao contido semellante</string>
     <string name="prevent_duplicate_tracks_in_queue">Evitar pistas duplicadas na cola</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Ao engadir unha pista que xa está na cola, moverase da súa posición anterior en vez de engadirse de novo</string>
-    <string name="show_wrapped_card">Amosar a tarxeta do Wrapped</string>
     <string name="enable_swipe_thumbnail">Activa o escorregamento para cambiar de canción</string>
     <string name="swipe_song_to_add">Escorrega á esquerda para engadir a canción á cola ou á dereita para reproducir a seguinte</string>
     <string name="swipe_song_to_remove">Escorrega para eliminar a canción da lista de reprodución</string>

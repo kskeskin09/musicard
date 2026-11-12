@@ -208,7 +208,6 @@
     <string name="lyrics_line_spacing">تباعد أسطر الكلمات</string>
     <string name="shuffle_playlist_first">تشغيل القائمة أو الألبوم عشوائيًا أولاً</string>
     <string name="shuffle_playlist_first_desc">عند التشغيل العشوائي، يتم تشغيل جميع أغاني القائمة أو الألبوم الحالية قبل الانتقال إلى محتوى مشابه</string>
-    <string name="show_wrapped_card">عرض البطاقة المغلفة</string>
     <string name="album_art_for">غلاف ألبوم لـ %s</string>
     <string name="wrapped_total_albums_title">استمعت إلى</string>
     <string name="wrapped_total_albums_subtitle">ألبومات فريدة!</string>

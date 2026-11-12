@@ -146,7 +146,6 @@
     <string name="show_cached_playlist">캐시된 재생목록 표시</string>
     <string name="enable_song_cache">곡 캐싱 활성화</string>
     <string name="enable_song_cache_desc">빠른 재생을 위해 곡을 자동으로 캐시합니다</string>
-    <string name="show_wrapped_card">\'Wrapped\' 카드 표시</string>
     <string name="skip_silence_desc">무음 구간을 빨리 감기</string>
     <string name="skip_silence_instant">무음 구간 건너뛰기</string>
     <string name="skip_silence_instant_desc">무음 구간을 빨리 감기 하는대신 바로 건너 뜁니다</string>

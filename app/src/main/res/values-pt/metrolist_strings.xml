@@ -197,7 +197,6 @@
     <string name="wavy">Ondulado</string>
     <string name="lyrics_glow_effect_desc">Adiciona uma animação brilhante e um efeito de ricochete à linha de letra ativa</string>
     <string name="shuffle_playlist_first_desc">Ao reproduzir aleatoriamente, reproduza todas as músicas da playlist ou álbum atual e, de seguida, reproduzir conteúdo semelhante (recomendações do ytm)</string>
-    <string name="show_wrapped_card">Mostrar cartão \"Wrapped\"</string>
     <string name="lyrics_romanize_title">Romanização</string>
     <string name="lyrics_romanization">Romanização de letras</string>
     <string name="romanize_current_track">Romanizar a faixa atual</string>

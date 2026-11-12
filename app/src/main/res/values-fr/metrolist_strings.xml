@@ -202,7 +202,6 @@
     <string name="lyrics_line_spacing">Espacement des lignes des paroles</string>
     <string name="shuffle_playlist_first">Commencez par mettre la playlist ou l\'album en lecture aléatoire</string>
     <string name="shuffle_playlist_first_desc">Lors de la lecture aléatoire, écoutez tous les titres de la playlist ou de l\'album en cours avant de passer à un contenu similaire</string>
-    <string name="show_wrapped_card">Montrer le résumé</string>
     <string name="album_art_for">Pochette d\'album pour %s</string>
     <string name="wrapped_total_albums_title">Vous avez écouté</string>
     <string name="wrapped_total_albums_subtitle">Des albums uniques !</string>

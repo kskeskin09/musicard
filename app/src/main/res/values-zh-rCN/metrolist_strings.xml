@@ -173,7 +173,6 @@
     <string name="auto_scroll">重新同步</string>
     <string name="shuffle_playlist_first">先对播放列表或专辑进行随机播放</string>
     <string name="shuffle_playlist_first_desc">随机播放时，先播放当前播放列表或专辑中的所有歌曲，然后再播放相似内容的歌曲</string>
-    <string name="show_wrapped_card">显示年度总结卡片</string>
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">向 Chromecast 和其他支持投屏功能的设备投屏音频</string>
     <string name="last_fm_send_likes">同步喜欢和取消喜欢</string>

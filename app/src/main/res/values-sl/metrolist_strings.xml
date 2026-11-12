@@ -153,7 +153,6 @@
     <string name="show_uploaded_playlist">Prikaži seznam predvajanja \"Naloženo\"</string>
     <string name="shuffle_playlist_first">Najprej premešaj seznam predvajanja/album</string>
     <string name="shuffle_playlist_first_desc">Pri mešanju najprej predvajaj vse pesmi z izvirnega seznama predvajanja/albuma, nato pa podobno vsebino</string>
-    <string name="show_wrapped_card">Prikaži kartico Wrapped</string>
     <string name="skip_silence_desc">Hitro previjaj skozi tihe dele pesmi</string>
     <string name="skip_silence_instant">Takoj preskoči tišino</string>
     <string name="skip_silence_instant_desc">Preskoči naprej med tihimi trenutki namesto pospeševanja predvajanja</string>

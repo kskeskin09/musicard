@@ -183,7 +183,6 @@
     <string name="auto_scroll">同期</string>
     <string name="shuffle_playlist_first_desc">シャッフル再生時、プレイリストやアルバム内の曲をすべて再生したあとに似た曲を再生します</string>
     <string name="shuffle_playlist_first">プレイリスト/アルバムを優先してシャッフル再生</string>
-    <string name="show_wrapped_card">Wrappedカードを表示</string>
     <string name="skip_silence_instant">無音の部分をスキップ</string>
     <string name="skip_silence_instant_desc">無音の部分は早送りせずに自動でスキップします</string>
     <string name="google_cast">Google Cast</string>

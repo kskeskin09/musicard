@@ -441,7 +441,6 @@
     <string name="wizard_model_name">Modeloaren izena</string>
     <string name="wizard_model_placeholder">adib.: Sony WH-1000XM4, Bose QuietComfort 45</string>
     <string name="wizard_no_models">Ez da modelorik aurkitu</string>
-    <string name="show_wrapped_card">Wrapped txartela ikusi</string>
     <string name="wizard_multiple_variants">Aukera ezberdinak eskuragarri</string>
     <string name="wizard_select_eq_profiles">%s-rentzako EQ profilak aukeratu</string>
     <string name="wizard_save_profiles">Profilak gorde</string>
