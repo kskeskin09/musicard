@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_quality_auto_desc">Mobil veride düşük, Wi-Fi\'da yüksek</string>
+    <string name="download_quality">İndirme kalitesi</string>
+    <string name="download_quality_same">Çalma kalitesiyle aynı (%1$s)</string>
+    <string name="download_and_update">İndir ve güncelle</string>
+    <string name="download_and_update_desc">%1$s indirilir ve yükleyici açılır</string>
+    <string name="update_notes">Güncelleme notları</string>
+    <string name="update_notes_loading">Güncelleme notları yükleniyor…</string>
+    <string name="update_notes_empty">Bu sürümde not yok.</string>
+    <string name="update_downloading">İndiriliyor… %1$d%%</string>
+    <string name="update_download_failed">İndirilemedi. Sürüm sayfası açılıyor.</string>
+    <string name="update_up_to_date">En son sürümü kullanıyorsun</string>
+    <string name="update_check_failed">Güncellemeler kontrol edilemedi. Bağlantını kontrol et.</string>
+    <string name="current_version_label">Yüklü: %1$s</string>
+</resources>

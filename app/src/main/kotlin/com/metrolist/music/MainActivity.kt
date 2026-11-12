@@ -528,7 +528,11 @@ class MainActivity : FragmentActivity() {
                     val preferences = dataStore.data.first()
                     val notificationsEnabled = preferences[UpdateNotificationsEnabledKey] ?: true
                     val (releaseInfo, hasUpdate) = Updater.checkForUpdate().getOrNull() ?: (null to false)
-                    releaseInfo?.let { onLatestVersionNameChange(it.versionName) }
+                    // Only report a newer version; otherwise "New version available" would show for the
+                    // version that is already installed.
+                    onLatestVersionNameChange(
+                        releaseInfo?.takeIf { hasUpdate }?.versionName ?: BuildConfig.BASE_VERSION_NAME,
+                    )
 
                     val standaloneUpdate =
                         releaseInfo

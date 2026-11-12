@@ -50,16 +50,22 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.constants.AudioQuality
+import com.metrolist.music.constants.AudioQualityKey
+import com.metrolist.music.constants.DownloadQuality
+import com.metrolist.music.constants.DownloadQualityKey
 import com.metrolist.music.constants.EnableSongCacheKey
 import com.metrolist.music.constants.MaxImageCacheSizeKey
 import com.metrolist.music.constants.MaxSongCacheSizeKey
 import com.metrolist.music.extensions.tryOrNull
 import com.metrolist.music.ui.component.ActionPromptDialog
+import com.metrolist.music.ui.component.EnumDialog
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import android.text.format.Formatter
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -96,6 +102,39 @@ fun StorageSettings(
         key = EnableSongCacheKey,
         defaultValue = true
     )
+
+    val (downloadQuality, onDownloadQualityChange) = rememberEnumPreference(
+        DownloadQualityKey,
+        defaultValue = DownloadQuality.SAME_AS_PLAYING
+    )
+    val (playingQuality, _) = rememberEnumPreference(AudioQualityKey, defaultValue = AudioQuality.AUTO)
+    var showDownloadQualityDialog by remember { mutableStateOf(false) }
+    // "Same as playing quality (Auto)": only the name of the playing setting, without the Auto hint.
+    val playingQualityName = when (playingQuality) {
+        AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
+        AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
+        AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
+    }
+    val downloadQualityText: @Composable (DownloadQuality) -> String = {
+        when (it) {
+            DownloadQuality.SAME_AS_PLAYING -> stringResource(R.string.download_quality_same, playingQualityName)
+            DownloadQuality.LOW -> stringResource(R.string.audio_quality_low)
+            DownloadQuality.HIGH -> stringResource(R.string.audio_quality_high)
+        }
+    }
+    if (showDownloadQualityDialog) {
+        EnumDialog(
+            onDismiss = { showDownloadQualityDialog = false },
+            onSelect = {
+                onDownloadQualityChange(it)
+                showDownloadQualityDialog = false
+            },
+            title = stringResource(R.string.download_quality),
+            current = downloadQuality,
+            values = DownloadQuality.entries.toList(),
+            valueText = downloadQualityText,
+        )
+    }
 
     var clearDownloads by remember { mutableStateOf(false) }
     var clearCacheDialog by remember { mutableStateOf(false) }
@@ -302,6 +341,12 @@ fun StorageSettings(
                         description = {
                             Text(text = Formatter.formatShortFileSize(context, downloadCacheSize))
                         },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.graphic_eq),
+                        title = { Text(stringResource(R.string.download_quality)) },
+                        description = { Text(downloadQualityText(downloadQuality)) },
+                        onClick = { showDownloadQualityDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.clear_all),

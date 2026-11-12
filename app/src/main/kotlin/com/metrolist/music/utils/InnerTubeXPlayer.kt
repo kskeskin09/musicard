@@ -305,6 +305,7 @@ object InnerTubeXPlayer {
         when (this) {
             AudioQuality.HIGH -> InnerTubeXAudioQuality.HIGH
             AudioQuality.LOW -> InnerTubeXAudioQuality.LOW
+            // Auto: low on mobile data (metered), on Wi-Fi the best Opus (webm) stream.
             AudioQuality.AUTO ->
                 if (connectivityManager.isActiveNetworkMetered) {
                     InnerTubeXAudioQuality.LOW

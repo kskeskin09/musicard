@@ -139,6 +139,15 @@ enum class AudioQuality {
     HIGH,
 }
 
+// Quality for downloaded songs; SAME_AS_PLAYING follows AudioQualityKey ("Playing quality").
+val DownloadQualityKey = stringPreferencesKey("downloadQuality")
+
+enum class DownloadQuality {
+    SAME_AS_PLAYING,
+    LOW,
+    HIGH,
+}
+
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")
 
