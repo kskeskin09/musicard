@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.ui.component.StyledSlider
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.WindowInsetsSides
 import com.metrolist.music.ui.component.ReorderableToggleList
@@ -35,7 +36,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -320,7 +320,7 @@ fun AndroidAutoSettings(
                                         else -> "$androidAutoSearchLocalLimit ${stringResource(R.string.songs)}"
                                     },
                             )
-                            Slider(
+                            StyledSlider(
                                 value = limitValues.indexOf(androidAutoSearchLocalLimit).toFloat(),
                                 enabled = true,
                                 onValueChange = {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -21,9 +22,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.metrolist.music.constants.SliderStyle
+import com.metrolist.music.constants.SliderStyleKey
+import com.metrolist.music.utils.rememberEnumPreference
 
 /**
- * Volume as a plain thick bar with round ends: the set part bright, the rest grey. Tap anywhere
+ * Volume as a plain thick bar ("Classic" slider style) with round ends: the set part bright, the rest grey. Tap anywhere
  * on it or slide along it to change the volume.
  */
 @Composable
@@ -35,6 +39,18 @@ fun VolumeSlider(
     onValueChangeFinished: (() -> Unit)? = null,
     @Suppress("UNUSED_PARAMETER") accentColor: Color = MaterialTheme.colorScheme.primary,
 ) {
+    // "Old" slider style: the plain Material slider, like everywhere else in the app.
+    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    if (sliderStyle == SliderStyle.DEFAULT) {
+        Slider(
+            value = value.coerceIn(0f, 1f),
+            onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
+            enabled = enabled,
+            modifier = modifier.fillMaxWidth(),
+        )
+        return
+    }
     val onChange by rememberUpdatedState(onValueChange)
     val onFinished by rememberUpdatedState(onValueChangeFinished)
     val fill = MaterialTheme.colorScheme.onSurface
