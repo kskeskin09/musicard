@@ -205,6 +205,12 @@ fun BackupAndRestore(
                         },
                     ),
                     Material3SettingsItem(
+                        title = { Text(stringResource(R.string.import_services)) },
+                        description = { Text(stringResource(R.string.import_services_desc)) },
+                        icon = painterResource(R.drawable.library_add),
+                        onClick = { navController.navigate("settings/import_services") },
+                    ),
+                    Material3SettingsItem(
                         title = { Text(stringResource(R.string.import_online)) },
                         icon = painterResource(R.drawable.playlist_add),
                         onClick = {
