@@ -11,8 +11,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.constants.SliderStyle
@@ -39,14 +41,18 @@ fun StyledSlider(
     val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
     when (sliderStyle) {
         SliderStyle.SLIM -> {
+            val sliderState =
+                remember(valueRange) {
+                    SliderState(value = value, trackRange = valueRange)
+                }
+            sliderState.value = value
             Slider(
-                value = value,
-                onValueChange = onValueChange,
+                state = sliderState,
+                // Snap to the steps ourselves, since this track draws no tick marks.
+                onValueChange = { onValueChange(snapToSteps(it, valueRange, steps)) },
+                onValueChangeFinished = onValueChangeFinished,
                 modifier = modifier,
                 enabled = enabled,
-                valueRange = valueRange,
-                steps = steps,
-                onValueChangeFinished = onValueChangeFinished,
                 colors = colors,
                 thumb = { Spacer(Modifier.size(0.dp)) },
                 track = { state ->
@@ -72,4 +78,17 @@ fun StyledSlider(
             )
         }
     }
+}
+
+private fun snapToSteps(
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    steps: Int,
+): Float {
+    if (steps <= 0) return value
+    val span = range.endInclusive - range.start
+    if (span <= 0f) return value
+    val stepSize = span / (steps + 1)
+    val index = ((value - range.start) / stepSize).let { kotlin.math.round(it) }
+    return (range.start + index * stepSize).coerceIn(range.start, range.endInclusive)
 }
