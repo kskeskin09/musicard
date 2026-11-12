@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.ui.component.StyledSlider
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -17,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
 import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -325,7 +325,7 @@ fun PlayerSettings(
                         description = {
                             Column {
                                 Text(pluralStringResource(R.plurals.seconds, crossfadeDuration.toInt(), crossfadeDuration.toInt()))
-                                Slider(
+                                StyledSlider(
                                     value = crossfadeDuration,
                                     onValueChange = onCrossfadeDurationChange,
                                     valueRange = 1f..15f,
@@ -362,7 +362,7 @@ fun PlayerSettings(
                     description = {
                         Column {
                             Text(historyDuration.roundToInt().toString())
-                            Slider(
+                            StyledSlider(
                                 value = historyDuration,
                                 onValueChange = onHistoryDurationChange,
                                 valueRange = 1f..100f
