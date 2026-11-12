@@ -683,7 +683,7 @@ private fun UpNextRow(
             modifier =
                 Modifier
                     .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(10.dp)),
         ) {
             AsyncImage(
                 model = metadata.thumbnailUrl,

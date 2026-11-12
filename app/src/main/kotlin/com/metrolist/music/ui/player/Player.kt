@@ -2392,6 +2392,18 @@ fun BottomSheetPlayer(
                                     isListenTogetherGuest = isListenTogetherGuest,
                                     compact = true,
                                     isPlaying = effectiveIsPlaying,
+                                    // The art is scaled down into the lyrics / up next header, so its
+                                    // corners are widened to end up as round as the mini player's.
+                                    cornerRadiusProvider = {
+                                        val p = cardExpand
+                                        val art = artBoxSize.height.toFloat()
+                                        if (p == 0f || art == 0f) {
+                                            20.dp
+                                        } else {
+                                            val scale = 1f + (headerArtPx / art - 1f) * p
+                                            (20f + (10f / scale - 20f) * p).dp
+                                        }
+                                    },
                                 )
                                 // Same gap as between the title row and the progress bar.
                                 Spacer(Modifier.height(24.dp))

@@ -219,6 +219,8 @@ fun Thumbnail(
     // and the current art shrinks slightly while paused.
     compact: Boolean = false,
     isPlaying: Boolean = true,
+    // Overrides the art's corner radius frame by frame (read only while drawing).
+    cornerRadiusProvider: (() -> Dp)? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -456,6 +458,7 @@ fun Thumbnail(
                                 currentMediaId = mediaMetadata?.id,
                                 currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
                                 shrink = compact && !isPlaying && item.mediaId == mediaMetadata?.id,
+                                cornerRadiusProvider = cornerRadiusProvider,
                             )
                         }
                     }
@@ -554,6 +557,7 @@ private fun ThumbnailItem(
     currentMediaId: String? = null,
     currentMediaThumbnail: String? = null,
     shrink: Boolean = false,
+    cornerRadiusProvider: (() -> Dp)? = null,
     modifier: Modifier = Modifier,
 ) {
     val artScale by animateFloatAsState(
@@ -624,7 +628,16 @@ private fun ThumbnailItem(
                     scaleY = artScale
                 }
                 .size(dimensions.thumbnailSize)
-                .clip(RoundedCornerShape(dimensions.cornerRadius))
+                .then(
+                    if (cornerRadiusProvider != null) {
+                        Modifier.graphicsLayer {
+                            shape = RoundedCornerShape(cornerRadiusProvider())
+                            clip = true
+                        }
+                    } else {
+                        Modifier.clip(RoundedCornerShape(dimensions.cornerRadius))
+                    },
+                )
         ) {
             if (hidePlayerThumbnail) {
                 HiddenThumbnailPlaceholder(textBackgroundColor = textBackgroundColor)

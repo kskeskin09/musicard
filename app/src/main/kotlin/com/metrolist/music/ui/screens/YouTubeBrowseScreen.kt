@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -87,8 +88,12 @@ fun YouTubeBrowseScreen(
     // genre and coming back starts again at For You.
     var filter by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(GenreFilter.FOR_YOU) }
     val sections = browseResult?.items.orEmpty()
+    val newItems by viewModel.newItems.collectAsStateWithLifecycle()
+    LaunchedEffect(filter, browseResult?.title) {
+        if (filter == GenreFilter.NEW) viewModel.loadNew(browseResult?.title.orEmpty())
+    }
     val allItems =
-        remember(sections, filter) {
+        remember(sections, filter, newItems) {
             when (filter) {
                 GenreFilter.FOR_YOU -> sections.flatMap { it.items }
                 GenreFilter.POPULAR -> {
@@ -97,10 +102,17 @@ fun YouTubeBrowseScreen(
                     (popular.ifEmpty { sections.filterNot { it.title.matchesAny(NewWords) } }).flatMap { it.items }
                 }
                 GenreFilter.NEW -> {
+                    // The page's own "new releases" shelf if it has one, then this year's releases
+                    // for the genre from search. Only when both are empty: the page's albums.
                     val fresh = sections.filter { it.title.matchesAny(NewWords) }.flatMap { it.items }
-                    // No section named that way: the albums and singles, which are the releases.
-                    fresh.ifEmpty { sections.flatMap { it.items }.filterIsInstance<AlbumItem>() }
-                        .ifEmpty { sections.flatMap { it.items } }
+                    val searched = newItems
+                    when {
+                        searched == null && fresh.isEmpty() -> emptyList()
+                        else -> (fresh + searched.orEmpty()).distinctBy { it.id }.ifEmpty {
+                            sections.flatMap { it.items }.filterIsInstance<AlbumItem>()
+                                .ifEmpty { sections.flatMap { it.items } }
+                        }
+                    }
                 }
             }
         }
@@ -116,7 +128,7 @@ fun YouTubeBrowseScreen(
             )
         }
 
-        if (browseResult == null) {
+        if (browseResult == null || (filter == GenreFilter.NEW && allItems.isEmpty() && newItems == null)) {
             items(8) {
                 ShimmerHost {
                     com.metrolist.music.ui.component.shimmer.ListItemPlaceHolder()
