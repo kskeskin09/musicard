@@ -140,6 +140,20 @@ jobs:
             echo "$DEBUG_KEYSTORE" | base64 -d > ./app/persistent-debug.keystore
           else
             echo "DEBUG_KEYSTORE secret not set; using the default debug keystore."
+            # GitHub runners no longer ship ~/.android/debug.keystore, so
+            # create one or the debug build fails at validateSigning.
+            if [ ! -f "$HOME/.android/debug.keystore" ]; then
+              mkdir -p "$HOME/.android"
+              keytool -genkeypair -v \
+                -keystore "$HOME/.android/debug.keystore" \
+                -storepass android \
+                -alias androiddebugkey \
+                -keypass android \
+                -keyalg RSA \
+                -keysize 2048 \
+                -validity 10000 \
+                -dname "CN=Android Debug,O=Android,C=US"
+            fi
           fi
 
       # Lint is intentionally not run in CI: it never gated a merge and added
