@@ -11,12 +11,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
@@ -85,13 +87,32 @@ fun ProfileScreen(
     var showPictureDialog by remember { mutableStateOf(false) }
     val avatarUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl
 
+    // Opening another page changes the bottom space (the navigation bar and mini player go away)
+    // while this page is still sliding out. That made the page shorter, so a page scrolled to
+    // the bottom jumped back up for a moment. The spacing is held as it was until the page is gone.
+    val liveInsets = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+    val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
+    val onThisPage = navController.currentBackStackEntryAsState().value?.destination?.route == Screens.Profile.route
+    val heldPadding = remember { arrayOf(liveInsets.calculateTopPadding(), liveInsets.calculateBottomPadding()) }
+    if (onThisPage) {
+        heldPadding[0] = liveInsets.calculateTopPadding()
+        heldPadding[1] = liveInsets.calculateBottomPadding()
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier =
             Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
+                // Kept outside the page, so it stays where it was while the page animates out
+                // (it used to jump back to the top for a moment when opening Settings).
+                .verticalScroll(com.metrolist.music.ui.utils.TabStates.scroll("profile/page"))
+                .padding(
+                    start = liveInsets.calculateStartPadding(layoutDirection),
+                    end = liveInsets.calculateEndPadding(layoutDirection),
+                    top = heldPadding[0],
+                    bottom = heldPadding[1],
+                ),
     ) {
         Spacer(Modifier.height(12.dp))
         Box(

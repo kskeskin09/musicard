@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.utils
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.mutableIntStateOf
@@ -21,6 +22,7 @@ import androidx.compose.runtime.MutableState
 object TabStates {
     private val lists = HashMap<String, LazyListState>()
     private val grids = HashMap<String, LazyGridState>()
+    private val scrolls = HashMap<String, ScrollState>()
     private val values = HashMap<String, MutableState<Any?>>()
     private val resets = HashMap<String, androidx.compose.runtime.MutableIntState>()
 
@@ -28,6 +30,8 @@ object TabStates {
     val headerCollapse = HashMap<String, Float>()
 
     fun list(key: String): LazyListState = lists.getOrPut(key) { LazyListState() }
+
+    fun scroll(key: String): ScrollState = scrolls.getOrPut(key) { ScrollState(0) }
 
     fun grid(key: String): LazyGridState = grids.getOrPut(key) { LazyGridState() }
 
@@ -45,6 +49,7 @@ object TabStates {
         val prefix = "$tab/"
         lists.keys.filter { it.startsWith(prefix) }.forEach { lists.remove(it) }
         grids.keys.filter { it.startsWith(prefix) }.forEach { grids.remove(it) }
+        scrolls.keys.filter { it.startsWith(prefix) }.forEach { scrolls.remove(it) }
         values.keys.filter { it.startsWith(prefix) }.forEach { values.remove(it) }
         headerCollapse.remove(tab)
         val counter = resets.getOrPut(tab) { mutableIntStateOf(0) }
