@@ -580,13 +580,14 @@ fun AppearanceSettings(
                 showPlayerButtonsStyleDialog = false
             },
             title = stringResource(R.string.player_buttons_style),
-            current = playerButtonsStyle,
-            values = PlayerButtonsStyle.values().toList(),
+            // Two choices: Default, or Background color (the song's color). The old Tertiary
+            // choice counts as Background color.
+            current = if (playerButtonsStyle == PlayerButtonsStyle.DEFAULT) PlayerButtonsStyle.DEFAULT else PlayerButtonsStyle.PRIMARY,
+            values = listOf(PlayerButtonsStyle.DEFAULT, PlayerButtonsStyle.PRIMARY),
             valueText = {
                 when (it) {
                     PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
-                    PlayerButtonsStyle.PRIMARY -> stringResource(R.string.primary_color_style)
-                    PlayerButtonsStyle.TERTIARY -> stringResource(R.string.tertiary_color_style)
+                    else -> stringResource(R.string.player_buttons_background_color)
                 }
             },
         )
@@ -890,7 +891,7 @@ fun AppearanceSettings(
                                 )
                             },
                             trailingContent = {
-                                // White or red, as a small two-part switch.
+                                // Classic (red) or Modern (white), as a small two-part switch.
                                 Row(
                                     modifier =
                                         Modifier
@@ -1347,8 +1348,7 @@ fun AppearanceSettings(
                             Text(
                                 when (playerButtonsStyle) {
                                     PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
-                                    PlayerButtonsStyle.PRIMARY -> stringResource(R.string.primary_color_style)
-                                    PlayerButtonsStyle.TERTIARY -> stringResource(R.string.tertiary_color_style)
+                                    else -> stringResource(R.string.player_buttons_background_color)
                                 },
                             )
                         },
@@ -1527,8 +1527,8 @@ fun AppearanceSettings(
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.lyrics),
-                            title = { Text(stringResource(R.string.hide_status_bar_fullscreen)) },
-                            description = { Text(stringResource(R.string.hide_status_bar_fullscreen_desc)) },
+                            title = { Text(stringResource(R.string.hide_status_bar_lyrics)) },
+                            description = { Text(stringResource(R.string.hide_status_bar_lyrics_desc)) },
                             trailingContent = {
                                 Switch(
                                     checked = hideStatusBarOnFullscreen,

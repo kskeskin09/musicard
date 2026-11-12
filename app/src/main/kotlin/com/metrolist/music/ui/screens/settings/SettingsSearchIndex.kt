@@ -49,7 +49,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.swipe_sensitivity, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.lyrics_text_position, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.respect_agent_positioning, R.string.appearance, "settings/appearance"),
-    SettingsSearchEntry(R.string.hide_status_bar_fullscreen, R.string.appearance, "settings/appearance"),
+    SettingsSearchEntry(R.string.hide_status_bar_lyrics, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.default_open_tab, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.default_lib_chips, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.swipe_song_to_add, R.string.appearance, "settings/appearance"),

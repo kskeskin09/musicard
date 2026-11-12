@@ -503,10 +503,10 @@ fun ArtistScreen(
                                         contentPadding = PaddingValues(horizontal = 14.dp),
                                         modifier = Modifier.height(40.dp),
                                     ) {
-                                        Text(
+                                        com.metrolist.music.ui.component.SteadyText(
                                             text = stringResource(if (isChannelSubscribed) R.string.subscribed else R.string.subscribe),
+                                            variants = listOf(stringResource(R.string.subscribe), stringResource(R.string.subscribed)),
                                             fontSize = 14.sp,
-                                            maxLines = 1,
                                             color = if (!isChannelSubscribed) MaterialTheme.colorScheme.error else LocalContentColor.current,
                                         )
                                     }

@@ -109,6 +109,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.LocalNavController
+import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
@@ -1426,7 +1427,7 @@ fun HomeScreen(
                                             {
                                                 when {
                                                     endpoint.browseId == "FEmusic_moods_and_genres" -> {
-                                                        navController.navigate("mood_and_genres")
+                                                        navController.openSearchTab()
                                                     }
 
                                                     endpoint.params != null -> {
@@ -2027,21 +2028,6 @@ fun HomeScreen(
                                     val title = stringResource(R.string.your_daily_discover)
                                     NavigationTitle(
                                         title = title,
-                                        onPlayAllClick = {
-                                            val queueItems =
-                                                discoverList.mapNotNull {
-                                                    (it.recommendation as? SongItem)?.toMediaMetadata()
-                                                }
-
-                                            if (queueItems.isNotEmpty()) {
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = title,
-                                                        items = queueItems.map { it.toMediaItem() },
-                                                    ),
-                                                )
-                                            }
-                                        },
                                     )
                                 }
 
@@ -2365,7 +2351,7 @@ fun HomeScreen(
                                                 {
                                                     when {
                                                         endpoint.browseId == "FEmusic_moods_and_genres" -> {
-                                                            navController.navigate("mood_and_genres")
+                                                            navController.openSearchTab()
                                                         }
 
                                                         // Handle podcast-related browse endpoints
@@ -2385,19 +2371,6 @@ fun HomeScreen(
                                                         }
                                                     }
                                                 }
-                                            },
-                                        onPlayAllClick =
-                                            if (hasPlayableSongs && !isListenTogetherGuest) {
-                                                {
-                                                    playerConnection.playQueue(
-                                                        ListQueue(
-                                                            title = sectionData.title,
-                                                            items = sectionSongs.map { it.toMediaMetadata().toMediaItem() },
-                                                        ),
-                                                    )
-                                                }
-                                            } else {
-                                                null
                                             },
                                     )
                                 }
@@ -2510,7 +2483,7 @@ fun HomeScreen(
                                     NavigationTitle(
                                         title = stringResource(R.string.mood_and_genres),
                                         onClick = {
-                                            navController.navigate("mood_and_genres")
+                                            navController.openSearchTab()
                                         },
                                     )
                                 }
@@ -2844,5 +2817,14 @@ private fun <T : Any> HomeSongRows(
         items(entries, key = key) { entry ->
             itemContent(entry, Modifier.width(itemWidth))
         }
+    }
+}
+
+/** Moods and genres live on the Search tab now; the arrow and the YouTube link open that tab. */
+private fun NavController.openSearchTab() {
+    navigate(Screens.Search.route) {
+        popUpTo(graph.startDestinationId) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }

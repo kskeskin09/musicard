@@ -534,6 +534,7 @@
     <string name="view_changelog">Değişiklik günlüğünü görüntüle</string>
     <string name="failed_to_check_updates">Güncellemeler kontrol edilemedi: %s</string>
     <string name="set_as_default">Varsayılan olarak ayarla</string>
+    <string name="already_default">Zaten varsayılan</string>
     <string name="sleep_timer_default_set">Uyku zamanlayıcısı varsayılanı %d dakika olarak ayarlandı</string>
     <string name="found_in_settings_content">Ayarlar &gt; İçerik bölümünde bulunur</string>
     <string name="plays">dinleme</string>
@@ -759,6 +760,8 @@
     <string name="show_interval_indicator">Aralık göstergesini göster</string>
     <string name="hide_status_bar_fullscreen_desc">Şarkı sözleri tam ekran modundayken durum çubuğunu gizle</string>
     <string name="hide_status_bar_fullscreen">Tam ekranda durum çubuğunu gizle</string>
+    <string name="hide_status_bar_lyrics">Sözler modunda durum çubuğunu gizle</string>
+    <string name="hide_status_bar_lyrics_desc">Açılan sözler şarkıyı takip ederken ve tuşlar gizliyken durum çubuğunu gizle</string>
     <string name="lyrics_from_provider">Şarkı sözleri sağlayıcısı: %s</string>
     <string name="parsed_from_link">Bağlantıdan ayrıştırıldı</string>
     <string name="autoplay">Oto oynatma</string>

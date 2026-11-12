@@ -139,9 +139,6 @@ fun NavGraphBuilder.navigationBuilder(
         StatsScreen(navController)
     }
 
-    composable("mood_and_genres") {
-        MoodAndGenresScreen(navController)
-    }
 
     composable("account") {
         AccountScreen(navController)

@@ -798,7 +798,9 @@ class MainActivity : FragmentActivity() {
                 )
                 val miniPlayerBlackout = miniPlayerEdgeEffect == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
                 val miniPlayerBlur = miniPlayerEdgeEffect == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR
-                val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
+                // Read once, right away: the start page must not first show Home and then jump to
+                // the chosen tab once the settings have loaded.
+                val defaultOpenTabInt = remember { dataStore.get(DefaultOpenTabKey, NavigationTab.HOME.name) }
                 val defaultOpenTab = remember(defaultOpenTabInt) {
                     try {
                         NavigationTab.valueOf(defaultOpenTabInt)
