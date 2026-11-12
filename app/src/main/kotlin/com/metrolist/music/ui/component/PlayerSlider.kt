@@ -29,7 +29,8 @@ fun PlayerSliderTrack(
     sliderState: SliderState,
     modifier: Modifier = Modifier,
     colors: SliderColors = SliderDefaults.colors(),
-    trackHeight: Dp = 10.dp
+    trackHeight: Dp = 10.dp,
+    showTicks: Boolean = true,
 ) {
     val inactiveTrackColor = colors.inactiveTrackColor
     val activeTrackColor = colors.activeTrackColor
@@ -42,7 +43,7 @@ fun PlayerSliderTrack(
             .height(trackHeight)
     ) {
         drawTrack(
-            stepsToTickFractions(sliderState.steps),
+            if (showTicks) stepsToTickFractions(sliderState.steps) else floatArrayOf(),
             0f,
             calcFraction(
                 valueRange.start,

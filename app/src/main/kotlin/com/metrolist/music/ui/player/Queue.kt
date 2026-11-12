@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.player
 
+import com.metrolist.music.ui.component.StyledSlider
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -53,7 +54,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -586,7 +586,7 @@ fun Queue(
 
                             Spacer(Modifier.height(16.dp))
 
-                            Slider(
+                            StyledSlider(
                                 value = sleepTimerValue,
                                 onValueChange = { sleepTimerValue = it },
                                 valueRange = 5f..120f,

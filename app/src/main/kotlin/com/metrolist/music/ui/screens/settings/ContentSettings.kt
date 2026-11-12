@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.ui.component.StyledSlider
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.WindowInsetsSides
 import android.content.Intent
@@ -31,7 +32,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -436,7 +436,7 @@ fun ContentSettings(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(tempLength.toInt().toString())
-                    Slider(
+                    StyledSlider(
                         value = tempLength,
                         onValueChange = { tempLength = it },
                         valueRange = 1f..100f,

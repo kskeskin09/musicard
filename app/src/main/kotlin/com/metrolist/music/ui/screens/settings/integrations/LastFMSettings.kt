@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings.integrations
 
+import com.metrolist.music.ui.component.StyledSlider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -443,7 +443,7 @@ fun LastFMSettings(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    Slider(
+                    StyledSlider(
                         value = tempMinTrackDuration.toFloat(),
                         onValueChange = { tempMinTrackDuration = it.toInt() },
                         valueRange = 10f..60f,
@@ -508,7 +508,7 @@ fun LastFMSettings(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    Slider(
+                    StyledSlider(
                         value = tempScrobbleDelayPercent,
                         onValueChange = { tempScrobbleDelayPercent = it },
                         valueRange = 0.3f..0.95f,
@@ -573,7 +573,7 @@ fun LastFMSettings(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    Slider(
+                    StyledSlider(
                         value = tempScrobbleDelaySeconds.toFloat(),
                         onValueChange = { tempScrobbleDelaySeconds = it.toInt() },
                         valueRange = 30f..360f,

@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.ui.component.StyledSlider
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -352,7 +352,7 @@ fun StorageSettings(
                                     else -> Formatter.formatShortFileSize(context, maxSongCacheSize * 1024 * 1024L)
                                 }
                             )
-                            Slider(
+                            StyledSlider(
                                 value = songCacheValues.indexOf(maxSongCacheSize).toFloat(),
                                 enabled = enableSongCache,
                                 onValueChange = {
@@ -425,7 +425,7 @@ fun StorageSettings(
                                             else -> Formatter.formatShortFileSize(context, maxImageCacheSize * 1024 * 1024L)
                                         },
                                 )
-                                Slider(
+                                StyledSlider(
                                     value = imageCacheValues.indexOf(maxImageCacheSize).toFloat(),
                                     onValueChange = {
                                         val newValue = imageCacheValues[it.roundToInt()]

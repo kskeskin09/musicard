@@ -76,10 +76,10 @@ val AlarmRandomSongKey = booleanPreferencesKey("alarmRandomSong")
 val AlarmNextTriggerAtKey = longPreferencesKey("alarmNextTriggerAt")
 val AlarmEntriesKey = stringPreferencesKey("alarmEntries")
 
+/** SLIM is shown as "Classic", DEFAULT as "Old". Old WAVY values fall back to DEFAULT. */
 enum class SliderStyle {
-    DEFAULT,
-    WAVY,
     SLIM,
+    DEFAULT,
 }
 
 const val SYSTEM_DEFAULT = "SYSTEM_DEFAULT"
