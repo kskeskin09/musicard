@@ -1042,7 +1042,13 @@ fun CompactLyrics(
                     val blurRadius by animateDpAsState(
                         targetValue =
                             if (lyricsBlur && synced && !followPaused && currentIndex >= 0) {
-                                LyricsBlurStep * abs(index - currentIndex).coerceAtMost(LyricsBlurMaxSteps)
+                                val away = abs(index - currentIndex)
+                                val compactBlur = LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps)
+                                // Opened, the text is much larger, so the same look needs a wider
+                                // blur. The lines right next to the current one stay easy to read.
+                                val fullBlur =
+                                    if (away <= 1) LyricsBlurStep * away else compactBlur * FullLyricsBlurScale
+                                lerp(compactBlur, fullBlur, fraction)
                             } else {
                                 0.dp
                             },
@@ -1465,6 +1471,7 @@ private fun liftedLetters(
 private val SweepEdgeWidth = 14.dp
 private val LyricsBlurStep = 1.3.dp
 private const val LyricsBlurMaxSteps = 5
+private const val FullLyricsBlurScale = 2.25f
 
 /**
  * Hooks the card's lyric lines up to the AI translation: loads saved translations, translates when

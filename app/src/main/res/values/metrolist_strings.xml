@@ -1056,7 +1056,7 @@
     <string name="style_glass">Glass</string>
     <string name="style_modern">Modern</string>
     <string name="lyrics_blur">Lyrics blur</string>
-    <string name="lyrics_blur_desc">Blur lines the farther they are from the current one</string>
+    <string name="lyrics_blur_desc">Blur lines the farther they are from the current one. Requires Android 12</string>
     <string name="like_icon_color">Like icon color</string>
     <string name="like_icon_color_white">White</string>
     <string name="like_icon_color_red">Red</string>
