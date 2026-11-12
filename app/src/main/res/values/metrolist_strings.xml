@@ -1098,4 +1098,15 @@
     <string name="genre_filter_for_you">For You</string>
     <string name="genre_filter_popular">Popular</string>
     <string name="genre_filter_new">New</string>
+    <string name="notification_center">Notification center</string>
+    <string name="notification_center_desc">Choose the buttons on the playback notification</string>
+    <string name="notification_buttons_hint">Tap a button to replace it. Play/pause always stays in the middle and each button can be used once.</string>
+    <string name="notification_choose_button">Choose a button</string>
+    <string name="notification_button_in_use">In use</string>
+    <string name="notification_restore_defaults">Restore default buttons</string>
+    <string name="notification_preview_song">Song name</string>
+    <string name="notification_preview_artist">Artist name</string>
+    <string name="repeat">Repeat</string>
+    <string name="seek_back_5">Back 5 seconds</string>
+    <string name="seek_forward_5">Forward 5 seconds</string>
 </resources>

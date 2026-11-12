@@ -142,6 +142,9 @@ import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.LastFMUseNowPlaying
 import com.metrolist.music.constants.MediaSessionConstants
+import com.metrolist.music.constants.NotificationButton
+import com.metrolist.music.constants.NotificationButtons
+import com.metrolist.music.constants.NotificationButtonsKey
 import com.metrolist.music.constants.MediaSessionConstants.CommandAddToTargetPlaylist
 import com.metrolist.music.constants.MediaSessionConstants.CommandToggleLike
 import com.metrolist.music.constants.MediaSessionConstants.CommandToggleRepeatMode
@@ -626,6 +629,7 @@ class MusicService :
         startupPrefs = runBlocking(Dispatchers.IO) { dataStore.data.first() }
         historyPaused = startupPrefs!![PauseListenHistoryKey] ?: false
         historyDurationMs = ((startupPrefs!![HistoryDuration] ?: 30f) * 1000).toLong()
+        notificationButtons = NotificationButtons.parse(startupPrefs!![NotificationButtonsKey])
 
         // 3. Connect the processor to the service
         // handled in createExoPlayer
@@ -863,6 +867,11 @@ class MusicService :
                 settings[PlayerVolumeKey] = volume
             }
         }
+
+        dataStore.data
+            .map { NotificationButtons.parse(it[NotificationButtonsKey]) }
+            .distinctUntilChanged()
+            .collect(scope) { buttons -> applyNotificationButtons(buttons) }
 
         currentSong.debounce(1000).collect(scope) { song ->
             updateNotification()
@@ -1600,65 +1609,144 @@ class MusicService :
         player.pause()
     }
 
-    private fun updateNotification(isLiked: Boolean? = currentSong.value?.song?.let { if (it.isEpisode) it.inLibrary != null else it.liked }) {
-        mediaSession?.setCustomLayout(
-            listOf(
-                CommandButton
-                    .Builder()
-                    .setDisplayName(getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on))
-                    .setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
-                    .setSessionCommand(CommandToggleShuffle)
-                    .build(),
-                CommandButton
-                    .Builder()
-                    .setDisplayName(
-                        getString(
-                            if (isLiked == true) {
-                                R.string.action_remove_like
-                            } else {
-                                R.string.action_like
-                            },
-                        ),
-                    ).setIconResId(if (isLiked == true) R.drawable.ic_heart else R.drawable.ic_heart_outline)
-                    .setSessionCommand(CommandToggleLike)
-                    .setEnabled(currentSong.value != null)
-                    .build(),
-                CommandButton
-                    .Builder()
-                    .setDisplayName(
-                        getString(
-                            when (player.repeatMode) {
-                                REPEAT_MODE_OFF -> R.string.repeat_mode_off
-                                REPEAT_MODE_ONE -> R.string.repeat_mode_one
-                                REPEAT_MODE_ALL -> R.string.repeat_mode_all
-                                else -> throw IllegalStateException()
-                            },
-                        ),
-                    ).setIconResId(
+    /** The user's notification buttons (Settings > Appearance > Notification center). */
+    @Volatile
+    private var notificationButtons: List<NotificationButton> = NotificationButtons.Default
+
+    private var notificationLiked: Boolean? = null
+
+    private fun currentLikedState(): Boolean? =
+        currentSong.value?.song?.let { if (it.isEpisode) it.inLibrary != null else it.liked }
+
+    /** The player commands the notification controller gets: previous/next are dropped when their slot holds another button. */
+    fun notificationPlayerCommands(base: Player.Commands): Player.Commands {
+        val buttons = notificationButtons
+        return base.buildUpon().apply {
+            if (buttons[0] != NotificationButton.PREVIOUS) {
+                remove(Player.COMMAND_SEEK_TO_PREVIOUS)
+                remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+            }
+            if (buttons[1] != NotificationButton.NEXT) {
+                remove(Player.COMMAND_SEEK_TO_NEXT)
+                remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+            }
+        }.build()
+    }
+
+    private fun notificationCommandButton(button: NotificationButton, isLiked: Boolean?, slot: Int): CommandButton {
+        val hasSong = currentSong.value != null
+        val builder = CommandButton.Builder()
+        when (button) {
+            NotificationButton.PREVIOUS -> builder
+                .setDisplayName(getString(R.string.previous))
+                .setIconResId(R.drawable.skip_previous)
+                .setSessionCommand(MediaSessionConstants.CommandSkipPrevious)
+
+            NotificationButton.NEXT -> builder
+                .setDisplayName(getString(R.string.next))
+                .setIconResId(R.drawable.skip_next)
+                .setSessionCommand(MediaSessionConstants.CommandSkipNext)
+
+            NotificationButton.LIKE -> builder
+                .setDisplayName(getString(if (isLiked == true) R.string.action_remove_like else R.string.action_like))
+                .setIconResId(if (isLiked == true) R.drawable.ic_heart else R.drawable.ic_heart_outline)
+                .setSessionCommand(CommandToggleLike)
+                .setEnabled(hasSong)
+
+            NotificationButton.REPEAT -> builder
+                .setDisplayName(
+                    getString(
                         when (player.repeatMode) {
-                            REPEAT_MODE_OFF -> R.drawable.repeat
-                            REPEAT_MODE_ONE -> R.drawable.repeat_one_on
-                            REPEAT_MODE_ALL -> R.drawable.repeat_on
-                            else -> throw IllegalStateException()
+                            REPEAT_MODE_ONE -> R.string.repeat_mode_one
+                            REPEAT_MODE_ALL -> R.string.repeat_mode_all
+                            else -> R.string.repeat_mode_off
                         },
-                    ).setSessionCommand(CommandToggleRepeatMode)
-                    .build(),
-                CommandButton
-                    .Builder()
-                    .setDisplayName(getString(R.string.start_radio))
-                    .setIconResId(R.drawable.radio)
-                    .setSessionCommand(CommandToggleStartRadio)
-                    .setEnabled(currentSong.value != null)
-                    .build(),
-                CommandButton
-                    .Builder()
-                    .setDisplayName(getString(R.string.android_auto_target_playlist))
-                    .setIconResId(R.drawable.playlist_add)
-                    .setSessionCommand(CommandAddToTargetPlaylist)
-                    .setEnabled(currentSong.value != null)
-                    .build(),
-            ),
-        )
+                    ),
+                ).setIconResId(
+                    when (player.repeatMode) {
+                        REPEAT_MODE_ONE -> R.drawable.repeat_one_on
+                        REPEAT_MODE_ALL -> R.drawable.repeat_on
+                        else -> R.drawable.repeat
+                    },
+                ).setSessionCommand(CommandToggleRepeatMode)
+
+            NotificationButton.SHUFFLE -> builder
+                .setDisplayName(getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on))
+                .setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
+                .setSessionCommand(CommandToggleShuffle)
+
+            NotificationButton.SEEK_BACK_5 -> builder
+                .setDisplayName(getString(R.string.seek_back_5))
+                .setIconResId(R.drawable.replay_5)
+                .setSessionCommand(MediaSessionConstants.CommandSeekBack5)
+                .setEnabled(hasSong)
+
+            NotificationButton.SEEK_FORWARD_5 -> builder
+                .setDisplayName(getString(R.string.seek_forward_5))
+                .setIconResId(R.drawable.forward_5)
+                .setSessionCommand(MediaSessionConstants.CommandSeekForward5)
+                .setEnabled(hasSong)
+
+            NotificationButton.START_RADIO -> builder
+                .setDisplayName(getString(R.string.start_radio))
+                .setIconResId(R.drawable.radio)
+                .setSessionCommand(CommandToggleStartRadio)
+                .setEnabled(hasSong)
+
+            NotificationButton.ADD_TO_PLAYLIST -> builder
+                .setDisplayName(getString(R.string.android_auto_target_playlist))
+                .setIconResId(R.drawable.playlist_add)
+                .setSessionCommand(CommandAddToTargetPlaylist)
+                .setEnabled(hasSong)
+        }
+        return builder.setSlots(slot).build()
+    }
+
+    /**
+     * Buttons for the notification: the left slot (previous by default) and right slot (next by default)
+     * sit around play/pause, followed by the two extra buttons. The remaining actions go to the overflow,
+     * which Android Auto and other controllers can still show.
+     */
+    fun notificationButtonPreferences(isLiked: Boolean? = notificationLiked ?: currentLikedState()): List<CommandButton> {
+        val buttons = notificationButtons
+        val result = mutableListOf<CommandButton>()
+        if (buttons[0] != NotificationButton.PREVIOUS) {
+            result += notificationCommandButton(buttons[0], isLiked, CommandButton.SLOT_BACK)
+        }
+        if (buttons[1] != NotificationButton.NEXT) {
+            result += notificationCommandButton(buttons[1], isLiked, CommandButton.SLOT_FORWARD)
+        }
+        result += notificationCommandButton(buttons[2], isLiked, CommandButton.SLOT_OVERFLOW)
+        result += notificationCommandButton(buttons[3], isLiked, CommandButton.SLOT_OVERFLOW)
+        NotificationButton.entries
+            .filter {
+                it !in buttons &&
+                    it != NotificationButton.PREVIOUS &&
+                    it != NotificationButton.NEXT &&
+                    it != NotificationButton.SEEK_BACK_5 &&
+                    it != NotificationButton.SEEK_FORWARD_5
+            }.forEach { result += notificationCommandButton(it, isLiked, CommandButton.SLOT_OVERFLOW) }
+        return result
+    }
+
+    private fun updateNotification(isLiked: Boolean? = currentLikedState()) {
+        notificationLiked = isLiked
+        val session = mediaSession ?: return
+        session.setMediaButtonPreferences(notificationButtonPreferences(isLiked))
+    }
+
+    /** Applies a new button choice: the notification controller's commands change along with its buttons. */
+    private fun applyNotificationButtons(buttons: List<NotificationButton>) {
+        if (buttons == notificationButtons) return
+        notificationButtons = buttons
+        val session = mediaSession ?: return
+        val controller = session.mediaNotificationControllerInfo
+        val base = mediaLibrarySessionCallback.notificationBasePlayerCommands
+        val sessionCommands = mediaLibrarySessionCallback.notificationSessionCommands
+        if (controller != null && base != null && sessionCommands != null) {
+            session.setAvailableCommands(controller, sessionCommands, notificationPlayerCommands(base))
+        }
+        updateNotification()
     }
 
     /**

@@ -1222,6 +1222,21 @@ fun AppearanceSettings(
         Spacer(modifier = Modifier.height(27.dp))
 
         Material3SettingsGroup(
+            title = stringResource(R.string.notification_center),
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.notification),
+                        title = { Text(stringResource(R.string.notification_center)) },
+                        description = { Text(stringResource(R.string.notification_center_desc)) },
+                        onClick = { navController.navigate("settings/appearance/notification_center") },
+                    ),
+                ),
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
             title = stringResource(R.string.player),
             items =
                 listOf(

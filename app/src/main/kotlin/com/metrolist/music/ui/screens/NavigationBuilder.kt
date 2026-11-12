@@ -377,6 +377,10 @@ fun NavGraphBuilder.navigationBuilder(
         ThemeScreen(navController)
     }
 
+    composable("settings/appearance/notification_center") {
+        com.metrolist.music.ui.screens.settings.NotificationCenterSettings(navController)
+    }
+
     composable("settings/content") {
         ContentSettings(navController)
     }

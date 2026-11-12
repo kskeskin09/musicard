@@ -37,6 +37,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.lyrics_blur, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.mini_player_blackout, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.mini_player_blur, R.string.appearance, "settings/appearance"),
+    SettingsSearchEntry(R.string.notification_center, R.string.appearance, "settings/appearance/notification_center"),
     SettingsSearchEntry(R.string.mini_player_background_style, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.hide_player_thumbnail, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.crop_album_art, R.string.appearance, "settings/appearance"),
