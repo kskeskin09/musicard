@@ -95,6 +95,8 @@ import com.metrolist.music.constants.MiniPlayerBackgroundStyle
 import com.metrolist.music.constants.MiniPlayerBackgroundStyleKey
 import com.metrolist.music.constants.MiniPlayerBlackoutKey
 import com.metrolist.music.constants.MiniPlayerBlurKey
+import com.metrolist.music.constants.MiniPlayerEdgeEffect
+import com.metrolist.music.constants.MiniPlayerEdgeEffectKey
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerButtonsStyle
@@ -604,6 +606,29 @@ fun AppearanceSettings(
                     PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
                 }
             },
+        )
+    }
+
+    val (oldMiniPlayerBlackout, _) = rememberPreference(MiniPlayerBlackoutKey, defaultValue = true)
+    val (oldMiniPlayerBlur, _) = rememberPreference(MiniPlayerBlurKey, defaultValue = false)
+    val (miniPlayerEdgeEffect, onMiniPlayerEdgeEffectChange) =
+        rememberEnumPreference(
+            MiniPlayerEdgeEffectKey,
+            defaultValue = MiniPlayerEdgeEffect.fromOld(oldMiniPlayerBlackout, oldMiniPlayerBlur),
+        )
+    var showMiniPlayerEdgeEffectDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showMiniPlayerEdgeEffectDialog) {
+        EnumDialog(
+            onDismiss = { showMiniPlayerEdgeEffectDialog = false },
+            onSelect = {
+                onMiniPlayerEdgeEffectChange(it)
+                showMiniPlayerEdgeEffectDialog = false
+            },
+            title = stringResource(R.string.mini_player_edge_effect),
+            current = miniPlayerEdgeEffect,
+            values = MiniPlayerEdgeEffect.values().toList(),
+            valueText = { miniPlayerEdgeEffectText(it) },
         )
     }
 
@@ -1137,10 +1162,6 @@ fun AppearanceSettings(
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        val (miniPlayerBlackout, onMiniPlayerBlackoutChange) =
-            rememberPreference(MiniPlayerBlackoutKey, defaultValue = true)
-        val (miniPlayerBlur, onMiniPlayerBlurChange) =
-            rememberPreference(MiniPlayerBlurKey, defaultValue = false)
 
         Material3SettingsGroup(
             title = stringResource(id = R.string.mini_player),
@@ -1161,48 +1182,10 @@ fun AppearanceSettings(
                         onClick = { showMiniPlayerBackgroundDialog = true },
                     ),
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.contrast),
-                        title = { Text(stringResource(R.string.mini_player_blackout)) },
-                        description = { Text(stringResource(R.string.mini_player_blackout_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = miniPlayerBlackout,
-                                onCheckedChange = onMiniPlayerBlackoutChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (miniPlayerBlackout) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onMiniPlayerBlackoutChange(!miniPlayerBlackout) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.blur_on),
-                        title = { Text(stringResource(R.string.mini_player_blur)) },
-                        description = { Text(stringResource(R.string.mini_player_blur_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = miniPlayerBlur,
-                                onCheckedChange = onMiniPlayerBlurChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (miniPlayerBlur) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onMiniPlayerBlurChange(!miniPlayerBlur) },
+                        icon = painterResource(if (miniPlayerEdgeEffect == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
+                        title = { Text(stringResource(R.string.mini_player_edge_effect)) },
+                        description = { Text(miniPlayerEdgeEffectText(miniPlayerEdgeEffect)) },
+                        onClick = { showMiniPlayerEdgeEffectDialog = true },
                     ),
                 ),
         )
@@ -1804,4 +1787,12 @@ private fun sliderStyleName(style: SliderStyle): String =
     when (style) {
         SliderStyle.SLIM -> stringResource(R.string.slider_style_classic)
         SliderStyle.DEFAULT -> stringResource(R.string.slider_style_old)
+    }
+
+@Composable
+private fun miniPlayerEdgeEffectText(effect: MiniPlayerEdgeEffect): String =
+    when (effect) {
+        MiniPlayerEdgeEffect.BLACKOUT -> stringResource(R.string.mini_player_blackout)
+        MiniPlayerEdgeEffect.BLUR -> stringResource(R.string.mini_player_blur)
+        MiniPlayerEdgeEffect.NONE -> stringResource(R.string.mini_player_edge_none)
     }

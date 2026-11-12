@@ -783,8 +783,14 @@ class MainActivity : FragmentActivity() {
                 }
                 val (forceBottomNav) = rememberPreference(ForceBottomNavBarKey, defaultValue = false)
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
-                val miniPlayerBlackout by rememberPreference(com.metrolist.music.constants.MiniPlayerBlackoutKey, defaultValue = true)
-                val miniPlayerBlur by rememberPreference(com.metrolist.music.constants.MiniPlayerBlurKey, defaultValue = false)
+                val oldMiniPlayerBlackout by rememberPreference(com.metrolist.music.constants.MiniPlayerBlackoutKey, defaultValue = true)
+                val oldMiniPlayerBlur by rememberPreference(com.metrolist.music.constants.MiniPlayerBlurKey, defaultValue = false)
+                val miniPlayerEdgeEffect by rememberEnumPreference(
+                    com.metrolist.music.constants.MiniPlayerEdgeEffectKey,
+                    defaultValue = com.metrolist.music.constants.MiniPlayerEdgeEffect.fromOld(oldMiniPlayerBlackout, oldMiniPlayerBlur),
+                )
+                val miniPlayerBlackout = miniPlayerEdgeEffect == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
+                val miniPlayerBlur = miniPlayerEdgeEffect == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
                 val defaultOpenTab = remember(defaultOpenTabInt) {
                     try {
@@ -1956,5 +1962,5 @@ val LocalIsPlayerExpanded = compositionLocalOf { false }
 
 // How far above the mini player (or the tab bar) the bottom fade starts, and how far down from
 // there it takes to reach most of its strength.
-private val BottomFadeLead = 10.dp
+private val BottomFadeLead = 18.dp
 private val BottomFadeRamp = 14.dp
