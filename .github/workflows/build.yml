@@ -84,16 +84,16 @@ jobs:
           OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
           mkdir -p "$OUTPUT_DIR/out"
           if [ "${{ matrix.variant }}" = "gms" ]; then
-            TARGET_NAME="app-universal-with-Google-Cast.apk"
+            TARGET_NAME="Musicard-Nightly-with-Google-Cast.apk"
           else
-            TARGET_NAME="app-universal-release.apk"
+            TARGET_NAME="Musicard-Nightly.apk"
           fi
           find "$OUTPUT_DIR" -name "*-signed.apk" -o -name "*-unsigned-signed.apk" | xargs -I{} mv {} "$OUTPUT_DIR/out/$TARGET_NAME"
 
       - name: Upload Signed APK
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.variant == 'gms' && 'app-with-Google-Cast' || 'app-release' }}
+          name: ${{ matrix.variant == 'gms' && 'Musicard-Nightly-with-Google-Cast' || 'Musicard-Nightly' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*
 
   build_debug:
@@ -140,6 +140,20 @@ jobs:
             echo "$DEBUG_KEYSTORE" | base64 -d > ./app/persistent-debug.keystore
           else
             echo "DEBUG_KEYSTORE secret not set; using the default debug keystore."
+            # GitHub runners no longer ship ~/.android/debug.keystore, so
+            # create one or the debug build fails at validateSigning.
+            if [ ! -f "$HOME/.android/debug.keystore" ]; then
+              mkdir -p "$HOME/.android"
+              keytool -genkeypair -v \
+                -keystore "$HOME/.android/debug.keystore" \
+                -storepass android \
+                -alias androiddebugkey \
+                -keypass android \
+                -keyalg RSA \
+                -keysize 2048 \
+                -validity 10000 \
+                -dname "CN=Android Debug,O=Android,C=US"
+            fi
           fi
 
       # Lint is intentionally not run in CI: it never gated a merge and added
@@ -147,8 +161,8 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary
         env:
-          METROLIST_APPLICATION_ID: com.kskeskin09.musicard
-          METROLIST_APP_NAME: Musicard Nightly
+          METROLIST_APPLICATION_ID: com.kskeskin09.musicard.debug
+          METROLIST_APP_NAME: Musicard Debug
           METROLIST_BUILD_COMMIT: ${{ github.sha }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -172,7 +186,7 @@ jobs:
       - name: Download Signed APK
         uses: actions/download-artifact@v8
         with:
-          name: app-with-Google-Cast
+          name: Musicard-Nightly-with-Google-Cast
           path: nightly
 
       - name: Publish Nightly Release
@@ -180,8 +194,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          mv nightly/app-universal-with-Google-Cast.apk nightly/Musicard-with-Google-Cast.apk
-
           PREVIOUS_NIGHTLY_SHA=$(gh release view nightly --json targetCommitish --jq .targetCommitish 2>/dev/null || true)
           {
             echo "Automated prerelease built from main at commit $GITHUB_SHA. It may be unstable."
@@ -200,7 +212,7 @@ jobs:
           fi
 
           gh release create nightly \
-            nightly/Musicard-with-Google-Cast.apk \
+            nightly/Musicard-Nightly-with-Google-Cast.apk \
             --target "$GITHUB_SHA" \
             --title "Musicard Nightly" \
             --notes-file nightly-notes.md \

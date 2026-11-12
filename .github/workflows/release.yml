@@ -255,7 +255,7 @@ jobs:
 
           gh release create "v${{ needs.check-version.outputs.new_version }}" \
             --target "$GITHUB_SHA" \
-            --title "${{ needs.check-version.outputs.new_version }}" \
+            --title "Musicard ${{ needs.check-version.outputs.new_version }}" \
             --notes-file attributed_release_notes.md \
             --latest \
             release_files/*.apk
