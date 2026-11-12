@@ -14,7 +14,6 @@ import android.os.Build
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.res.colorResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -144,7 +143,7 @@ fun AppearanceSettings(
             defaultValue = true,
         )
     val (appLogo, onAppLogoPrefChange) =
-        rememberEnumPreference(AppLogoKey, defaultValue = AppLogo.CARD)
+        rememberEnumPreference(AppLogoKey, defaultValue = AppLogo.SINGLE_NOTE)
     val (logoTheme, onLogoThemePrefChange) =
         rememberEnumPreference(LogoThemeKey, defaultValue = LogoTheme.BLACK)
     val iconContext = LocalContext.current
@@ -946,12 +945,8 @@ fun AppearanceSettings(
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        // Launcher logo: which mark, and its colours (fixed, or following the device).
-        val deviceLogoBackground = colorResource(R.color.logo_bg_device)
-        val deviceLogoForeground = colorResource(R.color.logo_device_fg)
-        val logoColors: (LogoTheme) -> Pair<Color, Color> = { theme ->
-            if (theme == LogoTheme.DEVICE) deviceLogoBackground to deviceLogoForeground else theme.background to theme.foreground
-        }
+        // Launcher logo: which mark, and its fixed colours.
+        val logoColors: (LogoTheme) -> Pair<Color, Color> = { theme -> theme.background to theme.foreground }
         Material3SettingsGroup(
             title = stringResource(R.string.logo),
             items =
@@ -1023,11 +1018,7 @@ fun AppearanceSettings(
                                 Text(stringResource(R.string.logo_theme))
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    if (logoTheme == LogoTheme.DEVICE) {
-                                        stringResource(R.string.logo_theme_device_desc)
-                                    } else {
-                                        stringResource(R.string.logo_theme_desc, stringResource(logoTheme.label))
-                                    },
+                                    stringResource(R.string.logo_theme_desc, stringResource(logoTheme.label)),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

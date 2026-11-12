@@ -161,16 +161,16 @@
         </activity>
 
         <!-- Launcher logos: one alias per logo and colour, only the chosen one is enabled
-             (see LogoUtils.kt). The two legacy names are kept so icons pinned by older builds
-             keep working: MainActivityAlias is card/black (the default), MainActivityStatic is
-             card/device. -->
+             (see LogoUtils.kt). Names are kept from earlier builds so the enabled state and
+             pinned icons carry over: Card = single note, Notes = double note.
+             MainActivityAlias is single note/dark, the default. -->
         <activity-alias
             android:name=".MainActivityAlias"
             android:enabled="true"
             android:exported="true"
-            android:icon="@mipmap/ic_logo_card_black"
+            android:icon="@mipmap/ic_logo_single_black"
             android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_card_black"
+            android:roundIcon="@mipmap/ic_logo_single_black"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -181,9 +181,9 @@
             android:name=".LogoCardWhite"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_logo_card_white"
+            android:icon="@mipmap/ic_logo_single_white"
             android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_card_white"
+            android:roundIcon="@mipmap/ic_logo_single_white"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -191,12 +191,25 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".MainActivityStatic"
+            android:name=".LogoNotesBlack"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_logo_card_device"
+            android:icon="@mipmap/ic_logo_double_black"
             android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_card_device"
+            android:roundIcon="@mipmap/ic_logo_double_black"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LogoNotesWhite"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_logo_double_white"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_logo_double_white"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -230,19 +243,6 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LogoWaveDevice"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_logo_wave_device"
-            android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_wave_device"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
             android:name=".LogoVinylBlack"
             android:enabled="false"
             android:exported="true"
@@ -268,39 +268,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- Retired "device colours" logos. Kept (disabled) only so a phone that had one enabled
+             still has a launcher icon after updating; they show the dark version. -->
         <activity-alias
-            android:name=".LogoVinylDevice"
+            android:name=".MainActivityStatic"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_logo_vinyl_device"
+            android:icon="@mipmap/ic_logo_single_black"
             android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_vinyl_device"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LogoNotesBlack"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_logo_notes_black"
-            android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_notes_black"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LogoNotesWhite"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_logo_notes_white"
-            android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_notes_white"
+            android:roundIcon="@mipmap/ic_logo_single_black"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -311,9 +287,35 @@
             android:name=".LogoNotesDevice"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_logo_notes_device"
+            android:icon="@mipmap/ic_logo_double_black"
             android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_logo_notes_device"
+            android:roundIcon="@mipmap/ic_logo_double_black"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LogoWaveDevice"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_logo_wave_black"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_logo_wave_black"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LogoVinylDevice"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_logo_vinyl_black"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_logo_vinyl_black"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
