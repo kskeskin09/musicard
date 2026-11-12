@@ -26,6 +26,9 @@ val DefaultThemeColor = Color(0xFFED5564)
 /** The fixed dark palette, also used on album-colored surfaces in the light theme. */
 val MusicardDarkColorScheme: ColorScheme get() = MusicardDarkColors
 
+/** The fixed light palette. */
+val MusicardLightColorScheme: ColorScheme get() = MusicardLightColors
+
 private val MusicardDarkColors =
     darkColorScheme(
         primary = Color(0xFFFFFFFF),

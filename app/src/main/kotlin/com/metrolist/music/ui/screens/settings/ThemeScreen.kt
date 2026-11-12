@@ -328,6 +328,7 @@ fun ThemeControls(
                         targetPureBlack = pureBlack,
                         onClick = {
                             onDarkModeChange(DarkMode.AUTO)
+                            onPureBlackChange(false)
                         },
                         showIcon = true
                     )
@@ -340,7 +341,7 @@ fun ThemeControls(
                             .background(MaterialTheme.colorScheme.outlineVariant)
                     )
                     
-                    // Manual modes (Light, Dark, Pure Black)
+                    // Manual modes (Light, Dark)
                     ModeCircle(
                         darkMode = darkMode,
                         pureBlack = pureBlack,
@@ -353,6 +354,7 @@ fun ThemeControls(
                         showIcon = false
                     )
                     
+                    // Musicard's dark theme is already pure black, so there is one Dark choice.
                     ModeCircle(
                         darkMode = darkMode,
                         pureBlack = pureBlack,
@@ -364,49 +366,6 @@ fun ThemeControls(
                         },
                         showIcon = false
                     )
-                    
-                    ModeCircle(
-                        darkMode = darkMode,
-                        pureBlack = pureBlack,
-                        targetMode = DarkMode.ON,
-                        targetPureBlack = true,
-                        onClick = {
-                            onDarkModeChange(DarkMode.ON)
-                            onPureBlackChange(true)
-                        },
-                        showIcon = false
-                    )
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(R.string.color_palette),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    items(PaletteColors) { palette ->
-                        val isDynamicPalette = palette.seedColor == Color.Transparent
-                        val isSelected = if (isDynamicPalette) {
-                            selectedThemeColor == DefaultThemeColor
-                        } else {
-                            selectedThemeColor == palette.seedColor
-                        }
-                        
-                        PaletteItem(
-                            palette = palette,
-                            isSelected = isSelected,
-                            onClick = { 
-                                val colorToSave = if (isDynamicPalette) DefaultThemeColor else palette.seedColor
-                                onSelectedThemeColorChange(colorToSave) 
-                            }
-                        )
-                    }
                 }
             }
         }
@@ -424,7 +383,7 @@ fun ModeCircle(
 ) {
     val context = LocalContext.current
     val isSystemDark = isSystemInDarkTheme()
-    val isSelected = darkMode == targetMode && pureBlack == targetPureBlack
+    val isSelected = darkMode == targetMode
     
     val effectiveDark = when (targetMode) {
         DarkMode.AUTO -> isSystemDark
@@ -432,23 +391,15 @@ fun ModeCircle(
         DarkMode.OFF -> false
     }
     
-    // Use actual system colors for AUTO mode on Android 12+
-    val modeColorScheme = if (targetMode == DarkMode.AUTO && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        if (effectiveDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    } else {
-        rememberDynamicColorScheme(
-            seedColor = DefaultThemeColor,
-            isDark = effectiveDark,
-            style = PaletteStyle.TonalSpot
-        )
-    }
-    
-    val fillColor = when {
-        targetPureBlack -> Color.Black
-        effectiveDark -> modeColorScheme.surface
-        else -> modeColorScheme.surface
-    }
-    
+    // The app's own fixed light / dark palettes, so each circle shows what the app will look like.
+    val modeColorScheme =
+        if (effectiveDark) {
+            com.metrolist.music.ui.theme.MusicardDarkColorScheme
+        } else {
+            com.metrolist.music.ui.theme.MusicardLightColorScheme
+        }
+    val fillColor = if (targetPureBlack) Color.Black else modeColorScheme.surface
+
     // Animated border width
     val borderWidth by animateDpAsState(
         targetValue = if (isSelected) 3.dp else 0.dp,
