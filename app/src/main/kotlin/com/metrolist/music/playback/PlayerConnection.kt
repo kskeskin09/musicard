@@ -178,6 +178,15 @@ class PlayerConnection(
         }.stateIn(scope, SharingStarted.Lazily, null)
 
     val queueTitle = MutableStateFlow<String?>(null)
+
+    /** The screen the user was on (with its arguments), set by the app as they navigate. */
+    @Volatile var currentScreenRoute: String? = null
+
+    /**
+     * Where the current queue was started from, when that was a list page (playlist, album,
+     * artist, Liked...), so "Playing from" can open it. Null otherwise.
+     */
+    val queueSourceRoute = MutableStateFlow<String?>(null)
     val queueWindows = MutableStateFlow<List<Timeline.Window>>(emptyList())
     val currentMediaItemIndex = MutableStateFlow(-1)
     val currentWindowIndex = MutableStateFlow(-1)
@@ -248,6 +257,8 @@ class PlayerConnection(
         if (!playerReadinessFlow.value) {
             Timber.tag(TAG).w("playQueue called before player ready; delegating to service")
         }
+        queueSourceRoute.value =
+            currentScreenRoute?.takeIf { route -> ListSourceRoutePrefixes.any { route.startsWith(it) } }
         try {
             service.playQueue(queue)
         } catch (e: Exception) {
@@ -677,3 +688,15 @@ class PlayerConnection(
         }
     }
 }
+
+/** Pages a queue can be started from that "Playing from" can go back to. */
+private val ListSourceRoutePrefixes =
+    listOf(
+        "album/",
+        "artist/",
+        "local_playlist/",
+        "online_playlist/",
+        "auto_playlist/",
+        "cache_playlist/",
+        "top_playlist/",
+    )

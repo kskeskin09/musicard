@@ -158,6 +158,8 @@ fun Queue(
     showInlineLyrics: Boolean,
     playerBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.DEFAULT,
     onToggleLyrics: () -> Unit = {},
+    // Header and bottom bar color; set in the card layout to a shade of the album color.
+    panelColor: Color? = null,
 ) {
     val navController = LocalNavController.current
     val context = LocalContext.current
@@ -213,7 +215,8 @@ fun Queue(
         BackHandler(onBack = onExitSelectionMode)
     }
 
-    var locked by rememberPreference(QueueEditLockKey, defaultValue = true)
+    // The lock toggle was removed: the queue can always be reordered and swiped away.
+    val locked = false
 
     val (useNewPlayerDesign, onUseNewPlayerDesignChange) =
         rememberPreference(
@@ -1037,7 +1040,7 @@ fun Queue(
                         interactionSource = remember { MutableInteractionSource() },
                     ) { }
                     .background(
-                        if (pureBlack) {
+                        panelColor ?: if (pureBlack) {
                             Color.Black
                         } else {
                             MaterialTheme.colorScheme
@@ -1065,41 +1068,11 @@ fun Queue(
                     modifier = Modifier.weight(1f),
                 )
 
-                AnimatedVisibility(
-                    visible = !inSelectMode,
-                    enter = fadeIn() + slideInVertically { it },
-                    exit = fadeOut() + slideOutVertically { it },
-                ) {
-                    Row {
-                        IconButton(
-                            onClick = { locked = !locked },
-                            modifier = Modifier.padding(horizontal = 6.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
-                                contentDescription = null,
-                            )
-                        }
-                    }
-                }
-
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    horizontalAlignment = Alignment.End,
-                ) {
-                    Text(
-                        text =
-                            pluralStringResource(
-                                R.plurals.n_song,
-                                queueWindows.size,
-                                queueWindows.size,
-                            ),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-
-                    Text(
-                        text = makeTimeString(queueLength * 1000L),
-                        style = MaterialTheme.typography.bodyMedium,
+                // Same close button as the full-screen lyrics.
+                IconButton(onClick = { state.collapseSoft() }) {
+                    Icon(
+                        painter = painterResource(R.drawable.expand_more),
+                        contentDescription = stringResource(R.string.close),
                     )
                 }
             }
@@ -1183,7 +1156,7 @@ fun Queue(
             modifier =
                 Modifier
                     .background(
-                        if (pureBlack) {
+                        panelColor ?: if (pureBlack) {
                             Color.Black
                         } else {
                             MaterialTheme.colorScheme
@@ -1197,61 +1170,61 @@ fun Queue(
                                 .asPaddingValues()
                                 .calculateBottomPadding(),
                     ).align(Alignment.BottomCenter)
-                    .clickable {
-                        state.collapseSoft()
-                    }.windowInsetsPadding(
+                    .windowInsetsPadding(
                         WindowInsets.systemBars
                             .only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal),
                     ).padding(12.dp),
         ) {
-            IconButton(
-                enabled = !isListenTogetherGuest,
-                modifier = Modifier.align(Alignment.CenterStart),
-                onClick = {
-                    coroutineScope
-                        .launch {
-                            lazyListState.animateScrollToItem(
-                                if (playerConnection.player.shuffleModeEnabled) playerConnection.player.currentMediaItemIndex else 0,
-                            )
-                        }.invokeOnCompletion {
-                            playerConnection.player.shuffleModeEnabled =
-                                !playerConnection.player.shuffleModeEnabled
-                        }
-                },
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp),
             ) {
-                val baseAlpha = if (shuffleModeEnabled) 1f else 0.5f
-                val finalAlpha = if (!isListenTogetherGuest) baseAlpha else 0.3f
-                Icon(
-                    painter = painterResource(R.drawable.shuffle),
-                    contentDescription = null,
-                    modifier = Modifier.alpha(finalAlpha),
+                Text(
+                    text = pluralStringResource(R.plurals.n_song, queueWindows.size, queueWindows.size),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = makeTimeString(queueLength * 1000L),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.alpha(0.7f),
                 )
             }
 
-            Icon(
-                painter = painterResource(R.drawable.expand_more),
-                contentDescription = null,
-                modifier = Modifier.align(Alignment.Center),
-            )
-
-            IconButton(
-                enabled = !isListenTogetherGuest,
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.align(Alignment.CenterEnd),
-                onClick = playerConnection.player::toggleRepeatMode,
             ) {
-                val baseAlpha = if (repeatMode == Player.REPEAT_MODE_OFF) 0.5f else 1f
-                val finalAlpha = if (!isListenTogetherGuest) baseAlpha else 0.3f
-                Icon(
-                    painter =
-                        painterResource(
-                            when (repeatMode) {
-                                Player.REPEAT_MODE_OFF, Player.REPEAT_MODE_ALL -> R.drawable.repeat
-                                Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
-                                else -> throw IllegalStateException()
-                            },
-                        ),
+                PlayerPillButton(
+                    icon = R.drawable.shuffle,
+                    contentDescription = stringResource(R.string.shuffle),
+                    active = shuffleModeEnabled,
+                    enabled = !isListenTogetherGuest,
+                    contentColor = LocalContentColor.current,
+                    activeIconColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.secondaryContainer,
+                    size = 44.dp,
+                    iconSize = 24.dp,
+                    onClick = {
+                        coroutineScope
+                            .launch {
+                                lazyListState.animateScrollToItem(
+                                    if (playerConnection.player.shuffleModeEnabled) playerConnection.player.currentMediaItemIndex else 0,
+                                )
+                            }.invokeOnCompletion {
+                                playerConnection.player.shuffleModeEnabled =
+                                    !playerConnection.player.shuffleModeEnabled
+                            }
+                    },
+                )
+                PlayerPillButton(
+                    icon = if (repeatMode == Player.REPEAT_MODE_ONE) R.drawable.repeat_one else R.drawable.repeat,
                     contentDescription = null,
-                    modifier = Modifier.alpha(finalAlpha),
+                    active = repeatMode != Player.REPEAT_MODE_OFF,
+                    enabled = !isListenTogetherGuest,
+                    contentColor = LocalContentColor.current,
+                    activeIconColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.secondaryContainer,
+                    size = 44.dp,
+                    iconSize = 24.dp,
+                    onClick = playerConnection.player::toggleRepeatMode,
                 )
             }
         }

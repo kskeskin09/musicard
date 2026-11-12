@@ -18,6 +18,15 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +64,11 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.music.R
 import com.metrolist.music.ui.screens.OptionStats
 
+/**
+ * Filter chips in the library's style: one rounded pill on the search bar's gray with the
+ * choices inside it; the chosen one is filled with the text color. With [fillWidth] the choices
+ * share the width equally (like the library filters), otherwise the row scrolls sideways.
+ */
 @Composable
 fun <E> ChipsRow(
     chips: List<Pair<E, String>>,
@@ -62,29 +76,55 @@ fun <E> ChipsRow(
     onValueUpdate: (E) -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    fillWidth: Boolean = false,
 ) {
+    if (chips.isEmpty()) return
+    val pill = RoundedCornerShape(50)
+    // The pill always spans the same width; when the choices don't fit, they scroll inside it.
     Row(
         modifier =
-        modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)),
+            modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                .padding(horizontal = 20.dp, vertical = 4.dp)
+                .clip(pill)
+                .background(containerColor),
     ) {
-        Spacer(Modifier.width(12.dp))
-
-        chips.forEach { (value, label) ->
-            FilterChip(
-                label = { Text(label) },
-                selected = currentValue == value,
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = containerColor,
-                ),
-                onClick = { onValueUpdate(value) },
-                shape = RoundedCornerShape(16.dp),
-                border = null
-            )
-
-            Spacer(Modifier.width(8.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (fillWidth) Modifier else Modifier.horizontalScroll(rememberScrollState()))
+                    .padding(3.dp),
+        ) {
+            chips.forEach { (value, label) ->
+                val isSelected = currentValue == value
+                val background by animateColorAsState(
+                    if (isSelected) MaterialTheme.colorScheme.onSurface else containerColor,
+                    label = "chipBackground",
+                )
+                val textColor by animateColorAsState(
+                    if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
+                    label = "chipText",
+                )
+                Text(
+                    text = label,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier =
+                        Modifier
+                            .then(if (fillWidth) Modifier.weight(1f) else Modifier)
+                            .clip(pill)
+                            .background(background)
+                            .clickable { onValueUpdate(value) }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
         }
     }
 }

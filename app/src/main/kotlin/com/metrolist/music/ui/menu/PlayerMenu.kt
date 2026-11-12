@@ -291,6 +291,10 @@ fun PlayerMenu(
                     accentColor = MaterialTheme.colorScheme.primary,
                 )
             }
+            if (!isCasting) {
+                Spacer(modifier = Modifier.height(16.dp))
+                com.metrolist.music.ui.component.AudioOutputSelector()
+            }
         }
     }
 

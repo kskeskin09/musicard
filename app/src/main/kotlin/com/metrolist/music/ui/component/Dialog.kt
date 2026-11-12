@@ -5,6 +5,11 @@
 
 package com.metrolist.music.ui.component
 
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -78,9 +83,10 @@ fun DefaultDialog(
     ) {
         Surface(
             modifier = Modifier.padding(24.dp),
-            shape = AlertDialogDefaults.shape,
-            color = AlertDialogDefaults.containerColor,
-            tonalElevation = AlertDialogDefaults.TonalElevation,
+            // The app's gray boxes: same surface and corners as menus and Add to playlist.
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Column(
                 horizontalAlignment = horizontalAlignment,
@@ -89,7 +95,7 @@ fun DefaultDialog(
                         .padding(24.dp),
             ) {
                 if (icon != null) {
-                    CompositionLocalProvider(LocalContentColor provides AlertDialogDefaults.iconContentColor) {
+                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
                         Box(
                             Modifier.align(Alignment.CenterHorizontally),
                         ) {
@@ -100,7 +106,7 @@ fun DefaultDialog(
                     Spacer(Modifier.height(16.dp))
                 }
                 if (title != null) {
-                    CompositionLocalProvider(LocalContentColor provides AlertDialogDefaults.titleContentColor) {
+                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
                         ProvideTextStyle(MaterialTheme.typography.headlineSmall) {
                             Box(
                                 // Align the title to the center when an icon is present.
@@ -325,7 +331,10 @@ fun TextFieldDialog(
         icon = icon,
         title = title,
         buttons = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+            ) {
                 Text(text = stringResource(android.R.string.cancel))
             }
 
@@ -333,8 +342,13 @@ fun TextFieldDialog(
                 textFields?.all { isInputValid(it.second.text) }
                     ?: isInputValid(legacyFieldState.value.text)
 
-            TextButton(
+            Button(
                 enabled = isValid,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.onSurface,
+                        contentColor = MaterialTheme.colorScheme.surface,
+                    ),
                 onClick = {
                     if (autoDismiss) onDismiss()
                     if (textFields != null && onDoneMultiple != null) {
@@ -359,7 +373,8 @@ fun TextFieldDialog(
                         placeholder = { Text(label) },
                         singleLine = singleLine,
                         maxLines = maxLines,
-                        colors = OutlinedTextFieldDefaults.colors(),
+                        colors = DialogFieldColors(),
+                        shape = RoundedCornerShape(16.dp),
                         keyboardOptions =
                             KeyboardOptions(
                                 imeAction = if (singleLine) ImeAction.Done else ImeAction.None,
@@ -399,7 +414,8 @@ fun TextFieldDialog(
                         placeholder = placeholder,
                         singleLine = singleLine,
                         maxLines = maxLines,
-                        colors = OutlinedTextFieldDefaults.colors(),
+                        colors = DialogFieldColors(),
+                        shape = RoundedCornerShape(16.dp),
                         keyboardOptions =
                             KeyboardOptions(
                                 imeAction = if (singleLine) ImeAction.Done else ImeAction.None,
@@ -424,3 +440,21 @@ fun TextFieldDialog(
         }
     }
 }
+
+/** Text fields in dialogs: a soft gray pill with no underline, in the text color. */
+@Composable
+private fun DialogFieldColors() =
+    TextFieldDefaults.colors(
+        focusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+        unfocusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+        disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+        focusedIndicatorColor = Color.Transparent,
+        unfocusedIndicatorColor = Color.Transparent,
+        disabledIndicatorColor = Color.Transparent,
+        cursorColor = MaterialTheme.colorScheme.onSurface,
+        selectionColors =
+            TextSelectionColors(
+                handleColor = MaterialTheme.colorScheme.onSurface,
+                backgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+            ),
+    )

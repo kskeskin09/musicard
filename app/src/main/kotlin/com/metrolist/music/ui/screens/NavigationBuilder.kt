@@ -20,7 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.composable
+import com.metrolist.music.ui.utils.composable
 import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
 import com.metrolist.music.constants.DarkModeKey
@@ -74,7 +74,10 @@ fun NavGraphBuilder.navigationBuilder(
     snackbarHostState: SnackbarHostState,
 ) {
     composable(Screens.Home.route) {
-        HomeScreen(snackbarHostState = snackbarHostState)
+        // Tapping the Home button again while on it starts the page over.
+        androidx.compose.runtime.key(com.metrolist.music.ui.utils.TabStates.resetCount("home")) {
+            HomeScreen(snackbarHostState = snackbarHostState)
+        }
     }
 
     composable(Screens.Search.route) { backStackEntry ->
@@ -95,8 +98,26 @@ fun NavGraphBuilder.navigationBuilder(
         )
     }
 
+    composable("library_search") {
+        val pureBlackEnabled by rememberPreference(PureBlackKey, defaultValue = false)
+        val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
+        val isSystemInDarkTheme = isSystemInDarkTheme()
+        val useDarkTheme =
+            remember(darkTheme, isSystemInDarkTheme) {
+                if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
+            }
+        com.metrolist.music.ui.screens.search.LibrarySearchScreen(pureBlack = pureBlackEnabled && useDarkTheme)
+    }
+
     composable(Screens.Library.route) {
         LibraryScreen()
+    }
+
+    composable(Screens.Profile.route) {
+        ProfileScreen(navController = navController, latestVersionName = latestVersionName)
+    }
+    composable(Screens.Explore.route) {
+        ExploreScreen()
     }
 
     composable(Screens.ListenTogether.route) {
@@ -358,6 +379,9 @@ fun NavGraphBuilder.navigationBuilder(
 
     composable("settings/content") {
         ContentSettings(navController)
+    }
+    composable("settings/content/lyrics_providers") {
+        com.metrolist.music.ui.screens.settings.LyricsProviderSettings(navController)
     }
 
     composable("settings/content/romanization") {

@@ -33,6 +33,7 @@ import com.metrolist.music.db.entities.AlbumWithSongs
 import com.metrolist.music.db.entities.Artist
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.db.entities.Event
+import com.metrolist.music.db.entities.EventTime
 import com.metrolist.music.db.entities.EventWithSong
 import com.metrolist.music.db.entities.FormatEntity
 import com.metrolist.music.db.entities.LyricsEntity
@@ -1500,6 +1501,12 @@ interface DatabaseDao {
         lastMondayStart: LocalDateTime,
     ): Flow<List<EventWithSong>>
 
+    @Query("SELECT timestamp, playTime FROM event WHERE timestamp > :fromTimeStamp AND timestamp <= :toTimeStamp")
+    fun eventTimes(
+        fromTimeStamp: LocalDateTime,
+        toTimeStamp: LocalDateTime,
+    ): Flow<List<EventTime>>
+
     @Transaction
     @Query("SELECT * FROM event ORDER BY rowId ASC LIMIT 1")
     fun firstEvent(): Flow<EventWithSong?>
@@ -1508,8 +1515,21 @@ interface DatabaseDao {
     @Query("SELECT * FROM event ORDER BY rowId DESC LIMIT 1")
     fun latestEvent(): Flow<EventWithSong?>
 
+    /** The latest plays, newest first (for the recently played rows on Home). */
+    @Transaction
+    @Query("SELECT * FROM event ORDER BY rowId DESC LIMIT :limit")
+    fun recentEvents(limit: Int): Flow<List<EventWithSong>>
+
     @Query("SELECT COUNT(*) FROM event")
     fun eventCount(): Flow<Int>
+
+    /** The days (local date as days since 1970) with at least one play, newest first. */
+    @Query("SELECT DISTINCT timestamp / 86400000 FROM event ORDER BY 1 DESC")
+    fun listeningDays(): Flow<List<Long>>
+
+    /** When the first play was recorded (epoch millis of the local time), or null. */
+    @Query("SELECT MIN(timestamp) FROM event")
+    fun firstEventTime(): Flow<Long?>
 
     @Transaction
     @Query("DELETE FROM event")

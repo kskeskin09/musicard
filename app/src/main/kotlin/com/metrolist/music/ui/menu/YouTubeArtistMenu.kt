@@ -96,7 +96,7 @@ fun YouTubeArtistMenu(
                                             painter = painterResource(R.drawable.radio),
                                             contentDescription = null,
                                             modifier = Modifier.size(28.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = MaterialTheme.colorScheme.onSurface
                                         )
                                     },
                                     text = stringResource(R.string.start_radio),
@@ -116,7 +116,7 @@ fun YouTubeArtistMenu(
                                     painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             text = if (isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin),
@@ -140,7 +140,7 @@ fun YouTubeArtistMenu(
                                     painter = painterResource(R.drawable.share),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             text = stringResource(R.string.share),

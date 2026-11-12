@@ -214,19 +214,7 @@ fun LocalPlaylistMenu(
                 ),
             )
 
-            // Export menu group
-            add(
-                Material3MenuItemData(
-                    title = { Text(stringResource(R.string.export_playlist)) },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.share),
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = { setShowExportDialog(true) },
-                ),
-            )
+            // Export moved to Settings > Backup and restore (several playlists at once).
 
             add(
                 Material3MenuItemData(
@@ -402,20 +390,8 @@ fun AutoPlaylistMenu(
                 } else {
                     null
                 },
-                if (songs.isNotEmpty()) {
-                    Material3MenuItemData(
-                        title = { Text(stringResource(R.string.export_playlist)) },
-                        icon = {
-                            Icon(
-                                painter = painterResource(R.drawable.share),
-                                contentDescription = null,
-                            )
-                        },
-                        onClick = { setShowExportDialog(true) },
-                    )
-                } else {
-                    null
-                },
+                // Export moved to Settings > Backup and restore.
+                null,
                 downloadMenuItem,
             ),
     )

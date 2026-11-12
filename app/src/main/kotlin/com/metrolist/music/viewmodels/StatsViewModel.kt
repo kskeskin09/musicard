@@ -36,11 +36,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -148,6 +150,39 @@ constructor(
                 )
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    /** When the user listens most in the chosen period: by hour of the day and by date. */
+    val listeningPattern =
+        combine(selectedOption, indexChips) { first, second -> Pair(first, second) }
+            .flatMapLatest { (selection, t) ->
+                database.eventTimes(
+                    fromTimeStamp = statToPeriod(selection, t),
+                    toTimeStamp =
+                        if (selection == OptionStats.CONTINUOUS || t == 0) {
+                            LocalDateTime.now()
+                        } else {
+                            statToPeriod(selection, t - 1)
+                        },
+                )
+            }.map { events ->
+                val byHour = LongArray(24)
+                val byDay = HashMap<LocalDate, Long>()
+                events.forEach { event ->
+                    byHour[event.timestamp.hour] += event.playTime
+                    val day = event.timestamp.toLocalDate()
+                    byDay[day] = (byDay[day] ?: 0L) + event.playTime
+                }
+                val topDay = byDay.maxByOrNull { it.value }
+                ListeningPattern(
+                    playTimeByHour = byHour.toList(),
+                    peakHour = if (events.isEmpty()) null else byHour.indices.maxByOrNull { byHour[it] },
+                    topDay = topDay?.key,
+                    topDayPlayTime = topDay?.value ?: 0L,
+                    plays = events.size,
+                    totalPlayTime = byHour.sum(),
+                )
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, ListeningPattern())
+
     val firstEvent =
         database
             .firstEvent()
@@ -246,7 +281,9 @@ constructor(
                 val nowEpochMillis = System.currentTimeMillis()
                 val preferences = context.dataStore.data.first()
                 val hideVideoSongs = preferences[HideVideoSongsKey] ?: false
-                val shouldShowMostStatsPlaylists = preferences[ShowMostStatsPlaylistsKey] ?: true
+                // Musicard: "My Top" (with its own period choice) replaces the Weekly / Monthly Most
+                // playlists, so they are always removed.
+                val shouldShowMostStatsPlaylists = false && (preferences[ShowMostStatsPlaylistsKey] ?: true)
 
                 if (!shouldShowMostStatsPlaylists) {
                     clearMostPlaylists()
@@ -438,3 +475,12 @@ constructor(
         }
     }
 }
+
+data class ListeningPattern(
+    val playTimeByHour: List<Long> = List(24) { 0L },
+    val peakHour: Int? = null,
+    val topDay: LocalDate? = null,
+    val topDayPlayTime: Long = 0L,
+    val plays: Int = 0,
+    val totalPlayTime: Long = 0L,
+)

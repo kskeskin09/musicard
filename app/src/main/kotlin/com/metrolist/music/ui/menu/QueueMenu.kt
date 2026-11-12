@@ -242,7 +242,7 @@ fun QueueMenu(
                         if (isFavorite) R.drawable.favorite
                         else R.drawable.favorite_border
                     ),
-                    tint = if (isFavorite) MaterialTheme.colorScheme.error
+                    tint = if (isFavorite) com.metrolist.music.ui.theme.likedTint()
                     else LocalContentColor.current,
                     contentDescription = null,
                 )
@@ -275,7 +275,7 @@ fun QueueMenu(
                                 painter = painterResource(R.drawable.radio),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         text = stringResource(R.string.start_radio),
@@ -299,7 +299,7 @@ fun QueueMenu(
                                 painter = painterResource(R.drawable.playlist_add),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         text = stringResource(R.string.add_to_playlist),
@@ -311,7 +311,7 @@ fun QueueMenu(
                                 painter = painterResource(R.drawable.share),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         text = stringResource(R.string.share),

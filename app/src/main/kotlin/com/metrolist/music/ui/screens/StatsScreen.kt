@@ -5,97 +5,113 @@
 
 package com.metrolist.music.ui.screens
 
+import com.metrolist.music.ui.theme.TintedPageColors
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.metrolist.innertube.models.Artist
+import coil3.compose.AsyncImage
 import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.constants.CONTENT_TYPE_ARTIST
-import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.StatPeriod
+import com.metrolist.music.constants.TopSize
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.YouTubeQueue
-import com.metrolist.music.ui.component.ArtistListItem
-import com.metrolist.music.ui.component.ChoiceChipsRow
+import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.EmptyPlaceholder
 import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.IconButton
-import com.metrolist.music.ui.component.LocalAlbumsGrid
-import com.metrolist.music.ui.component.LocalArtistsGrid
 import com.metrolist.music.ui.component.LocalMenuState
-import com.metrolist.music.ui.component.LocalSongsGrid
-import com.metrolist.music.ui.component.NavigationTitle
-import com.metrolist.music.ui.component.PlaylistGridItem
 import com.metrolist.music.ui.component.TimeTransfer
 import com.metrolist.music.ui.menu.AlbumMenu
 import com.metrolist.music.ui.menu.ArtistMenu
 import com.metrolist.music.ui.menu.SongMenu
+import com.metrolist.music.ui.theme.albumBackgroundColor
+import com.metrolist.music.ui.theme.rememberPageCoverColor
+import com.metrolist.music.ui.theme.rememberPageTint
+import com.metrolist.music.ui.theme.pageTintFor
 import com.metrolist.music.ui.utils.backToMain
-import com.metrolist.music.utils.joinByBullet
-import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.viewmodels.ListeningPattern
 import com.metrolist.music.viewmodels.StatsViewModel
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+
+private enum class StatsSection { SONGS, ARTISTS, ALBUMS }
+
+private const val STATS_PREVIEW_COUNT = 5
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -103,689 +119,654 @@ fun StatsScreen(
     navController: NavController,
     viewModel: StatsViewModel = hiltViewModel(),
 ) {
-    val sArtists = viewModel.selectedArtists // SnapshotStateList<Artist>
-
-// Helper actions:
-    val toggleArtistSelection: (Artist) -> Unit = { artist ->
-        if (sArtists.any { it.id == artist.id }) {
-            sArtists.removeAll { it.id == artist.id }
-        } else {
-            sArtists.add(artist)
-        }
-    }
-
-    val clearArtistSelection: () -> Unit = {
-        sArtists.clear()
-    }
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val context = LocalContext.current
-
-    var inSelectMode by rememberSaveable { mutableStateOf(false) }
-    val selection =
-        rememberSaveable(
-            saver =
-                listSaver<MutableList<Long>, Long>(
-                    save = { it.toList() },
-                    restore = { it.toMutableStateList() },
-                ),
-        ) { mutableStateListOf() }
-    val onExitSelectionMode = {
-        inSelectMode = false
-        selection.clear()
-    }
-
-    var isSearching by rememberSaveable { mutableStateOf(false) }
-    var query by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue())
-    }
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(isSearching) {
-        if (isSearching) {
-            focusRequester.requestFocus()
-        }
-    }
-    if (isSearching) {
-        BackHandler {
-            isSearching = false
-            query = TextFieldValue()
-        }
-    } else if (inSelectMode) {
-        BackHandler(onBack = onExitSelectionMode)
-    }
+    val coroutineScope = rememberCoroutineScope()
 
     val indexChips by viewModel.indexChips.collectAsStateWithLifecycle()
-    val mostPlayedSongs by viewModel.mostPlayedSongs.collectAsStateWithLifecycle()
-    val mostPlayedSongsStats by viewModel.filteredSongs.collectAsStateWithLifecycle()
-    val mostPlayedArtists by viewModel.filteredArtists.collectAsStateWithLifecycle()
-    val mostPlayedAlbums by viewModel.filteredAlbums.collectAsStateWithLifecycle()
-    val allArtists by viewModel.mostPlayedArtists.collectAsStateWithLifecycle()
-    val firstEvent by viewModel.firstEvent.collectAsStateWithLifecycle()
-    val weeklyMostPlaylist by viewModel.weeklyMostPlaylist.collectAsStateWithLifecycle()
-    val monthlyMostPlaylist by viewModel.monthlyMostPlaylist.collectAsStateWithLifecycle()
-    val recapPlaylists by viewModel.recapPlaylists.collectAsStateWithLifecycle()
-    val currentDate = LocalDateTime.now()
-    val orderedMostPlayedSongs =
-        remember(mostPlayedSongsStats, mostPlayedSongs) {
-            val songsById = mostPlayedSongs.associateBy { it.song.id }
-            mostPlayedSongsStats.mapNotNull { statsSong -> songsById[statsSong.id] }
-        }
-    val mostPeriodPlaylists = listOfNotNull(weeklyMostPlaylist, monthlyMostPlaylist)
-    val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
-    val isLoggedIn =
-        remember(innerTubeCookie) {
-            "SAPISID" in parseCookieString(innerTubeCookie)
-        }
-    val visibleStatsPlaylists =
-        remember(mostPeriodPlaylists, recapPlaylists, isLoggedIn) {
-            if (isLoggedIn) {
-                (mostPeriodPlaylists + recapPlaylists).distinctBy { it.id }
-            } else {
-                mostPeriodPlaylists
-            }
-        }
+    val songsWithData by viewModel.mostPlayedSongs.collectAsStateWithLifecycle()
+    val songs by viewModel.mostPlayedSongsStats.collectAsStateWithLifecycle()
+    val artists by viewModel.mostPlayedArtists.collectAsStateWithLifecycle()
+    val albums by viewModel.mostPlayedAlbums.collectAsStateWithLifecycle()
+    val pattern by viewModel.listeningPattern.collectAsStateWithLifecycle()
 
-    val coroutineScope = rememberCoroutineScope()
-    val lazyListState = rememberLazyListState()
-    val selectedOption by viewModel.selectedOption.collectAsStateWithLifecycle()
+    val (topSizePref) = rememberPreference(TopSize, "50")
+    val topSize = topSizePref.toIntOrNull()?.coerceIn(1, 100) ?: 50
+    val period = StatPeriod.entries.getOrElse(indexChips) { StatPeriod.WEEK_1 }
+
+    var expandedName by rememberSaveable { mutableStateOf<String?>(null) }
+    val expanded = expandedName?.let { name -> StatsSection.entries.firstOrNull { it.name == name } }
+    BackHandler(enabled = expanded != null) { expandedName = null }
 
     var showTimeTransfer by rememberSaveable { mutableStateOf(false) }
-    var prevOptionOrdinal by rememberSaveable { mutableStateOf<OptionStats?>(null) }
-    var prevIndexChips by rememberSaveable { mutableStateOf<Int?>(null) }
-
+    var periodBeforeTransfer by rememberSaveable { mutableStateOf<Int?>(null) }
+    // Moving listening time between songs works on the whole history.
     LaunchedEffect(showTimeTransfer) {
         if (showTimeTransfer) {
-            if (prevOptionOrdinal == null) prevOptionOrdinal = selectedOption
-            if (prevIndexChips == null) prevIndexChips = indexChips
-            viewModel.selectedOption.value = OptionStats.CONTINUOUS // "throughout time" in your VM
-            viewModel.indexChips.value = StatPeriod.ALL.ordinal // optional: ensure it’s actually “now -> throughout time”
+            if (periodBeforeTransfer == null) periodBeforeTransfer = indexChips
+            viewModel.indexChips.value = StatPeriod.ALL.ordinal
         }
     }
-
     if (showTimeTransfer) {
         TimeTransfer(
             onDismiss = {
                 showTimeTransfer = false
-                prevOptionOrdinal?.let { viewModel.selectedOption.value = it }
-                prevIndexChips?.let { viewModel.indexChips.value = it }
-
-                // Clear snapshots for the next open
-                prevOptionOrdinal = null
-                prevIndexChips = null
+                periodBeforeTransfer?.let { viewModel.indexChips.value = it }
+                periodBeforeTransfer = null
             },
         )
     }
 
     LaunchedEffect(Unit) {
+        viewModel.selectedOption.value = OptionStats.CONTINUOUS
         viewModel.syncMostPlaylistsIfNeeded()
     }
 
-    val weeklyDates =
-        if (currentDate != null && firstEvent != null) {
-            generateSequence(currentDate) { it.minusWeeks(1) }
-                .takeWhile { it.isAfter(firstEvent?.event?.timestamp?.minusWeeks(1)) }
-                .mapIndexed { index, date ->
-                    val endDate = date.plusWeeks(1).minusDays(1).coerceAtMost(currentDate)
-                    val formatter = DateTimeFormatter.ofPattern("dd MMM")
-
-                    val startDateFormatted = formatter.format(date)
-                    val endDateFormatted = formatter.format(endDate)
-
-                    val startMonth = date.month
-                    val endMonth = endDate.month
-                    val startYear = date.year
-                    val endYear = endDate.year
-
-                    val text =
-                        when {
-                            startYear != currentDate.year -> "$startDateFormatted, $startYear - $endDateFormatted, $endYear"
-                            startMonth != endMonth -> "$startDateFormatted - $endDateFormatted"
-                            else -> "${date.dayOfMonth} - $endDateFormatted"
-                        }
-                    Pair(index, text)
-                }.toList()
-        } else {
-            emptyList()
+    val orderedSongs =
+        remember(songs, songsWithData) {
+            val byId = songsWithData.associateBy { it.song.id }
+            songs.mapNotNull { byId[it.id] }
         }
 
-    val monthlyDates =
-        if (currentDate != null && firstEvent != null) {
-            generateSequence(
-                currentDate.plusMonths(1).withDayOfMonth(1).minusDays(1),
-            ) { it.minusMonths(1) }
-                .takeWhile {
-                    it.isAfter(
-                        firstEvent
-                            ?.event
-                            ?.timestamp
-                            ?.withDayOfMonth(1),
-                    )
-                }.mapIndexed { index, date ->
-                    val formatter = DateTimeFormatter.ofPattern("MMM")
-                    val formattedDate = formatter.format(date)
-                    val text =
-                        if (date.year != currentDate.year) {
-                            "$formattedDate ${date.year}"
-                        } else {
-                            formattedDate
-                        }
-                    Pair(index, text)
-                }.toList()
+    // The whole page takes the color of the most played song's cover.
+    val pageBackground = MaterialTheme.colorScheme.background
+    val darkTheme = pageBackground.luminance() < 0.5f
+    val coverColor = rememberPageCoverColor(songs.firstOrNull()?.thumbnailUrl, variant = period.name)
+    val tint =
+        rememberPageTint(
+            target = pageTintFor(coverColor, pageBackground),
+            ready = coverColor != null,
+        )
+    val accent = coverColor?.let { lerp(it, if (darkTheme) Color.White else Color.Black, 0.4f) } ?: MaterialTheme.colorScheme.primary
+    val chipContainer = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f).compositeOver(tint)
+
+    val playSong: (String) -> Unit = { songId ->
+        if (songId == playerConnection.mediaMetadata.value?.id) {
+            playerConnection.togglePlayPause()
         } else {
-            emptyList()
-        }
-
-    val yearlyDates =
-        if (currentDate != null && firstEvent != null) {
-            generateSequence(
-                currentDate
-                    .plusYears(1)
-                    .withDayOfYear(1)
-                    .minusDays(1),
-            ) { it.minusYears(1) }
-                .takeWhile {
-                    it.isAfter(
-                        firstEvent
-                            ?.event
-                            ?.timestamp,
-                    )
-                }.mapIndexed { index, date ->
-                    Pair(index, "${date.year}")
-                }.toList()
-        } else {
-            emptyList()
-        }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = lazyListState,
-            contentPadding =
-                LocalPlayerAwareWindowInsets.current
-                    .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
-                    .asPaddingValues(),
-            modifier =
-                Modifier.windowInsetsPadding(
-                    LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top),
-                ),
-        ) {
-            val filteredArtists =
-                allArtists
-                    .map { artistWrapper ->
-                        Artist(
-                            id = artistWrapper.artist.id,
-                            name = artistWrapper.artist.name,
-                        )
-                    }.filter { artist ->
-                        artist.name.contains(query.text, ignoreCase = true)
-                    }
-
-            item(key = "choice_chips") {
-                ChoiceChipsRow(
-                    chips =
-                        when (selectedOption) {
-                            OptionStats.WEEKS -> {
-                                weeklyDates
-                            }
-
-                            OptionStats.MONTHS -> {
-                                monthlyDates
-                            }
-
-                            OptionStats.YEARS -> {
-                                yearlyDates
-                            }
-
-                            OptionStats.CONTINUOUS -> {
-                                listOf(
-                                    StatPeriod.WEEK_1.ordinal to
-                                        pluralStringResource(
-                                            R.plurals.n_week,
-                                            1,
-                                            1,
-                                        ),
-                                    StatPeriod.MONTH_1.ordinal to
-                                        pluralStringResource(
-                                            R.plurals.n_month,
-                                            1,
-                                            1,
-                                        ),
-                                    StatPeriod.MONTH_3.ordinal to
-                                        pluralStringResource(
-                                            R.plurals.n_month,
-                                            3,
-                                            3,
-                                        ),
-                                    StatPeriod.MONTH_6.ordinal to
-                                        pluralStringResource(
-                                            R.plurals.n_month,
-                                            6,
-                                            6,
-                                        ),
-                                    StatPeriod.YEAR_1.ordinal to
-                                        pluralStringResource(
-                                            R.plurals.n_year,
-                                            1,
-                                            1,
-                                        ),
-                                    StatPeriod.ALL.ordinal to stringResource(R.string.filter_all),
-                                )
-                            }
-                        },
-                    options =
-                        listOf(
-                            OptionStats.CONTINUOUS to stringResource(id = R.string.continuous),
-                            OptionStats.WEEKS to stringResource(R.string.weeks),
-                            OptionStats.MONTHS to stringResource(R.string.months),
-                            OptionStats.YEARS to stringResource(R.string.years),
-                        ),
-                    selectedOption = selectedOption,
-                    onSelectionChange = {
-                        viewModel.selectedOption.value = it
-                        viewModel.indexChips.value = 0
-                    },
-                    currentValue = indexChips,
-                    onValueUpdate = { viewModel.indexChips.value = it },
+            songsWithData.find { it.id == songId }?.let { target ->
+                playerConnection.playQueue(
+                    YouTubeQueue(
+                        endpoint = WatchEndpoint(songId),
+                        preloadItem = target.toMediaMetadata(),
+                    ),
                 )
             }
+        }
+    }
+    val showSongMenu: (String) -> Unit = { songId ->
+        songsWithData.find { it.id == songId }?.let { target ->
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            menuState.show { SongMenu(originalSong = target, onDismiss = menuState::dismiss) }
+        }
+    }
 
-            if (visibleStatsPlaylists.isNotEmpty() && !isSearching && sArtists.isEmpty()) {
-                item(key = "mostPeriodPlaylistsTitle") {
-                    NavigationTitle(
-                        title =
-                            pluralStringResource(
-                                R.plurals.n_playlist,
-                                visibleStatsPlaylists.size,
-                                visibleStatsPlaylists.size,
-                            ),
-                        modifier = Modifier.animateItem(),
-                    )
-                }
-
-                item(key = "mostPeriodPlaylists") {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                        modifier = Modifier.animateItem(),
-                    ) {
-                        itemsIndexed(
-                            items = visibleStatsPlaylists,
-                            key = { _, playlist -> playlist.id },
-                        ) { _, playlist ->
-                            PlaylistGridItem(
-                                playlist = playlist,
-                                autoPlaylist = true,
-                                modifier =
-                                    Modifier
-                                        .combinedClickable(
-                                            onClick = {
-                                                navController.navigate("local_playlist/${playlist.id}")
-                                            },
-                                        ).animateItem(),
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (!isSearching) {
-                item(key = "mostPlayedSongs") {
-                    NavigationTitle(
-                        title = "${mostPlayedSongsStats.size} ${stringResource(id = R.string.songs)}",
-                        onPlayAllClick =
-                            if (orderedMostPlayedSongs.isNotEmpty()) {
-                                {
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = context.getString(R.string.most_played_songs),
-                                            items = orderedMostPlayedSongs.map { it.toMediaMetadata().toMediaItem() },
-                                        ),
-                                    )
-                                }
-                            } else {
-                                null
-                            },
-                        modifier = Modifier.animateItem(),
-                    )
-
-                    LazyRow(
-                        modifier = Modifier.animateItem(),
-                    ) {
-                        itemsIndexed(
-                            items = mostPlayedSongsStats,
-                            key = { index, song -> "${song.id}_$index" },
-                        ) { index, song ->
-                            LocalSongsGrid(
-                                title = "${index + 1}. ${song.title}",
-                                subtitle =
-                                    joinByBullet(
-                                        pluralStringResource(
-                                            R.plurals.n_time,
-                                            song.songCountListened,
-                                            song.songCountListened,
-                                        ),
-                                        makeTimeString(song.timeListened),
-                                    ),
-                                thumbnailUrl = song.thumbnailUrl,
-                                isActive = song.id == mediaMetadata?.id,
-                                isPlaying = isPlaying,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = {
-                                                if (song.id == mediaMetadata?.id) {
-                                                    playerConnection.togglePlayPause()
-                                                } else {
-                                                    val targetSong = mostPlayedSongs.find { it.id == song.id }
-                                                    if (targetSong != null) {
-                                                        playerConnection.playQueue(
-                                                            YouTubeQueue(
-                                                                endpoint = WatchEndpoint(song.id),
-                                                                preloadItem = targetSong.toMediaMetadata(),
-                                                            ),
-                                                        )
-                                                    }
-                                                }
-                                            },
-                                            onLongClick = {
-                                                val targetSong = mostPlayedSongs.find { it.id == song.id }
-                                                if (targetSong != null) {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        SongMenu(
-                                                            originalSong = targetSong,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                }
-                                            },
-                                        ).animateItem(),
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (!isSearching) {
-                item(key = "mostPlayedArtists") {
-                    NavigationTitle(
-                        title = "${mostPlayedArtists.size} ${stringResource(id = R.string.artists)}",
-                        modifier = Modifier.animateItem(),
-                    )
-
-                    LazyRow(
-                        modifier = Modifier.animateItem(),
-                    ) {
-                        itemsIndexed(
-                            items = mostPlayedArtists,
-                            key = { _, artist -> artist.id },
-                        ) { index, artist ->
-                            LocalArtistsGrid(
-                                title = "${index + 1}. ${artist.artist.name}",
-                                subtitle =
-                                    joinByBullet(
-                                        pluralStringResource(
-                                            R.plurals.n_time,
-                                            artist.songCount,
-                                            artist.songCount,
-                                        ),
-                                        makeTimeString(artist.timeListened?.toLong()),
-                                    ),
-                                thumbnailUrl = artist.artist.thumbnailUrl,
-                                modifier =
-                                    Modifier
-                                        .combinedClickable(
-                                            onClick = {
-                                                navController.navigate("artist/${artist.id}")
-                                            },
-                                            onLongClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                menuState.show {
-                                                    ArtistMenu(
-                                                        originalArtist = artist,
-                                                        coroutineScope = coroutineScope,
-                                                        onDismiss = menuState::dismiss,
-                                                    )
-                                                }
-                                            },
-                                        ).animateItem(),
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (!isSearching) {
-                item(key = "mostPlayedAlbums") {
-                    NavigationTitle(
-                        title = "${mostPlayedAlbums.size} ${stringResource(id = R.string.albums)}",
-                        modifier = Modifier.animateItem(),
-                    )
-
-                    if (mostPlayedAlbums.isNotEmpty()) {
-                        LazyRow(
-                            modifier = Modifier.animateItem(),
-                        ) {
-                            itemsIndexed(
-                                items = mostPlayedAlbums,
-                                key = { _, album -> album.id },
-                            ) { index, album ->
-                                LocalAlbumsGrid(
-                                    title = "${index + 1}. ${album.album.title}",
-                                    subtitle =
-                                        joinByBullet(
-                                            pluralStringResource(
-                                                R.plurals.n_time,
-                                                album.songCountListened ?: 0,
-                                                album.songCountListened ?: 0,
-                                            ),
-                                            makeTimeString(album.timeListened),
-                                        ),
-                                    thumbnailUrl = album.album.thumbnailUrl,
-                                    isActive = album.id == mediaMetadata?.album?.id,
-                                    isPlaying = isPlaying,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    navController.navigate("album/${album.id}")
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        AlbumMenu(
-                                                            originalAlbum = album,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            ).animateItem(),
+    val songRows: LazyListScope.(Int) -> Unit = { limit ->
+        itemsIndexed(songs.take(limit), key = { index, song -> "song_${song.id}_$index" }) { index, song ->
+            StatsRow(
+                rank = index + 1,
+                thumbnailUrl = song.thumbnailUrl,
+                title = song.title,
+                subtitle =
+                    listOfNotNull(
+                        (song.artists.joinToString { it.name }.ifBlank { song.artistName.orEmpty() }).takeIf { it.isNotBlank() },
+                        pluralStringResource(R.plurals.n_time, song.songCountListened, song.songCountListened),
+                        listenTime(song.timeListened),
+                    ).joinToString(" · "),
+                accent = accent,
+                modifier =
+                    Modifier.combinedClickable(
+                        onClick = { playSong(song.id) },
+                        onLongClick = { showSongMenu(song.id) },
+                    ),
+            )
+        }
+    }
+    val artistRows: LazyListScope.(Int) -> Unit = { limit ->
+        itemsIndexed(artists.take(limit), key = { _, artist -> "artist_${artist.id}" }) { index, artist ->
+            StatsRow(
+                rank = index + 1,
+                thumbnailUrl = artist.artist.thumbnailUrl,
+                title = artist.artist.name,
+                subtitle = listenTime(artist.timeListened?.toLong()),
+                accent = accent,
+                round = true,
+                modifier =
+                    Modifier.combinedClickable(
+                        onClick = { navController.navigate("artist/${artist.id}") },
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            menuState.show {
+                                ArtistMenu(
+                                    originalArtist = artist,
+                                    coroutineScope = coroutineScope,
+                                    onDismiss = menuState::dismiss,
                                 )
                             }
-                        }
-                    }
-                }
-            }
-
-            if (isSearching) {
-                items(
-                    items =
-                        allArtists.filter { artist ->
-                            artist.artist.name.contains(query.text, ignoreCase = true)
                         },
-                    key = { "stats_artist_${it.id}" },
-                    contentType = { CONTENT_TYPE_ARTIST },
-                ) { artist ->
-                    val uiArtist = Artist(name = artist.artist.name, id = artist.id)
-                    val isChecked = sArtists.any { it.id == uiArtist.id }
-                    Row( // Use a row to arrange the checkbox and ArtistListItem horizontally
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    toggleArtistSelection(uiArtist)
-                                }.padding(8.dp),
-                    ) {
-                        ArtistListItem(
-                            artist = artist,
-                            modifier = Modifier.weight(1f), // Allow ArtistListItem to take remaining space
-                        )
-
-                        Checkbox(
-                            checked = sArtists.contains(Artist(name = artist.artist.name, id = artist.id)), // Get the current checked state
-                            onCheckedChange = {
-                                toggleArtistSelection(uiArtist)
-                            },
-                        )
-                    }
-                }
-            }
-            if (query.text.isNotEmpty() && filteredArtists.isEmpty()) {
-                item(key = "no_result") {
-                    EmptyPlaceholder(
-                        icon = R.drawable.search,
-                        text = stringResource(R.string.no_results_found),
-                    )
-                }
-            }
+                    ),
+            )
         }
-        // FAB to shuffle most played songs
-        if (mostPlayedSongsStats.isNotEmpty() && !isSearching) {
-            HideOnScrollFAB(
-                visible = true,
-                lazyListState = lazyListState,
-                icon = R.drawable.shuffle,
-                onClick = {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = context.getString(R.string.most_played_songs),
-                            items = orderedMostPlayedSongs.map { it.toMediaMetadata().toMediaItem() }.shuffled(),
-                        ),
-                    )
-                },
+    }
+    val albumRows: LazyListScope.(Int) -> Unit = { limit ->
+        itemsIndexed(albums.take(limit), key = { _, album -> "album_${album.id}" }) { index, album ->
+            StatsRow(
+                rank = index + 1,
+                thumbnailUrl = album.album.thumbnailUrl,
+                title = album.album.title,
+                subtitle =
+                    listOfNotNull(
+                        album.artists.joinToString { it.name }.takeIf { it.isNotBlank() },
+                        listenTime(album.timeListened),
+                    ).joinToString(" · "),
+                accent = accent,
+                modifier =
+                    Modifier.combinedClickable(
+                        onClick = { navController.navigate("album/${album.id}") },
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            menuState.show { AlbumMenu(originalAlbum = album, onDismiss = menuState::dismiss) }
+                        },
+                    ),
             )
         }
     }
 
-    TopAppBar(
-        title = {
-            if (inSelectMode) {
-                Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
-            } else if (isSearching) {
-                Row {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.search),
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        colors =
-                            TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                            ),
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .focusRequester(focusRequester),
-                    )
+    val periodChips: @Composable () -> Unit = {
+        ChipsRow(
+            chips =
+                listOf(
+                    StatPeriod.DAY_1 to stringResource(R.string.stats_daily),
+                    StatPeriod.WEEK_1 to stringResource(R.string.stats_weekly),
+                    StatPeriod.MONTH_1 to stringResource(R.string.stats_monthly),
+                    StatPeriod.YEAR_1 to stringResource(R.string.stats_yearly),
+                    StatPeriod.ALL to stringResource(R.string.stats_lifetime),
+                ),
+            currentValue = period,
+            onValueUpdate = { viewModel.indexChips.value = it.ordinal },
+            containerColor = chipContainer,
+        )
+    }
 
-                    if (sArtists.isNotEmpty()) {
-                        androidx.compose.material3.IconButton(onClick = clearArtistSelection) {
+    val mainListState = rememberLazyListState()
+
+    // Footer of the main page: the longest daily streak and the day of the first recorded play.
+    val database = com.metrolist.music.LocalDatabase.current
+    val listeningDays by database.listeningDays().collectAsStateWithLifecycle(initialValue = emptyList())
+    val streak = remember(listeningDays) { com.metrolist.music.utils.ListeningStreak.from(listeningDays) }
+    val firstListen by database.firstEventTime().collectAsStateWithLifecycle(initialValue = null)
+
+    TintedPageColors(tint) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(tint),
+        ) {
+            Crossfade(targetState = expanded, label = "statsSection") { section ->
+                val listState = if (section == null) mainListState else remember(section) { LazyListState() }
+                LazyColumn(
+                    state = listState,
+                    contentPadding =
+                        LocalPlayerAwareWindowInsets.current
+                            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+                            .asPaddingValues(),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)),
+                ) {
+                    item(key = "period") { periodChips() }
+
+                    if (section == null) {
+                        item(key = "summary") {
+                            StatsSummaryCard(
+                                pattern = pattern,
+                                songCount = songs.size,
+                                artistCount = artists.size,
+                                albumCount = albums.size,
+                                coverColor = coverColor,
+                            )
+                        }
+                        if (songs.isEmpty() && artists.isEmpty() && albums.isEmpty()) {
+                            item(key = "empty") {
+                                EmptyPlaceholder(
+                                    icon = R.drawable.music_note,
+                                    text = stringResource(R.string.stats_empty),
+                                )
+                            }
+                        }
+                        if (songs.isNotEmpty()) {
+                            item(key = "songs_title") {
+                                StatsSectionTitle(stringResource(R.string.stats_top_songs)) { expandedName = StatsSection.SONGS.name }
+                            }
+                            songRows(STATS_PREVIEW_COUNT)
+                        }
+                        if (artists.isNotEmpty()) {
+                            item(key = "artists_title") {
+                                StatsSectionTitle(stringResource(R.string.stats_top_artists)) { expandedName = StatsSection.ARTISTS.name }
+                            }
+                            artistRows(STATS_PREVIEW_COUNT)
+                        }
+                        if (albums.isNotEmpty()) {
+                            item(key = "albums_title") {
+                                StatsSectionTitle(stringResource(R.string.stats_top_albums)) { expandedName = StatsSection.ALBUMS.name }
+                            }
+                            albumRows(STATS_PREVIEW_COUNT)
+                        }
+                        if (firstListen != null) {
+                            item(key = "listening_footer") {
+                                ListeningFooter(longestStreak = streak.longest, firstListenMillis = firstListen!!)
+                            }
+                        }
+                        item(key = "bottom_space") { Spacer(Modifier.height(24.dp)) }
+                    } else {
+                        when (section) {
+                            StatsSection.SONGS -> songRows(topSize)
+                            StatsSection.ARTISTS -> artistRows(topSize)
+                            else -> albumRows(topSize)
+                        }
+                        item(key = "bottom_space") { Spacer(Modifier.height(24.dp)) }
+                    }
+                }
+            }
+
+            if (ShowStatsShuffleAndTransfer && orderedSongs.isNotEmpty() && expanded != StatsSection.ARTISTS && expanded != StatsSection.ALBUMS) {
+                HideOnScrollFAB(
+                    visible = true,
+                    lazyListState = mainListState,
+                    icon = R.drawable.shuffle,
+                    onClick = {
+                        playerConnection.playQueue(
+                            ListQueue(
+                                title = context.getString(R.string.most_played_songs),
+                                items = orderedSongs.take(topSize).map { it.toMediaMetadata().toMediaItem() }.shuffled(),
+                            ),
+                        )
+                    },
+                )
+            }
+
+            TopAppBar(
+                title = {
+                    Text(
+                        when (expanded) {
+                            StatsSection.SONGS -> stringResource(R.string.stats_top_songs)
+                            StatsSection.ARTISTS -> stringResource(R.string.stats_top_artists)
+                            StatsSection.ALBUMS -> stringResource(R.string.stats_top_albums)
+                            null -> stringResource(R.string.stats)
+                        },
+                    )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = { if (expanded != null) expandedName = null else navController.navigateUp() },
+                        onLongClick = { navController.backToMain() },
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.arrow_back),
+                            contentDescription = null,
+                        )
+                    }
+                },
+                actions = {
+                    if (ShowStatsShuffleAndTransfer && expanded == null) {
+                        IconButton(
+                            onClick = { showTimeTransfer = true },
+                            onLongClick = { showTimeTransfer = true },
+                        ) {
                             Icon(
-                                painter = painterResource(R.drawable.close),
-                                contentDescription = "Clear Artists",
-                                tint = MaterialTheme.colorScheme.onSurface,
+                                painterResource(R.drawable.sync),
+                                contentDescription = null,
                             )
                         }
                     }
-                }
-            } else {
-                Text(stringResource(R.string.stats))
-            }
-        },
-        navigationIcon = {
-            if (inSelectMode) {
-                androidx.compose.material3.IconButton(onClick = onExitSelectionMode) {
-                    Icon(
-                        painter = painterResource(R.drawable.close),
-                        contentDescription = "Select Button",
-                    )
-                }
-            } else {
-                IconButton(
-                    onClick = {
-                        if (isSearching) {
-                            isSearching = false
-                            query = TextFieldValue()
-                        } else {
-                            navController.navigateUp()
-                        }
-                    },
-                    onLongClick = {
-                        if (!isSearching) {
-                            navController.backToMain()
-                        }
-                    },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.arrow_back),
-                        contentDescription = "Back Button",
-                    )
-                }
-            }
-        },
-        actions = {
-            if (inSelectMode) {
-                Checkbox(
-                    checked = true,
-                    onCheckedChange = {
-                    },
+                },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = tint,
+                        scrolledContainerColor = tint,
+                    ),
+            )
+        }
+    }
+}
+
+/** Shuffle play and the listening time transfer stay in the code but are hidden for now. */
+private const val ShowStatsShuffleAndTransfer = false
+
+@Composable
+private fun ListeningFooter(
+    longestStreak: Int,
+    firstListenMillis: Long,
+) {
+    // Plays are stored as the local clock time, so read the millis back without a zone shift.
+    val date =
+        remember(firstListenMillis) {
+            java.time.Instant
+                .ofEpochMilli(firstListenMillis)
+                .atZone(java.time.ZoneOffset.UTC)
+                .toLocalDate()
+                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        }
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(top = 28.dp),
+    ) {
+        if (longestStreak > 0) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.longest_streak),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
                 )
-                androidx.compose.material3.IconButton(
-                    enabled = selection.isNotEmpty(),
-                    onClick = {
-                    },
+                Icon(
+                    painter = painterResource(R.drawable.streak_flame),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = pluralStringResource(R.plurals.streak_days, longestStreak, longestStreak),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+        Text(
+            text = stringResource(R.string.listening_since, date),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** "34 min" under an hour, "1h 47m" above. */
+@Composable
+private fun listenTime(millis: Long?): String {
+    val minutes = ((millis ?: 0L) / 60000L).toInt()
+    return if (minutes < 60) {
+        stringResource(R.string.stats_minutes, minutes)
+    } else {
+        stringResource(R.string.stats_hours_minutes, minutes / 60, minutes % 60)
+    }
+}
+
+@Composable
+private fun StatsSectionTitle(
+    title: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 18.dp, bottom = 2.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.width(2.dp))
+        Icon(
+            painter = painterResource(R.drawable.navigate_next),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.size(28.dp),
+        )
+    }
+}
+
+@Composable
+private fun StatsRow(
+    rank: Int,
+    thumbnailUrl: String?,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    round: Boolean = false,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 7.dp),
+    ) {
+        Text(
+            text = rank.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (rank == 1) accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            modifier = Modifier.widthIn(min = 30.dp),
+        )
+        AsyncImage(
+            model = thumbnailUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier =
+                Modifier
+                    .size(52.dp)
+                    .clip(if (round) CircleShape else RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * The card at the top: total listening time, how many different songs, artists and albums were
+ * played, and when the user listens most (hour of the day with a small 24-hour chart, and the
+ * busiest day).
+ */
+@Composable
+private fun StatsSummaryCard(
+    pattern: ListeningPattern,
+    songCount: Int,
+    artistCount: Int,
+    albumCount: Int,
+    coverColor: Color?,
+) {
+    val base = coverColor?.let { albumBackgroundColor(it, true) } ?: Color(0xFF2B2A30)
+    val content = Color.White
+    val faded = content.copy(alpha = 0.65f)
+    val shape = RoundedCornerShape(28.dp)
+    val totalMinutes = (pattern.totalPlayTime / 60000L).toInt()
+
+    Column(
+        modifier =
+            Modifier
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .fillMaxWidth()
+                .clip(shape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(lerp(base, Color.White, 0.16f), base, lerp(base, Color.Black, 0.35f)),
+                    ),
+                ).border(1.dp, Color.White.copy(alpha = 0.1f), shape)
+                .padding(20.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.stats_your_listening).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                letterSpacing = 1.5.sp,
+                color = faded,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                painter = painterResource(R.drawable.graphic_eq),
+                contentDescription = null,
+                tint = content,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = totalMinutes.toString(),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = content,
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.padding(bottom = 6.dp)) {
+                Text(
+                    text = stringResource(R.string.stats_minutes_listened).uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    letterSpacing = 1.2.sp,
+                    color = faded,
+                )
+                Text(
+                    text = stringResource(R.string.stats_plays, pattern.plays),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = faded,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(
+                songCount to stringResource(R.string.songs),
+                artistCount to stringResource(R.string.artists),
+                albumCount to stringResource(R.string.albums),
+            ).forEach { (count, label) ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.1f))
+                            .padding(vertical = 10.dp),
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.more_vert),
-                        contentDescription = "More Button",
+                    Text(
+                        text = count.toString(),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = content,
                     )
-                }
-            } else if (!isSearching) {
-                androidx.compose.material3.IconButton(
-                    onClick = { isSearching = true },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.search),
-                        contentDescription = "Search Button",
-                    )
-                }
-                IconButton(
-                    onClick = { showTimeTransfer = true },
-                    onLongClick = { showTimeTransfer = true },
-                ) {
-                    Icon(
-                        painterResource(R.drawable.sync),
-                        contentDescription = "Time Transfer",
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = faded,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
-        },
-    )
+        }
+
+        val peakHour = pattern.peakHour
+        val topDay = pattern.topDay
+        if (peakHour != null && topDay != null) {
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.stats_peak_hour),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = faded,
+                    )
+                    Text(
+                        text = "%02d:00".format(peakHour),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = content,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    HourBars(
+                        playTimeByHour = pattern.playTimeByHour,
+                        peakHour = peakHour,
+                        color = content,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(26.dp),
+                    )
+                }
+                Spacer(Modifier.width(20.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.stats_top_day),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = faded,
+                    )
+                    Text(
+                        text = remember(topDay) { topDay.format(DateTimeFormatter.ofPattern("EEE, d MMM")) },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = content,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = listenTime(pattern.topDayPlayTime),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = faded,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 24 thin bars, one per hour of the day; the busiest hour is fully bright. */
+@Composable
+private fun HourBars(
+    playTimeByHour: List<Long>,
+    peakHour: Int,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val max = (playTimeByHour.maxOrNull() ?: 0L).coerceAtLeast(1L).toFloat()
+        val slot = size.width / playTimeByHour.size
+        val barWidth = slot * 0.6f
+        val minHeight = 2.dp.toPx()
+        playTimeByHour.forEachIndexed { hour, playTime ->
+            val barHeight = (size.height * (playTime / max)).coerceAtLeast(minHeight)
+            drawRoundRect(
+                color = color.copy(alpha = if (hour == peakHour) 1f else 0.35f),
+                topLeft = Offset(hour * slot + (slot - barWidth) / 2f, size.height - barHeight),
+                size = Size(barWidth, barHeight),
+                cornerRadius = CornerRadius(barWidth / 2f),
+            )
+        }
+    }
 }
 
 enum class OptionStats { WEEKS, MONTHS, YEARS, CONTINUOUS }

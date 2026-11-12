@@ -44,7 +44,11 @@ object LyricsTranslationHelper {
     val clearTranslationsTrigger: SharedFlow<Unit> = _clearTranslationsTrigger.asSharedFlow()
 
     private var translationJob: kotlinx.coroutines.Job? = null
-    private var isCompositionActive = true
+    // How many lyrics views are on screen. A boolean here was switched off whenever any one view
+    // left the screen (for example the pager's other page), which threw away finished translations.
+    private val activeViews = java.util.concurrent.atomic.AtomicInteger(0)
+    private val isCompositionActive: Boolean
+        get() = activeViews.get() > 0
 
     // Cache translations in memory to avoid redundant API calls during a session
     private val translationCache = ConcurrentHashMap<String, List<String>>()
@@ -76,7 +80,11 @@ object LyricsTranslationHelper {
     )
 
     fun setCompositionActive(active: Boolean) {
-        isCompositionActive = active
+        if (active) {
+            activeViews.incrementAndGet()
+        } else {
+            activeViews.updateAndGet { (it - 1).coerceAtLeast(0) }
+        }
     }
 
     fun triggerManualTranslation() {

@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.collapsingTitleAnchor
+import com.metrolist.music.ui.component.ExpandingSearchField
+import com.metrolist.music.ui.component.ListPlayButton
+import com.metrolist.music.ui.theme.pageRaisedColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -80,6 +84,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.music.ui.component.ShuffleModeButton
+import com.metrolist.music.ui.component.shuffleAwareStartIndex
+import com.metrolist.music.extensions.toMediaItem
+import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalNavController
@@ -137,6 +145,7 @@ fun OnlinePlaylistScreen(
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
 
     val lazyListState = rememberLazyListState()
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
     val snackbarHostState = remember { SnackbarHostState() }
 
     var isSearching by rememberSaveable { mutableStateOf(false) }
@@ -148,8 +157,8 @@ fun OnlinePlaylistScreen(
                 songs.mapIndexed { i, s -> i to s }
             } else {
                 songs.mapIndexed { i, s -> i to s }.filter {
-                    it.second.title.contains(query.text, true) ||
-                        it.second.artists.fastAny { a -> a.name.contains(query.text, true) }
+                    com.metrolist.music.utils.FuzzySearch.matches(query.text, it.second.title) ||
+                        it.second.artists.fastAny { a -> com.metrolist.music.utils.FuzzySearch.matches(query.text, a.name) }
                 }
             }
         }
@@ -249,6 +258,7 @@ fun OnlinePlaylistScreen(
                 playlist?.let { playlist ->
                     if (!isSearching) {
                         item(key = "playlist_header") {
+                            com.metrolist.music.ui.component.ProvideCollapsingTitle(titleState) {
                             OnlinePlaylistHeader(
                                 playlist = playlist,
                                 songs = songs,
@@ -258,6 +268,7 @@ fun OnlinePlaylistScreen(
                                 isPodcastPlaylist = isPodcastPlaylist,
                                 modifier = Modifier.animateItem(),
                             )
+                            }
                         }
                     }
 
@@ -372,33 +383,13 @@ fun OnlinePlaylistScreen(
                         style = MaterialTheme.typography.titleLarge,
                     )
                 } else if (isSearching) {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.search),
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        colors =
-                            TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                            ),
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester),
-                    )
-                } else if (lazyListState.firstVisibleItemIndex > 0) {
-                    Text(playlist?.title ?: "")
+                    ExpandingSearchField(
+    value = query,
+    onValueChange = { query = it },
+    focusRequester = focusRequester,
+)
+                } else {
+                    com.metrolist.music.ui.component.CollapsingTopBarTitle(playlist?.title ?: "", titleState)
                 }
             },
             navigationIcon = {
@@ -534,7 +525,7 @@ private fun OnlinePlaylistHeader(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 32.dp),
+            modifier = Modifier.padding(horizontal = 32.dp).collapsingTitleAnchor(),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -617,9 +608,30 @@ private fun OnlinePlaylistHeader(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Play Button - Larger primary circular button
+            ListPlayButton(
+                onPlay = {
+                    if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                        playerConnection.playQueue(
+                            YouTubePlaylistQueue(
+                                playlistId = playlist.id,
+                                playlistTitle = playlist.title,
+                                initialSongs = songs,
+                                initialContinuation = continuation,
+                            ),
+                        )
+                    }
+                },
+            )
+
+            // Shuffle on / off (the same switch as in Up next; it does not start playback).
+            ShuffleModeButton()
+
+            Spacer(Modifier.weight(1f))
+
             // Like Button - Smaller secondary button
             Surface(
                 onClick = {
@@ -659,7 +671,7 @@ private fun OnlinePlaylistHeader(
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = pageRaisedColor(),
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(
@@ -674,42 +686,11 @@ private fun OnlinePlaylistHeader(
                         contentDescription = null,
                         tint =
                             if (dbPlaylist?.playlist?.bookmarkedAt != null) {
-                                MaterialTheme.colorScheme.error
+                                com.metrolist.music.ui.theme.likedTint(MaterialTheme.colorScheme.onBackground)
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
                         modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-
-            // Play Button - Larger primary circular button
-            Surface(
-                onClick = {
-                    if (!isListenTogetherGuest && songs.isNotEmpty()) {
-                        playerConnection.playQueue(
-                            YouTubePlaylistQueue(
-                                playlistId = playlist.id,
-                                playlistTitle = playlist.title,
-                                initialSongs = songs,
-                                initialContinuation = continuation,
-                            ),
-                        )
-                    }
-                },
-                color = MaterialTheme.colorScheme.primary,
-                shape = CircleShape,
-                modifier = Modifier.size(72.dp),
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play),
-                        contentDescription = stringResource(R.string.play),
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(32.dp),
                     )
                 }
             }
@@ -727,7 +708,7 @@ private fun OnlinePlaylistHeader(
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = pageRaisedColor(),
                 modifier = Modifier.size(48.dp),
             ) {
                 Box(

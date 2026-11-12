@@ -266,7 +266,7 @@ fun YouTubeSongMenu(
             ) {
                 Icon(
                     painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
-                    tint = if (isFavorite) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                    tint = if (isFavorite) com.metrolist.music.ui.theme.likedTint() else LocalContentColor.current,
                     contentDescription = null,
                 )
             }
@@ -301,7 +301,7 @@ fun YouTubeSongMenu(
                                     painter = painterResource(R.drawable.playlist_play),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             text = stringResource(R.string.play_next),
@@ -317,7 +317,7 @@ fun YouTubeSongMenu(
                                 painter = painterResource(R.drawable.playlist_add),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         text = stringResource(R.string.add_to_playlist),
@@ -331,7 +331,7 @@ fun YouTubeSongMenu(
                                 painter = painterResource(R.drawable.share),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         text = stringResource(R.string.share),

@@ -6,26 +6,108 @@
 package com.metrolist.music.ui.theme
 
 import android.graphics.Bitmap
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
-import com.materialkolor.PaletteStyle
-import com.materialkolor.dynamiccolor.ColorSpec
-import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
 
 val DefaultThemeColor = Color(0xFFED5564)
+
+// Fixed palettes: near-black / grouped-grey surfaces with a monochrome accent.
+/** The fixed dark palette, also used on album-colored surfaces in the light theme. */
+val MusicardDarkColorScheme: ColorScheme get() = MusicardDarkColors
+
+/** The fixed light palette. */
+val MusicardLightColorScheme: ColorScheme get() = MusicardLightColors
+
+private val MusicardDarkColors =
+    darkColorScheme(
+        primary = Color(0xFFFFFFFF),
+        onPrimary = Color(0xFF000000),
+        primaryContainer = Color(0xFF3A3A3C),
+        onPrimaryContainer = Color(0xFFFFFFFF),
+        inversePrimary = Color(0xFF1C1C1E),
+        secondary = Color(0xFFD1D1D6),
+        onSecondary = Color(0xFF000000),
+        secondaryContainer = Color(0xFF2C2C2E),
+        onSecondaryContainer = Color(0xFFFFFFFF),
+        tertiary = Color(0xFFAEAEB2),
+        onTertiary = Color(0xFF000000),
+        tertiaryContainer = Color(0xFF2C2C2E),
+        onTertiaryContainer = Color(0xFFFFFFFF),
+        background = Color(0xFF000000),
+        onBackground = Color(0xFFFFFFFF),
+        surface = Color(0xFF000000),
+        onSurface = Color(0xFFFFFFFF),
+        surfaceVariant = Color(0xFF2C2C2E),
+        onSurfaceVariant = Color(0xFF98989F),
+        surfaceTint = Color(0xFFFFFFFF),
+        inverseSurface = Color(0xFFF2F2F7),
+        inverseOnSurface = Color(0xFF000000),
+        error = Color(0xFFFF453A),
+        onError = Color(0xFFFFFFFF),
+        errorContainer = Color(0xFF5C1512),
+        onErrorContainer = Color(0xFFFFDAD6),
+        outline = Color(0xFF636366),
+        outlineVariant = Color(0xFF38383A),
+        scrim = Color(0xFF000000),
+        surfaceBright = Color(0xFF3A3A3C),
+        surfaceDim = Color(0xFF000000),
+        surfaceContainerLowest = Color(0xFF000000),
+        surfaceContainerLow = Color(0xFF141416),
+        surfaceContainer = Color(0xFF1C1C1E),
+        surfaceContainerHigh = Color(0xFF2C2C2E),
+        surfaceContainerHighest = Color(0xFF3A3A3C),
+    )
+
+private val MusicardLightColors =
+    lightColorScheme(
+        primary = Color(0xFF000000),
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFE5E5EA),
+        onPrimaryContainer = Color(0xFF000000),
+        inversePrimary = Color(0xFFFFFFFF),
+        secondary = Color(0xFF3A3A3C),
+        onSecondary = Color(0xFFFFFFFF),
+        secondaryContainer = Color(0xFFE5E5EA),
+        onSecondaryContainer = Color(0xFF000000),
+        tertiary = Color(0xFF636366),
+        onTertiary = Color(0xFFFFFFFF),
+        tertiaryContainer = Color(0xFFE5E5EA),
+        onTertiaryContainer = Color(0xFF000000),
+        background = Color(0xFFF2F2F7),
+        onBackground = Color(0xFF000000),
+        surface = Color(0xFFF2F2F7),
+        onSurface = Color(0xFF000000),
+        surfaceVariant = Color(0xFFE5E5EA),
+        onSurfaceVariant = Color(0xFF6C6C70),
+        surfaceTint = Color(0xFF000000),
+        inverseSurface = Color(0xFF1C1C1E),
+        inverseOnSurface = Color(0xFFFFFFFF),
+        error = Color(0xFFFF3B30),
+        onError = Color(0xFFFFFFFF),
+        errorContainer = Color(0xFFFFDAD6),
+        onErrorContainer = Color(0xFF410002),
+        outline = Color(0xFFAEAEB2),
+        outlineVariant = Color(0xFFD1D1D6),
+        scrim = Color(0xFF000000),
+        surfaceBright = Color(0xFFFFFFFF),
+        surfaceDim = Color(0xFFE5E5EA),
+        surfaceContainerLowest = Color(0xFFFFFFFF),
+        surfaceContainerLow = Color(0xFFFFFFFF),
+        surfaceContainer = Color(0xFFFFFFFF),
+        surfaceContainerHigh = Color(0xFFE9E9EE),
+        surfaceContainerHighest = Color(0xFFE0E0E6),
+    )
 
 @Composable
 fun MetrolistTheme(
@@ -34,23 +116,9 @@ fun MetrolistTheme(
     themeColor: Color = DefaultThemeColor,
     content: @Composable () -> Unit,
 ) {
-    val context = LocalContext.current
-    // Determine if system dynamic colors should be used (Android S+ and default theme color)
-    val useSystemDynamicColor = (themeColor == DefaultThemeColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-
-    // Select the appropriate color scheme generation method
-    val baseColorScheme = if (useSystemDynamicColor) {
-        // Use standard Material 3 dynamic color functions for system wallpaper colors
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    } else {
-        // Use materialKolor only when a specific seed color is provided
-        rememberDynamicColorScheme(
-            seedColor = themeColor, // themeColor is guaranteed non-default here
-            isDark = darkTheme,
-            specVersion = ColorSpec.SpecVersion.SPEC_2025,
-            style = PaletteStyle.TonalSpot // Keep existing style
-        )
-    }
+    // Musicard uses one fixed neutral palette for each theme instead of wallpaper / album colors,
+    // so the app looks the same on every phone. [themeColor] is kept for callers but not used here.
+    val baseColorScheme = if (darkTheme) MusicardDarkColors else MusicardLightColors
 
     // Apply pureBlack modification if needed, similar to original logic
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {

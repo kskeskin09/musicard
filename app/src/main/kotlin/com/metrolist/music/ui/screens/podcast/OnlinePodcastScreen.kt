@@ -1,5 +1,9 @@
 package com.metrolist.music.ui.screens.podcast
 
+import com.metrolist.music.ui.component.ExpandingSearchField
+import com.metrolist.music.ui.component.collapsingTitleAnchor
+
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -108,6 +112,7 @@ fun OnlinePodcastScreen(
     val libraryPodcast by viewModel.libraryPodcast.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
+    val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
 
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
@@ -115,8 +120,8 @@ fun OnlinePodcastScreen(
     val filteredEpisodes = remember(episodes, query) {
         if (query.text.isEmpty()) episodes
         else episodes.filter { episode ->
-            episode.title.contains(query.text, ignoreCase = true) ||
-                episode.author?.name?.contains(query.text, ignoreCase = true) == true
+            com.metrolist.music.utils.FuzzySearch.matches(query.text, episode.title) ||
+                episode.author?.name?.let { com.metrolist.music.utils.FuzzySearch.matches(query.text, it) } == true
         }
     }
 
@@ -170,6 +175,7 @@ fun OnlinePodcastScreen(
                     if (!isSearching) {
                         item(key = "podcast_header") {
                             val context = LocalContext.current
+                            com.metrolist.music.ui.component.ProvideCollapsingTitle(titleState) {
                             PodcastHeader(
                                 podcast = podcastItem,
                                 episodeCount = episodes.size,
@@ -182,6 +188,7 @@ fun OnlinePodcastScreen(
                                     }
                                 }
                             )
+                            }
                         }
                     }
 
@@ -237,31 +244,13 @@ fun OnlinePodcastScreen(
         TopAppBar(
             title = {
                 if (isSearching) {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.search),
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                    )
-                } else if (lazyListState.firstVisibleItemIndex > 0) {
-                    Text(podcast?.title ?: "")
+                    ExpandingSearchField(
+    value = query,
+    onValueChange = { query = it },
+    focusRequester = focusRequester,
+)
+                } else {
+                    com.metrolist.music.ui.component.CollapsingTopBarTitle(podcast?.title ?: "", titleState)
                 }
             },
             navigationIcon = {
@@ -334,7 +323,8 @@ private fun PodcastHeader(
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.collapsingTitleAnchor(),
         )
 
         podcast.author?.name?.let { authorName ->

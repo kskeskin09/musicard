@@ -3,8 +3,11 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
+@file:OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+
 package com.metrolist.music
 
+import com.metrolist.music.ui.utils.resolvedRoute
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.ForegroundServiceStartNotAllowedException
@@ -19,9 +22,17 @@ import android.os.IBinder
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import kotlin.math.roundToInt
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -48,6 +59,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +72,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -89,6 +103,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -153,6 +169,7 @@ import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.constants.LyricsProviderOrderKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
+import com.metrolist.music.ui.component.bottomEdgeBlur
 import com.metrolist.music.constants.NavigationBarAnimationSpec
 import com.metrolist.music.constants.NavigationBarHeight
 import com.metrolist.music.constants.PauseListenHistoryKey
@@ -167,7 +184,6 @@ import com.metrolist.music.constants.SlimNavBarHeight
 import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.UpdateNotificationsEnabledKey
-import com.metrolist.music.constants.UseNewMiniPlayerDesignKey
 import com.metrolist.music.constants.VideoThumbnailMigrationDoneKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
@@ -181,6 +197,15 @@ import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.AccountSettingsDialog
 import com.metrolist.music.ui.component.AppNavigationBar
+import com.metrolist.music.ui.component.ProfilePictureDialog
+import com.metrolist.music.ui.component.TopLevelHeader
+import com.metrolist.music.constants.ProfileImageUrlKey
+import com.metrolist.music.constants.ProfileImageZoomKey
+import com.metrolist.music.constants.ProfileImageOffsetXKey
+import com.metrolist.music.constants.ProfileImageOffsetYKey
+import com.metrolist.music.ui.component.ProfileCrop
+import com.metrolist.music.constants.TopLevelHeaderHeight
+import com.metrolist.music.constants.TopLevelSearchHeight
 import com.metrolist.music.ui.component.AppNavigationRail
 import com.metrolist.music.ui.component.BottomSheetMenu
 import com.metrolist.music.ui.component.BottomSheetPage
@@ -736,6 +761,12 @@ class MainActivity : FragmentActivity() {
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
+                // Tell the player which page is open (with its arguments), so a queue started
+                // there remembers where it came from ("Playing from").
+                LaunchedEffect(navBackStackEntry, playerConnection) {
+                    val entry = navBackStackEntry ?: return@LaunchedEffect
+                    playerConnection?.currentScreenRoute = entry.resolvedRoute()
+                }
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
                 val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)
@@ -752,7 +783,8 @@ class MainActivity : FragmentActivity() {
                 }
                 val (forceBottomNav) = rememberPreference(ForceBottomNavBarKey, defaultValue = false)
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
-                val (useNewMiniPlayerDesign) = rememberPreference(UseNewMiniPlayerDesignKey, defaultValue = true)
+                val miniPlayerBlackout by rememberPreference(com.metrolist.music.constants.MiniPlayerBlackoutKey, defaultValue = true)
+                val miniPlayerBlur by rememberPreference(com.metrolist.music.constants.MiniPlayerBlurKey, defaultValue = false)
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
                 val defaultOpenTab = remember(defaultOpenTabInt) {
                     try {
@@ -774,6 +806,8 @@ class MainActivity : FragmentActivity() {
                     remember {
                         listOf(
                             Screens.Home.route,
+                            Screens.Explore.route,
+                            Screens.Profile.route,
                             Screens.Library.route,
                             Screens.ListenTogether.route,
                             "settings",
@@ -849,7 +883,7 @@ class MainActivity : FragmentActivity() {
                         collapsedBound =
                             bottomInset +
                                 (if (!showRail && shouldShowNavigationBar) navPadding else 0.dp) +
-                                (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
+                                MiniPlayerBottomSpacing +
                                 MiniPlayerHeight,
                         expandedBound = maxHeight,
                     )
@@ -860,12 +894,55 @@ class MainActivity : FragmentActivity() {
                 val playerReady by playerReadyState
                 val activePlayerConnection = if (playerReady) playerConnection else null
 
+                // Worked out in the same frame as the route, so a page never opens with the
+                // previous page's header (or its spacing) for a moment.
+                val shouldShowTopBar =
+                    run {
+                        val isListenTogetherScreen =
+                            currentRoute == Screens.ListenTogether.route ||
+                                currentRoute == "listen_together_from_topbar"
+                        currentRoute in topLevelScreens &&
+                            currentRoute != "settings" &&
+                            !(isListenTogetherScreen && listenTogetherInTopBar)
+                    }
+                val onProfileTab = currentRoute == Screens.Profile.route
+                // Home has no search bar and its name stays at the top while the page scrolls
+                // under it, fading out.
+                val onHomeTab = currentRoute == Screens.Home.route
+                // The main tabs' header scrolls away with the page: first the page name, then the
+                // search bar; scrolling back brings it back the same way.
+                val headerMaxPx = with(density) { TopLevelHeaderHeight.toPx() }
+                var headerCollapsePx by remember { mutableFloatStateOf(0f) }
+                val latestRoute = androidx.compose.runtime.rememberUpdatedState(currentRoute)
+                val headerCollapseConnection =
+                    remember(headerMaxPx) {
+                        object : NestedScrollConnection {
+                            override fun onPostScroll(
+                                consumed: Offset,
+                                available: Offset,
+                                source: NestedScrollSource,
+                            ): Offset {
+                                if (consumed.y != 0f) {
+                                    headerCollapsePx = (headerCollapsePx - consumed.y).coerceIn(0f, headerMaxPx)
+                                    latestRoute.value?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] = headerCollapsePx }
+                                }
+                                return Offset.Zero
+                            }
+                        }
+                    }
+                // Each tab's header comes back as far scrolled away as its page was.
+                LaunchedEffect(currentRoute) {
+                    headerCollapsePx = currentRoute?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] } ?: 0f
+                }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
                         shouldShowNavigationBar,
                         playerBottomSheetState.isDismissed,
                         showRail,
+                        shouldShowTopBar,
+                        onProfileTab,
+                        onHomeTab,
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
@@ -874,7 +951,18 @@ class MainActivity : FragmentActivity() {
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                            .add(WindowInsets(top = AppBarHeight, bottom = bottom))
+                            .add(
+                                WindowInsets(
+                                    top =
+                                        when {
+                                            !shouldShowTopBar -> AppBarHeight
+                                            // The Profile and Home headers have no search bar.
+                                            onProfileTab || onHomeTab -> TopLevelHeaderHeight - TopLevelSearchHeight
+                                            else -> TopLevelHeaderHeight
+                                        },
+                                    bottom = bottom,
+                                ),
+                            )
                     }
                 appBarScrollBehavior(
                     canScroll = {
@@ -967,17 +1055,6 @@ class MainActivity : FragmentActivity() {
                     }
                 }
 
-                var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
-
-                LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
-                    val currentRoute = navBackStackEntry?.destination?.route
-                    val isListenTogetherScreen =
-                        currentRoute == Screens.ListenTogether.route ||
-                            currentRoute == "listen_together_from_topbar"
-                    shouldShowTopBar = currentRoute in topLevelScreens &&
-                        currentRoute != "settings" &&
-                        !(isListenTogetherScreen && listenTogetherInTopBar)
-                }
 
                 val coroutineScope = rememberCoroutineScope()
                 var sharedSong: SongItem? by remember {
@@ -1014,6 +1091,8 @@ class MainActivity : FragmentActivity() {
                     remember(navBackStackEntry) {
                         when (navBackStackEntry?.destination?.route) {
                             Screens.Home.route -> R.string.home
+                            Screens.Explore.route -> R.string.explore
+                            Screens.Profile.route -> R.string.profile_tab
                             Screens.Search.route -> R.string.search
                             Screens.Library.route -> R.string.filter_library
                             Screens.ListenTogether.route -> R.string.together
@@ -1022,6 +1101,14 @@ class MainActivity : FragmentActivity() {
                     }
 
                 var showAccountDialog by remember { mutableStateOf(false) }
+                var showProfilePictureDialog by remember { mutableStateOf(false) }
+                val (profileImageUrl, setProfileImageUrl) = rememberPreference(ProfileImageUrlKey, defaultValue = "")
+                val (profileZoom, setProfileZoom) = rememberPreference(ProfileImageZoomKey, defaultValue = 1f)
+                val (profileOffsetX, setProfileOffsetX) = rememberPreference(ProfileImageOffsetXKey, defaultValue = 0f)
+                val (profileOffsetY, setProfileOffsetY) = rememberPreference(ProfileImageOffsetYKey, defaultValue = 0f)
+                val profileCrop = ProfileCrop(profileZoom, profileOffsetX, profileOffsetY)
+                val (profileName, setProfileName) =
+                    rememberPreference(com.metrolist.music.constants.ListenTogetherUsernameKey, defaultValue = "")
 
                 val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
                 val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
@@ -1030,8 +1117,11 @@ class MainActivity : FragmentActivity() {
                         !(pauseListenHistory && eventCount == 0)
                     }
 
-                val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+                // The strip under the floating nav pill matches the page background.
+                val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
                 val artistNameAliases by ArtistNameAliases.aliases.collectAsStateWithLifecycle()
+                val (likeIconColor) =
+                    rememberEnumPreference(com.metrolist.music.constants.LikeIconColorKey, defaultValue = com.metrolist.music.ui.theme.LikeIconColor.WHITE)
 
                 CompositionLocalProvider(
                     LocalDatabase provides database,
@@ -1045,86 +1135,115 @@ class MainActivity : FragmentActivity() {
                     LocalListenTogetherManager provides listenTogetherManager,
                     LocalChangelogState provides showChangelog,
                     LocalArtistNameAliases provides artistNameAliases,
+                    com.metrolist.music.ui.theme.LocalLikeIconRed provides (likeIconColor == com.metrolist.music.ui.theme.LikeIconColor.RED),
                 ) {
                     if (showChangelog.value) {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
                     }
 
+                    // How far up from the bottom the page darkens / blurs: the tab bar and the mini
+                    // player (when showing) plus a short lead-in above them.
+                    val bottomFadeHeight =
+                        run {
+                            val miniPlayerShown = activePlayerConnection != null && !playerBottomSheetState.isDismissed
+                            val tabBar = if (!showRail) navigationBarHeight else 0.dp
+                            if (!miniPlayerShown && (showRail || !shouldShowNavigationBar)) {
+                                0.dp
+                            } else {
+                                bottomInset + tabBar + (if (miniPlayerShown) MiniPlayerHeight else 0.dp) + 14.dp
+                            }
+                        }
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
+                            // The header goes at once when a page without it opens, while the old
+                            // page is still sliding out; the status bar area keeps the page color
+                            // and fades with the change, so it never turns see-through for a moment.
+                            val statusScrimAlpha by androidx.compose.animation.core.animateFloatAsState(
+                                targetValue = if (shouldShowTopBar) 1f else 0f,
+                                animationSpec = if (shouldShowTopBar) androidx.compose.animation.core.snap() else tween(320),
+                                label = "statusScrim",
+                            )
+                            if (!shouldShowTopBar && statusScrimAlpha > 0f) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .windowInsetsTopHeight(WindowInsets.statusBars)
+                                        .graphicsLayer { alpha = statusScrimAlpha }
+                                        .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background),
+                                )
+                            }
                             AnimatedVisibility(
                                 visible = shouldShowTopBar,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 200)),
+                                enter = fadeIn(animationSpec = tween(durationMillis = 200)),
+                                exit = ExitTransition.None,
                             ) {
-                                Row {
-                                    TopAppBar(
-                                        title = {
-                                            Text(
-                                                text = currentTitleRes?.let { stringResource(it) } ?: "",
-                                                style = MaterialTheme.typography.titleLarge,
+                                // Main tabs: large page name, profile picture and a search pill, on the
+                                // page background (below the status bar).
+                                // Header buttons: round, on the same gray as the search bar.
+                                val headerButtonColors =
+                                    IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                TopLevelHeader(
+                                    title = currentTitleRes?.let { stringResource(it) } ?: "",
+                                    profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
+                                    profileCrop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                                    showBadge = latestVersionName != BuildConfig.BASE_VERSION_NAME,
+                                    // History, stats, Listen Together and the account settings are on the
+                                    // Profile tab now.
+                                    onProfileClick = {
+                                        if (currentRoute != Screens.Profile.route) {
+                                            navController.navigate(Screens.Profile.route) {
+                                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        }
+                                    },
+                                    onProfileLongClick = { showProfilePictureDialog = true },
+                                    showProfile = false,
+                                    showSearch = !onProfileTab && !onHomeTab,
+                                    // Tapping the page name works like tapping its tab again.
+                                    onTitleClick = {
+                                        navController.currentBackStackEntry?.savedStateHandle?.set("scrollToTop", true)
+                                    },
+                                    onSearchClick = {
+                                        // On the Library tab the pill searches the library itself.
+                                        if (currentRoute == Screens.Library.route) {
+                                            navController.navigate("library_search")
+                                        } else {
+                                            navController.navigate(Screens.Search.route) { launchSingleTop = true }
+                                        }
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .background(
+                                                if (onHomeTab) {
+                                                    // The page shows through toward the bottom of the header.
+                                                    val pageColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+                                                    Brush.verticalGradient(
+                                                        0f to pageColor,
+                                                        0.55f to pageColor.copy(alpha = 0.85f),
+                                                        1f to pageColor.copy(alpha = 0f),
+                                                    )
+                                                } else {
+                                                    SolidColor(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background)
+                                                },
                                             )
-                                        },
-                                        actions = {
-                                            if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.history),
-                                                        contentDescription = stringResource(R.string.history),
-                                                    )
+                                            .windowInsetsPadding(WindowInsets.statusBars)
+                                            .clipToBounds()
+                                            .layout { measurable, constraints ->
+                                                // Shorter by how far the page has scrolled, with the
+                                                // content moved up so its top part goes first.
+                                                val placeable = measurable.measure(constraints)
+                                                val cut = if (onHomeTab) 0 else headerCollapsePx.roundToInt().coerceAtMost(placeable.height)
+                                                layout(placeable.width, placeable.height - cut) {
+                                                    placeable.place(0, -cut)
                                                 }
                                             }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
-                                                )
-                                            }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { showAccountDialog = true }) {
-                                                BadgedBox(badge = {
-                                                    if (latestVersionName != BuildConfig.BASE_VERSION_NAME) {
-                                                        Badge()
-                                                    }
-                                                }) {
-                                                    if (accountImageUrl != null) {
-                                                        AsyncImage(
-                                                            model = accountImageUrl,
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier =
-                                                                Modifier
-                                                                    .size(24.dp)
-                                                                    .clip(CircleShape),
-                                                        )
-                                                    } else {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.account),
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier = Modifier.size(24.dp),
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        scrollBehavior = topAppBarScrollBehavior,
-                                        colors =
-                                            TopAppBarDefaults.topAppBarColors(
-                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                titleContentColor = MaterialTheme.colorScheme.onSurface,
-                                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            ),
-                                        modifier =
-                                            Modifier.windowInsetsPadding(
+                                            .windowInsetsPadding(
                                                 if (showRail) {
                                                     WindowInsets(left = NavigationBarHeight)
                                                         .add(cutoutInsets.only(WindowInsetsSides.Start))
@@ -1132,8 +1251,7 @@ class MainActivity : FragmentActivity() {
                                                     cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
                                                 },
                                             ),
-                                    )
-                                }
+                                )
                             }
                         },
                         bottomBar = {
@@ -1168,8 +1286,19 @@ class MainActivity : FragmentActivity() {
 
                                             // Use appropriate key based on screen type
                                             if (screen == Screens.Search) {
-                                                val current = targetEntry?.savedStateHandle?.get<Int>("scrollToTopCount") ?: 0
-                                                targetEntry?.savedStateHandle?.set("scrollToTopCount", current + 1)
+                                                // Focus the search field of the page that is open (the search page
+                                                // or the results), keeping that page open.
+                                                listOfNotNull(targetEntry, navController.currentBackStackEntry)
+                                                    .distinct()
+                                                    .forEach { entry ->
+                                                        val current = entry.savedStateHandle.get<Int>("scrollToTopCount") ?: 0
+                                                        entry.savedStateHandle["scrollToTopCount"] = current + 1
+                                                    }
+                                            } else if (screen == Screens.Home || screen == Screens.Library) {
+                                                // Tapping the tab again starts it over: back to the top with the
+                                                // header (and its search bar) shown and the filters cleared.
+                                                com.metrolist.music.ui.utils.TabStates.reset(screen.route)
+                                                headerCollapsePx = 0f
                                             } else {
                                                 targetEntry?.savedStateHandle?.set("scrollToTop", true)
                                             }
@@ -1178,12 +1307,22 @@ class MainActivity : FragmentActivity() {
                                                 topAppBarScrollBehavior.state.resetHeightOffset()
                                             }
                                         } else {
-                                            navController.navigate(screen.route) {
-                                                popUpTo(navController.graph.startDestinationId) {
-                                                    saveState = true
+                                            // Inside this tab's own pages (e.g. a playlist opened from the
+                                            // library): go back to the tab itself. Restoring the tab would only
+                                            // show the same page again, so the tap seemed to do nothing.
+                                            val tabInStack =
+                                                screen != Screens.Search &&
+                                                    runCatching { navController.getBackStackEntry(screen.route) }.isSuccess
+                                            if (tabInStack) {
+                                                navController.popBackStack(screen.route, inclusive = false)
+                                            } else {
+                                                navController.navigate(screen.route) {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
                                                 }
-                                                launchSingleTop = true
-                                                restoreState = true
                                             }
                                         }
                                     }
@@ -1203,6 +1342,29 @@ class MainActivity : FragmentActivity() {
 
                             if (!showRail && currentRoute != "wrapped") {
                                 Box {
+                                    // The page fades darker toward the tab bar (and the mini player
+                                    // above it, when one is showing), like the fade under the title.
+                                    // Settings pages have no tab bar: the fade still runs under the mini
+                                    // player, starting at the same point above it. Blackout turns it off.
+                                    if (miniPlayerBlackout && bottomFadeHeight > 14.dp) {
+                                        val fadeColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+                                        val coveredHeight = bottomFadeHeight - 14.dp
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .fillMaxWidth()
+                                                    .height(coveredHeight + 14.dp)
+                                                    .background(
+                                                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                                                            0f to fadeColor.copy(alpha = 0f),
+                                                            // Starts just under the buttons that float above the mini player (16 dp up).
+                                                            (14f / (coveredHeight.value + 14f)) to fadeColor.copy(alpha = 0.85f),
+                                                            1f to fadeColor,
+                                                        ),
+                                                    ),
+                                        )
+                                    }
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
@@ -1219,6 +1381,23 @@ class MainActivity : FragmentActivity() {
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
                                         onHomeLongHold = { showAccountDialog = true },
+                                        onProfileLongClick = { showProfilePictureDialog = true },
+                                        profileIcon = { size ->
+                                            val avatarUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl
+                                            if (avatarUrl != null) {
+                                                com.metrolist.music.ui.component.CroppedProfileImage(
+                                                    url = avatarUrl,
+                                                    crop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                                                    modifier = Modifier.size(size).clip(CircleShape),
+                                                )
+                                            } else {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.person),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(size),
+                                                )
+                                            }
+                                        },
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
@@ -1254,7 +1433,7 @@ class MainActivity : FragmentActivity() {
                                                     val progress = playerBottomSheetState.progress
                                                     alpha =
                                                         if (progress > 0f ||
-                                                            (useNewMiniPlayerDesign && !shouldShowNavigationBar)
+                                                            !shouldShowNavigationBar
                                                         ) {
                                                             0f
                                                         } else {
@@ -1284,7 +1463,7 @@ class MainActivity : FragmentActivity() {
                                             .graphicsLayer {
                                                 val progress = playerBottomSheetState.progress
                                                 alpha =
-                                                    if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar)) 0f else 1f
+                                                    if (progress > 0f || !shouldShowNavigationBar) 0f else 1f
                                             }.background(baseBg),
                                 )
                             }
@@ -1292,6 +1471,7 @@ class MainActivity : FragmentActivity() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
+                                .nestedScroll(headerCollapseConnection)
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
                         Row(Modifier.fillMaxSize()) {
@@ -1338,65 +1518,79 @@ class MainActivity : FragmentActivity() {
                                     onHomeLongHold = { showAccountDialog = true },
                                 )
                             }
-                            Box(Modifier.weight(1f)) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .then(
+                                        Modifier.bottomEdgeBlur(
+                                            enabled = miniPlayerBlur && bottomFadeHeight > 14.dp && currentRoute != "wrapped",
+                                            startFromBottomPx = { with(density) { bottomFadeHeight.toPx() } },
+                                        ),
+                                    ),
+                            ) {
                                 // NavHost with animations (Material 3 Expressive style)
-                                NavHost(
-                                    navController = navController,
-                                    startDestination =
-                                        when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                                            NavigationTab.HOME -> Screens.Home
-                                            NavigationTab.SEARCH -> Screens.Search
-                                            NavigationTab.LIBRARY -> Screens.Library
-                                        }.route,
-                                    enterTransition = {
-                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                // Lets album covers grow from a card into the album page.
+                                androidx.compose.animation.SharedTransitionLayout {
+                                    CompositionLocalProvider(com.metrolist.music.ui.utils.LocalSharedTransitionScope provides this) {
+                                        NavHost(
+                                            navController = navController,
+                                            startDestination =
+                                                when (tabOpenedFromShortcut ?: defaultOpenTab) {
+                                                    NavigationTab.HOME -> Screens.Home
+                                                    NavigationTab.SEARCH -> Screens.Search
+                                                    NavigationTab.LIBRARY -> Screens.Library
+                                                }.route,
+                                            enterTransition = {
+                                                val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
 
-                                        if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                        } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                        }
-                                    },
-                                    exitTransition = {
-                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
+                                                    slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                                } else {
+                                                    slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                                }
+                                            },
+                                            exitTransition = {
+                                                val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                                val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
 
-                                        if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                                        } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
-                                        }
-                                    },
-                                    popEnterTransition = {
-                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                                if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
+                                                    slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                                } else {
+                                                    slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                                }
+                                            },
+                                            popEnterTransition = {
+                                                val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
 
-                                        if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                        } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                        }
-                                    },
-                                    popExitTransition = {
-                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                                if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
+                                                    slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                                } else {
+                                                    slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                                }
+                                            },
+                                            popExitTransition = {
+                                                val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                                val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
 
-                                        if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                                        } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                                if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
+                                                    slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                                } else {
+                                                    slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                                }
+                                            },
+                                            modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+                                        ) {
+                                            navigationBuilder(
+                                                navController = navController,
+                                                scrollBehavior = topAppBarScrollBehavior,
+                                                latestVersionName = latestVersionName,
+                                                activity = this@MainActivity,
+                                                snackbarHostState = snackbarHostState,
+                                            )
                                         }
-                                    },
-                                    modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
-                                ) {
-                                    navigationBuilder(
-                                        navController = navController,
-                                        scrollBehavior = topAppBarScrollBehavior,
-                                        latestVersionName = latestVersionName,
-                                        activity = this@MainActivity,
-                                        snackbarHostState = snackbarHostState,
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -1411,6 +1605,23 @@ class MainActivity : FragmentActivity() {
                         state = LocalBottomSheetPageState.current,
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
+
+                    if (showProfilePictureDialog) {
+                        ProfilePictureDialog(
+                            initialUrl = profileImageUrl,
+                            initialCrop = profileCrop,
+                            initialName = profileName,
+                            onDismiss = { showProfilePictureDialog = false },
+                            onSave = { url, crop, name ->
+                                setProfileName(name)
+                                setProfileImageUrl(url.trim())
+                                setProfileZoom(crop.zoom)
+                                setProfileOffsetX(crop.offsetX)
+                                setProfileOffsetY(crop.offsetY)
+                                showProfilePictureDialog = false
+                            },
+                        )
+                    }
 
                     if (showAccountDialog) {
                         AccountSettingsDialog(

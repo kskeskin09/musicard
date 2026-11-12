@@ -278,6 +278,10 @@ class BottomSheetState(
         get() = object : NestedScrollConnection {
             var isTopReached = false
 
+            // True once the list itself scrolled during the current gesture. A gesture that
+            // scrolls the list up to its top stops there; only a new pull at the top moves the sheet.
+            var scrolledThisGesture = false
+
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 if (isExpanded && available.y < 0) {
                     isTopReached = false
@@ -296,7 +300,10 @@ class BottomSheetState(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                if (!isTopReached) {
+                if (source == NestedScrollSource.UserInput && consumed.y != 0f) {
+                    scrolledThisGesture = true
+                }
+                if (!isTopReached && !scrolledThisGesture) {
                     isTopReached = consumed.y == 0f && available.y > 0
                 }
 
@@ -321,6 +328,7 @@ class BottomSheetState(
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 isTopReached = false
+                scrolledThisGesture = false
                 return Velocity.Zero
             }
         }

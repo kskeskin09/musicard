@@ -199,7 +199,16 @@ class InnerTube(
         params: String? = null,
         continuation: String? = null,
         setLogin: Boolean = false,
-    ) = innerTubeX.search(client, query, params, continuation, setLogin = setLogin)
+    ) = innerTubeX.search(client, query?.let(::neutralizeSearchOperators), params, continuation, setLogin = setLogin)
+
+    /**
+     * YouTube treats a hyphen at the start of a word as "exclude this word". Titles such as
+     * "THANATOS -IF I CAN'T BE YOURS-" therefore hid the very song being searched for, because
+     * "-IF" removed every result containing "if". Drop such leading hyphens so they are read as
+     * plain punctuation; hyphens inside words ("Jay-Z") and lone dashes are left alone.
+     */
+    private fun neutralizeSearchOperators(query: String): String =
+        query.replace(LEADING_HYPHEN_REGEX, "$1").trim().ifEmpty { query }
 
     suspend fun player(
         client: YouTubeClient,
@@ -478,3 +487,5 @@ class InnerTube(
             )
         }
 }
+
+private val LEADING_HYPHEN_REGEX = Regex("(^|\\s)-+(?=[\\p{L}\\p{N}])")

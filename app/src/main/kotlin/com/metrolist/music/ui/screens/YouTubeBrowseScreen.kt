@@ -6,11 +6,25 @@
 package com.metrolist.music.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -70,16 +84,54 @@ fun YouTubeBrowseScreen(
     val coroutineScope = rememberCoroutineScope()
     val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
 
-    val allItems = browseResult?.items?.flatMap { it.items } ?: emptyList()
+    // For You (the page as YouTube gives it), Popular or New. One is always picked; leaving the
+    // genre and coming back starts again at For You.
+    var filter by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(GenreFilter.FOR_YOU) }
+    val sections = browseResult?.items.orEmpty()
+    val newItems by viewModel.newItems.collectAsStateWithLifecycle()
+    LaunchedEffect(filter, browseResult?.title) {
+        if (filter == GenreFilter.NEW) viewModel.loadNew(browseResult?.title.orEmpty())
+    }
+    val allItems =
+        remember(sections, filter, newItems) {
+            when (filter) {
+                GenreFilter.FOR_YOU -> sections.flatMap { it.items }
+                GenreFilter.POPULAR -> {
+                    val popular = sections.filter { it.title.matchesAny(PopularWords) }
+                    // No section named that way: everything except the new releases.
+                    (popular.ifEmpty { sections.filterNot { it.title.matchesAny(NewWords) } }).flatMap { it.items }
+                }
+                GenreFilter.NEW -> {
+                    // The page's own "new releases" shelf if it has one, then this year's releases
+                    // for the genre from search. Only when both are empty: the page's albums.
+                    val fresh = sections.filter { it.title.matchesAny(NewWords) }.flatMap { it.items }
+                    val searched = newItems
+                    when {
+                        searched == null && fresh.isEmpty() -> emptyList()
+                        else -> (fresh + searched.orEmpty()).distinctBy { it.id }.ifEmpty {
+                            sections.flatMap { it.items }.filterIsInstance<AlbumItem>()
+                                .ifEmpty { sections.flatMap { it.items } }
+                        }
+                    }
+                }
+            }
+        }
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp),
+    androidx.compose.foundation.lazy.LazyColumn(
         contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
     ) {
-        if (browseResult == null) {
+        item(key = "genre_filters") {
+            GenreFilterSegments(
+                selected = filter,
+                onSelect = { filter = it },
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 8.dp),
+            )
+        }
+
+        if (browseResult == null || (filter == GenreFilter.NEW && allItems.isEmpty() && newItems == null)) {
             items(8) {
                 ShimmerHost {
-                    GridItemPlaceHolder(fillMaxWidth = true)
+                    com.metrolist.music.ui.component.shimmer.ListItemPlaceHolder()
                 }
             }
         }
@@ -88,7 +140,7 @@ fun YouTubeBrowseScreen(
             items = allItems.distinctBy { it.id },
             key = { "yt_browse_${it.id}" },
         ) { item ->
-            YouTubeGridItem(
+            com.metrolist.music.ui.component.YouTubeListItem(
                 item = item,
                 isActive =
                     when (item) {
@@ -97,8 +149,6 @@ fun YouTubeBrowseScreen(
                         else -> false
                     },
                 isPlaying = isPlaying,
-                fillMaxWidth = true,
-                coroutineScope = coroutineScope,
                 modifier =
                     Modifier
                         .combinedClickable(
@@ -210,4 +260,65 @@ fun YouTubeBrowseScreen(
             }
         },
     )
+}
+
+private enum class GenreFilter { FOR_YOU, POPULAR, NEW }
+
+private val PopularWords =
+    listOf("popular", "top", "trending", "featured", "hot", "best", "popüler", "öne çıkan", "en iyi", "en çok")
+private val NewWords =
+    listOf("new", "release", "latest", "fresh", "recent", "yeni", "son çıkan", "çıkanlar")
+
+private fun String?.matchesAny(words: List<String>): Boolean {
+    val text = this?.lowercase() ?: return false
+    return words.any { it in text }
+}
+
+/** The same rounded segments as the Library filters; one of them is always picked. */
+@Composable
+private fun GenreFilterSegments(
+    selected: GenreFilter,
+    onSelect: (GenreFilter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.foundation.layout.Row(
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(3.dp),
+    ) {
+        listOf(
+            GenreFilter.FOR_YOU to R.string.genre_filter_for_you,
+            GenreFilter.POPULAR to R.string.genre_filter_popular,
+            GenreFilter.NEW to R.string.genre_filter_new,
+        ).forEach { (value, label) ->
+            val isSelected = value == selected
+            val background by androidx.compose.animation.animateColorAsState(
+                if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceContainer,
+                label = "genreSegmentBackground",
+            )
+            val textColor by androidx.compose.animation.animateColorAsState(
+                if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
+                label = "genreSegmentText",
+            )
+            Text(
+                text = stringResource(label),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = textColor,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                        .background(background)
+                        .clickable { onSelect(value) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+    }
 }

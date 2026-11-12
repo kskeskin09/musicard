@@ -37,7 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
+import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -119,6 +119,9 @@ fun LyricsMenu(
     // Observe the authoritative translation-active state from the singleton; this persists
     // correctly across menu open/close cycles and avoids the lyricsProvider() race condition.
     val hasTranslations by LyricsTranslationHelper.hasActiveTranslations.collectAsStateWithLifecycle()
+    val translationStatus by LyricsTranslationHelper.status.collectAsStateWithLifecycle()
+    // The switch turns on right away and stays on while the translation is being made.
+    val translationOn = hasTranslations || translationStatus is LyricsTranslationHelper.TranslationStatus.Translating
 
     var showEditDialog by rememberSaveable {
         mutableStateOf(false)
@@ -401,7 +404,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.edit),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.edit),
@@ -415,7 +418,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.cached),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.refetch),
@@ -430,7 +433,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.search),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.search),
@@ -444,7 +447,7 @@ fun LyricsMenu(
                                     painter = painterResource(R.drawable.content_copy),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.copy),
@@ -486,7 +489,10 @@ fun LyricsMenu(
                                     )
                                 },
                                 onClick = {
-                                    if (hasTranslations) {
+                                    if (translationOn && !hasTranslations) {
+                                        LyricsTranslationHelper.cancelTranslation()
+                                        LyricsTranslationHelper.triggerClearTranslations()
+                                    } else if (hasTranslations) {
                                         // Remove translations
                                         lyricsProvider()?.let { lyrics ->
                                             val clearedLyrics = LyricsTranslationHelper.clearTranslations(lyrics)
@@ -503,9 +509,13 @@ fun LyricsMenu(
                                 },
                                 trailingContent = {
                                     Switch(
-                                        checked = hasTranslations,
+                                        checked = translationOn,
                                         onCheckedChange = { newCheckedState ->
-                                            if (newCheckedState) {
+                                            if (!newCheckedState && !hasTranslations) {
+                                                // Still translating: stop it.
+                                                LyricsTranslationHelper.cancelTranslation()
+                                                LyricsTranslationHelper.triggerClearTranslations()
+                                            } else if (newCheckedState) {
                                                 // Enable translations – hasActiveTranslations updates when done
                                                 LyricsTranslationHelper.triggerManualTranslation()
                                             } else {
@@ -522,7 +532,7 @@ fun LyricsMenu(
                                         thumbContent = {
                                             Icon(
                                                 painter = painterResource(
-                                                    id = if (hasTranslations) R.drawable.check else R.drawable.close
+                                                    id = if (translationOn) R.drawable.check else R.drawable.close
                                                 ),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(SwitchDefaults.IconSize)

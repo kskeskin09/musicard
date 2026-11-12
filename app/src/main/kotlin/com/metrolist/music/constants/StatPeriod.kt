@@ -16,6 +16,8 @@ enum class StatPeriod {
     MONTH_6,
     YEAR_1,
     ALL,
+    // Added last so the stored positions of the older entries stay the same.
+    DAY_1,
     ;
 
     fun toLocalDateTime(): LocalDateTime =
@@ -46,6 +48,11 @@ enum class StatPeriod {
                     .minusMonths(12)
 
             ALL -> LocalDateTime.of(1970, 1, 1, 0, 0)
+
+            DAY_1 ->
+                LocalDateTime
+                    .now()
+                    .minusDays(1)
         }
 }
 

@@ -123,6 +123,19 @@ private val communityLinks = listOf(
     CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/MetrolistGroup/Metrolist/blob/main/LICENSE")
 )
 
+/**
+ * Musicard's own About page: the app, its source, and credit to Metrolist, the project it is
+ * based on, with the license (GPL-3.0 asks for both to stay). Metrolist's team cards, community
+ * channels and donation links are kept in the code below but hidden.
+ */
+private const val ShowUpstreamTeam = false
+
+private val musicardLinks = listOf(
+    CommunityLink(R.string.credits_view_repo, R.drawable.github, "https://github.com/kskeskin09/musicard"),
+    CommunityLink(R.string.about_based_on_metrolist, R.drawable.github, "https://github.com/MetrolistGroup/Metrolist"),
+    CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/kskeskin09/musicard/blob/main/LICENSE")
+)
+
 private fun handleEasterEggClick(
     clickCount: Int,
     favoriteSongVideoId: String?,
@@ -228,8 +241,9 @@ fun AboutScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(windowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+            .windowInsetsPadding(windowInsets.only(WindowInsetsSides.Horizontal))
             .verticalScroll(rememberScrollState())
+            .windowInsetsPadding(windowInsets.only(WindowInsetsSides.Bottom))
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -254,7 +268,7 @@ fun AboutScreen(
             ) {
                 Image(
                     painter = painterResource(R.drawable.small_icon),
-                    contentDescription = stringResource(R.string.metrolist),
+                    contentDescription = stringResource(R.string.app_name),
                     colorFilter = ColorFilter.tint(
                         color = MaterialTheme.colorScheme.primary,
                         blendMode = BlendMode.SrcIn,
@@ -265,7 +279,7 @@ fun AboutScreen(
                 Spacer(Modifier.width(20.dp))
         
                 Column {
-                    val metrolistName = stringResource(R.string.metrolist)
+                    val metrolistName = stringResource(R.string.app_name)
                         .lowercase(Locale.getDefault())
                         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
@@ -329,6 +343,7 @@ fun AboutScreen(
 
         Spacer(Modifier.height(24.dp))
 
+        if (ShowUpstreamTeam) {
         // Lead Developer Hero Card
         ElevatedCard(
             shape = RoundedCornerShape(32.dp),
@@ -471,17 +486,20 @@ fun AboutScreen(
         )
 
         Spacer(Modifier.height(32.dp))
+        }
 
         // Community & Info using standard Group
         Material3SettingsGroup(
             title = stringResource(R.string.community_and_info),
-            items = communityLinks.map { link ->
+            items = (if (ShowUpstreamTeam) communityLinks else musicardLinks).map { link ->
                 Material3SettingsItem(
                     icon = painterResource(link.iconRes),
                     title = { Text(stringResource(link.labelRes), fontWeight = FontWeight.SemiBold) },
-                    description = if (link.labelRes == R.string.credits_license_name) {
-                        { Text(stringResource(R.string.credits_license_desc)) }
-                    } else null,
+                    description = when (link.labelRes) {
+                        R.string.credits_license_name -> { { Text(stringResource(R.string.credits_license_desc)) } }
+                        R.string.about_based_on_metrolist -> { { Text(stringResource(R.string.about_based_on_metrolist_desc)) } }
+                        else -> null
+                    },
                     onClick = { uriHandler.openUri(link.url) }
                 )
             }
@@ -489,12 +507,14 @@ fun AboutScreen(
 
         Spacer(Modifier.height(48.dp))
         
-        Text(
-            text = stringResource(R.string.stands_with_palestine),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (ShowUpstreamTeam) {
+            Text(
+                text = stringResource(R.string.stands_with_palestine),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         
         Spacer(Modifier.height(48.dp))
     }

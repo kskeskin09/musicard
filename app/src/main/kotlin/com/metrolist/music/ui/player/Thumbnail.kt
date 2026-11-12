@@ -6,6 +6,9 @@
 package com.metrolist.music.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,6 +30,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -85,6 +93,7 @@ import com.metrolist.music.listentogether.RoomRole
 import com.metrolist.music.ui.component.CastButton
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 /**
@@ -98,6 +107,9 @@ data class ThumbnailDimensions(
     val thumbnailSize: Dp,
     val cornerRadius: Dp
 )
+
+private val CompactThumbnailCornerRadius = 20.dp
+private const val PausedThumbnailScale = 0.93f
 
 /**
  * Cached media items data to prevent recalculation on every recomposition.
@@ -118,20 +130,21 @@ private fun calculateThumbnailDimensions(
     containerWidth: Dp,
     containerHeight: Dp = containerWidth,
     horizontalPadding: Dp = PlayerHorizontalPadding,
-    cornerRadius: Dp = ThumbnailCornerRadius,
-    isLandscape: Boolean = false
+    cornerRadius: Dp = 6.dp,
+    isLandscape: Boolean = false,
+    fitHeight: Boolean = false,
 ): ThumbnailDimensions {
     // In landscape, use height as the constraining dimension for a square thumbnail
-    val effectiveSize = if (isLandscape) {
-        minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
-    } else {
-        containerWidth - (horizontalPadding * 2)
+    val effectiveSize = when {
+        isLandscape -> minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
+        fitHeight -> minOf(containerWidth - (horizontalPadding * 2), containerHeight)
+        else -> containerWidth - (horizontalPadding * 2)
     }
     return ThumbnailDimensions(
         itemWidth = containerWidth,
         containerSize = containerWidth,
         thumbnailSize = effectiveSize,
-        cornerRadius = cornerRadius * 2
+        cornerRadius = cornerRadius
     )
 }
 
@@ -202,6 +215,12 @@ fun Thumbnail(
     isPlayerExpanded: () -> Boolean = { true },
     isLandscape: Boolean = false,
     isListenTogetherGuest: Boolean = false,
+    // Card layout: no "Now playing" header, art fits the given height, rounder corners,
+    // and the current art shrinks slightly while paused.
+    compact: Boolean = false,
+    isPlaying: Boolean = true,
+    // Overrides the art's corner radius frame by frame (read only while drawing).
+    cornerRadiusProvider: (() -> Dp)? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -257,36 +276,68 @@ fun Thumbnail(
         )
     }
 
-    // Current item tracking - derived state for efficiency
-    val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
-    val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
 
-    // Handle swipe to change song
-    LaunchedEffect(itemScrollOffset) {
-        if (!thumbnailLazyGridState.isScrollInProgress || !swipeThumbnail || itemScrollOffset != 0 || currentMediaIndex < 0) return@LaunchedEffect
-
-        if (currentItem > currentMediaIndex && canSkipNext) {
-            playerConnection.player.seekToNext()
-        } else if (currentItem < currentMediaIndex && canSkipPrevious) {
-            playerConnection.player.seekToPreviousMediaItem()
+    // Handle swipe to change song. Checked when a scroll the user started by dragging comes to
+    // rest: reading the offset while the fling settles could miss the last frame (the scroll is
+    // already over by then), which left the next song's art on screen without changing the song.
+    val latestCurrentMediaIndex by rememberUpdatedState(currentMediaIndex)
+    val latestCanSkipNext by rememberUpdatedState(canSkipNext)
+    val latestCanSkipPrevious by rememberUpdatedState(canSkipPrevious)
+    LaunchedEffect(thumbnailLazyGridState, swipeThumbnail) {
+        if (!swipeThumbnail) return@LaunchedEffect
+        var userDragged = false
+        launch {
+            thumbnailLazyGridState.interactionSource.interactions.collect { interaction ->
+                if (interaction is DragInteraction.Start) userDragged = true
+            }
         }
-    }
-
-    // Update position when song changes
-    LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext) {
-        val index = maxOf(0, currentMediaIndex)
-        if (index >= 0 && index < mediaItems.size) {
-            try {
-                thumbnailLazyGridState.animateScrollToItem(index)
-            } catch (e: Exception) {
-                thumbnailLazyGridState.scrollToItem(index)
+        snapshotFlow { thumbnailLazyGridState.isScrollInProgress }.collect { inProgress ->
+            if (inProgress || !userDragged) return@collect
+            userDragged = false
+            val layoutInfo = thumbnailLazyGridState.layoutInfo
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            val settled =
+                layoutInfo.visibleItemsInfo
+                    .minByOrNull { abs(it.offset.x + it.size.width / 2 - viewportCenter) }
+                    ?.index ?: return@collect
+            val current = latestCurrentMediaIndex
+            if (current < 0) return@collect
+            if (settled > current && latestCanSkipNext) {
+                playerConnection.player.seekToNext()
+            } else if (settled < current && latestCanSkipPrevious) {
+                playerConnection.player.seekToPreviousMediaItem()
             }
         }
     }
 
-    LaunchedEffect(playerConnection.player.currentMediaItemIndex) {
-        val index = mediaItemsData.currentIndex
-        if (index >= 0 && index != currentItem) {
+    // Slide to the new song's art when the song changes. The grid keeps the art that was showing
+    // in place while the list around it is rebuilt, so this starts from the previous song. If the
+    // user already swiped to the new art there is nothing left to do.
+    var shownMediaId by remember { mutableStateOf(mediaMetadata?.id) }
+    LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext, playerConnection.player.currentMediaItemIndex) {
+        val index = currentMediaIndex
+        if (index !in mediaItems.indices) return@LaunchedEffect
+        val previousId = shownMediaId
+        val currentId = mediaItems[index].mediaId
+        shownMediaId = currentId
+        val settledKey =
+            thumbnailLazyGridState.layoutInfo.visibleItemsInfo
+                .firstOrNull()
+                ?.key
+                ?.takeIf { thumbnailLazyGridState.firstVisibleItemScrollOffset == 0 }
+        try {
+            if (settledKey == currentId) {
+                thumbnailLazyGridState.scrollToItem(index)
+                return@LaunchedEffect
+            }
+            val from = mediaItems.indexOfFirst { it.mediaId == previousId }
+            if (from >= 0 && from != index && settledKey == previousId) {
+                thumbnailLazyGridState.scrollToItem(from)
+            }
+            thumbnailLazyGridState.animateScrollToItem(index)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             thumbnailLazyGridState.scrollToItem(index)
         }
     }
@@ -326,7 +377,7 @@ fun Thumbnail(
             exit = fadeOut(),
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (!isLandscape) Modifier.statusBarsPadding() else Modifier),
+                .then(if (!isLandscape && !compact) Modifier.statusBarsPadding() else Modifier),
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -334,7 +385,7 @@ fun Thumbnail(
                 verticalArrangement = if (isLandscape) Arrangement.Center else Arrangement.Top
             ) {
                 // Now Playing header - hide in landscape mode
-                if (!isLandscape) {
+                if (!isLandscape && !compact) {
                     ThumbnailHeader(
                         queueTitle = queueTitle,
                         albumTitle = mediaMetadata?.album?.title,
@@ -352,11 +403,13 @@ fun Thumbnail(
                     }
                 ) {
                     // Calculate dimensions once per size change, considering landscape mode
-                    val dimensions = remember(maxWidth, maxHeight, isLandscape) {
+                    val dimensions = remember(maxWidth, maxHeight, isLandscape, compact) {
                         calculateThumbnailDimensions(
                             containerWidth = maxWidth,
                             containerHeight = maxHeight,
-                            isLandscape = isLandscape
+                            cornerRadius = if (compact) CompactThumbnailCornerRadius else 6.dp,
+                            isLandscape = isLandscape,
+                            fitHeight = compact,
                         )
                     }
 
@@ -403,7 +456,9 @@ fun Thumbnail(
                                 isLandscape = isLandscape,
                                 isListenTogetherGuest = isListenTogetherGuest,
                                 currentMediaId = mediaMetadata?.id,
-                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl
+                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
+                                shrink = compact && !isPlaying && item.mediaId == mediaMetadata?.id,
+                                cornerRadiusProvider = cornerRadiusProvider,
                             )
                         }
                     }
@@ -501,8 +556,18 @@ private fun ThumbnailItem(
     isListenTogetherGuest: Boolean = false,
     currentMediaId: String? = null,
     currentMediaThumbnail: String? = null,
+    shrink: Boolean = false,
+    cornerRadiusProvider: (() -> Dp)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val artScale by animateFloatAsState(
+        targetValue = if (shrink) PausedThumbnailScale else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "artScale",
+    )
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
     var skipMultiplier by remember { mutableIntStateOf(1) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
@@ -558,8 +623,21 @@ private fun ThumbnailItem(
     ) {
         Box(
             modifier = Modifier
+                .graphicsLayer {
+                    scaleX = artScale
+                    scaleY = artScale
+                }
                 .size(dimensions.thumbnailSize)
-                .clip(RoundedCornerShape(dimensions.cornerRadius))
+                .then(
+                    if (cornerRadiusProvider != null) {
+                        Modifier.graphicsLayer {
+                            shape = RoundedCornerShape(cornerRadiusProvider())
+                            clip = true
+                        }
+                    } else {
+                        Modifier.clip(RoundedCornerShape(dimensions.cornerRadius))
+                    },
+                )
         ) {
             if (hidePlayerThumbnail) {
                 HiddenThumbnailPlaceholder(textBackgroundColor = textBackgroundColor)

@@ -271,7 +271,7 @@ fun AlbumMenu(
             ) {
                 Icon(
                     painter = painterResource(if (album.album.bookmarkedAt != null) R.drawable.favorite else R.drawable.favorite_border),
-                    tint = if (album.album.bookmarkedAt != null) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                    tint = if (album.album.bookmarkedAt != null) com.metrolist.music.ui.theme.likedTint() else LocalContentColor.current,
                     contentDescription = null,
                 )
             }
@@ -305,7 +305,7 @@ fun AlbumMenu(
                                         painter = painterResource(R.drawable.play),
                                         contentDescription = null,
                                         modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 },
                                 text = stringResource(R.string.play),
@@ -328,7 +328,7 @@ fun AlbumMenu(
                                         painter = painterResource(R.drawable.shuffle),
                                         contentDescription = null,
                                         modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 },
                                 text = stringResource(R.string.shuffle),
@@ -356,7 +356,7 @@ fun AlbumMenu(
                                     painter = painterResource(R.drawable.share),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             text = stringResource(R.string.share),

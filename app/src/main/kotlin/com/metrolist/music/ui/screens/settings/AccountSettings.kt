@@ -22,7 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
+import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -77,7 +77,9 @@ import com.metrolist.music.viewmodels.HomeViewModel
 fun AccountSettings(
     navController: NavController,
     onClose: () -> Unit,
-    latestVersionName: String
+    latestVersionName: String,
+    // On the Profile tab: no title row, no own scrolling and no card background.
+    embedded: Boolean = false,
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -107,12 +109,17 @@ fun AccountSettings(
     val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+        modifier =
+            if (embedded) {
+                Modifier.padding(horizontal = 16.dp)
+            } else {
+                Modifier
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            }
     ) {
-        Row(
+        if (!embedded) Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 8.dp, end = 8.dp),
@@ -312,7 +319,6 @@ fun AccountSettings(
                     )
                 } else null,
             ),
-            useLowContrast = true
         )
 
         Spacer(Modifier.height(8.dp))
@@ -337,6 +343,8 @@ fun AccountSettings(
                     }
                 ),
                 Material3SettingsItem(
+                    // Needs an account: shown faded until the user is logged in.
+                    enabled = isLoggedIn,
                     title = { Text(stringResource(R.string.more_content)) },
                     icon = painterResource(R.drawable.cached),
                     trailingContent = {
@@ -358,9 +366,9 @@ fun AccountSettings(
                             }
                         )
                     },
-                    enabled = isLoggedIn
                 ),
                 Material3SettingsItem(
+                    enabled = isLoggedIn,
                     title = { Text(stringResource(R.string.yt_sync)) },
                     icon = painterResource(R.drawable.cached),
                     trailingContent = {
@@ -379,10 +387,8 @@ fun AccountSettings(
                             }
                         )
                     },
-                    enabled = isLoggedIn
                 )
             ),
-            useLowContrast = true
         )
 
         Spacer(Modifier.height(12.dp))
@@ -428,7 +434,6 @@ fun AccountSettings(
                     }
                 }
             },
-            useLowContrast = true
         )
     }
 }

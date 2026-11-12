@@ -34,6 +34,8 @@ import com.metrolist.music.constants.QuickPicksKey
 import com.metrolist.music.constants.ShowWrappedCardKey
 import com.metrolist.music.constants.WrappedSeenKey
 import com.metrolist.music.db.MusicDatabase
+import com.metrolist.music.constants.RandomizeHomeOrderKey
+import com.metrolist.music.constants.RecentPlaylistsKey
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.LocalItem
 import com.metrolist.music.db.entities.Song
@@ -108,6 +110,9 @@ class HomeViewModel @Inject constructor(
     val quickPicks = MutableStateFlow<List<Song>?>(null)
     val dailyDiscover = MutableStateFlow<List<DailyDiscoverItem>?>(null)
     val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
+
+    /** Albums of songs the user listens to, mixed with albums YouTube suggests next to them. */
+    val albumsForYou = MutableStateFlow<List<AlbumItem>?>(null)
     val keepListening = MutableStateFlow<List<LocalItem>?>(null)
     val similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
     val accountPlaylists = MutableStateFlow<List<PlaylistItem>?>(null)
@@ -123,6 +128,21 @@ class HomeViewModel @Inject constructor(
 
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
+
+    // Kept here (and collected eagerly) so that coming back to Home shows the same rows at
+    // once, and the list returns to the same scroll position instead of jumping.
+    val recentEvents =
+        database.recentEvents(400).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val savedPlaylists =
+        database.playlistsByCreateDateAsc().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val recentPlaylistsRaw =
+        context.dataStore.data
+            .map { it[RecentPlaylistsKey] ?: "" }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+    val randomizeHomeOrder =
+        context.dataStore.data
+            .map { it[RandomizeHomeOrderKey] ?: true }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()
@@ -495,6 +515,23 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) { getCommunityPlaylists() }
 
+        viewModelScope.launch(Dispatchers.IO) { getAlbumsForYou(hideExplicit) }
+
+        // "My Top" replaces the old Weekly / Monthly Most playlists; remove them if they exist.
+        viewModelScope.launch(Dispatchers.IO) {
+            listOf(
+                com.metrolist.music.db.entities.PlaylistEntity.WEEKLY_MOST_PLAYLIST_ID,
+                com.metrolist.music.db.entities.PlaylistEntity.MONTHLY_MOST_PLAYLIST_ID,
+            ).forEach { id ->
+                if (database.playlist(id).first() != null) {
+                    database.withTransaction {
+                        clearPlaylist(id)
+                        delete(com.metrolist.music.db.entities.PlaylistEntity(id = id, name = ""))
+                    }
+                }
+            }
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             YouTube.explore().onSuccess { page ->
                 explorePage.value = page.copy(
@@ -573,6 +610,45 @@ class HomeViewModel @Inject constructor(
             allYtItems.value = similarRecommendations.value?.flatMap { it.items }.orEmpty() +
                     homePage.value?.sections?.flatMap { it.items }.orEmpty()
         }
+    }
+
+    private suspend fun getAlbumsForYou(hideExplicit: Boolean) {
+        val since = LocalDateTime.now().minusWeeks(8)
+        // Albums the user's own listening comes from.
+        val ownAlbums =
+            database.mostPlayedAlbums(since, limit = 12).first()
+                .filter { it.album.thumbnailUrl != null }
+                .map { album ->
+                    AlbumItem(
+                        browseId = album.id,
+                        playlistId = album.album.playlistId ?: "",
+                        title = album.title,
+                        artists = album.artists.map { Artist(name = it.name, id = it.id) },
+                        year = album.album.year,
+                        thumbnail = album.thumbnailUrl ?: "",
+                        explicit = album.album.explicit,
+                    )
+                }.shuffled().take(6)
+        // YouTube's own "related" suggestions for a few of the most played songs.
+        val suggested =
+            database.mostPlayedSongs(fromTimeStamp = since, limit = 20).first()
+                .shuffled().take(4)
+                .flatMap { song ->
+                    val endpoint =
+                        YouTube.next(WatchEndpoint(videoId = song.id)).getOrNull()?.relatedEndpoint
+                            ?: return@flatMap emptyList()
+                    YouTube.related(endpoint).getOrNull()?.albums.orEmpty()
+                }.distinctBy { it.id }
+                .shuffled().take(14)
+        val mixed = mutableListOf<AlbumItem>()
+        val own = ownAlbums.iterator()
+        val other = suggested.iterator()
+        // One of the user's albums, then two suggestions, and so on.
+        while (own.hasNext() || other.hasNext()) {
+            if (own.hasNext()) mixed += own.next()
+            repeat(2) { if (other.hasNext()) mixed += other.next() }
+        }
+        albumsForYou.value = mixed.distinctBy { it.id }.filterExplicit(hideExplicit).take(16)
     }
 
     private val _isLoadingMore = MutableStateFlow(false)

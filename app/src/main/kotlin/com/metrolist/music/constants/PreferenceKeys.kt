@@ -21,6 +21,8 @@ val DarkModeKey = stringPreferencesKey("darkMode")
 val PureBlackKey = booleanPreferencesKey("pureBlack")
 val PureBlackMiniPlayerKey = booleanPreferencesKey("pureBlackMiniPlayer")
 val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
+val MiniPlayerBlackoutKey = booleanPreferencesKey("miniPlayerBlackout")
+val MiniPlayerBlurKey = booleanPreferencesKey("miniPlayerBlur")
 
 enum class MiniPlayerBackgroundStyle {
     DEFAULT,
@@ -91,6 +93,8 @@ val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
 val EnableLyricsPlus = booleanPreferencesKey("enableLyricsPlus")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
+val ReLikeProtectionKey = booleanPreferencesKey("reLikeProtection")
+val LikeIconColorKey = stringPreferencesKey("likeIconColor")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
 val ShowArtistDescriptionKey = booleanPreferencesKey("showArtistDescription")
@@ -264,7 +268,6 @@ val ShowLikedPlaylistKey = booleanPreferencesKey("show_liked_playlist")
 val ShowDownloadedPlaylistKey = booleanPreferencesKey("show_downloaded_playlist")
 val ShowTopPlaylistKey = booleanPreferencesKey("show_top_playlist")
 val ShowCachedPlaylistKey = booleanPreferencesKey("show_cached_playlist")
-val ShowUploadedPlaylistKey = booleanPreferencesKey("show_uploaded_playlist")
 
 enum class LibraryViewType {
     LIST,
@@ -315,6 +318,7 @@ enum class PlaylistSongSortType {
     NAME,
     ARTIST,
     PLAY_TIME,
+    MODIFIED_DATE,
 }
 
 enum class ArtistSortType {
@@ -428,6 +432,21 @@ enum class PlayerBackgroundStyle {
     DEFAULT,
     GRADIENT,
     BLUR,
+}
+
+val PlayerCardBackgroundKey = stringPreferencesKey("playerCardBackground")
+
+enum class PlayerCardBackground {
+    CLASSIC,
+    GLASS,
+}
+
+val LyricStyleKey = stringPreferencesKey("lyricStyle")
+val LyricsBlurKey = booleanPreferencesKey("lyricsBlur")
+
+enum class LyricStyle {
+    CLASSIC,
+    MODERN,
 }
 
 val TopSize = stringPreferencesKey("topSize")
@@ -719,3 +738,26 @@ val CountryCodeToName =
         "YE" to "Yemen",
         "ZW" to "Zimbabwe",
     )
+
+// Profile picture shown at the top right of the main tabs: an image URL kept on the device.
+val ProfileImageUrlKey = stringPreferencesKey("profileImageUrl")
+// Crop of the profile picture: zoom (1..3) and the visible center as fractions (-1..1).
+val ProfileImageZoomKey = floatPreferencesKey("profileImageZoom")
+val ProfileImageOffsetXKey = floatPreferencesKey("profileImageOffsetX")
+val ProfileImageOffsetYKey = floatPreferencesKey("profileImageOffsetY")
+
+// Library: sort option, custom order and pinned items (ids separated by '\n').
+val LibrarySortKey = stringPreferencesKey("librarySort")
+val LibraryCustomOrderKey = stringPreferencesKey("libraryCustomOrder")
+val LibraryPinnedKey = stringPreferencesKey("libraryPinned")
+val LibraryEditLockKey = booleanPreferencesKey("libraryEditLock")
+val RecentPlaylistsKey = stringPreferencesKey("recentPlaylists")
+
+enum class LibrarySortOption {
+    CUSTOM,
+    NAME,
+    ADDED_NEWEST,
+    ADDED_OLDEST,
+    MODIFIED_NEWEST,
+    MODIFIED_OLDEST,
+}

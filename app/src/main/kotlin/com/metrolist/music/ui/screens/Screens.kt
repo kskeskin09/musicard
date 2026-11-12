@@ -24,6 +24,14 @@ sealed class Screens(
         route = "home"
     )
 
+    // Placeholder tab; its content will be added later.
+    object Explore : Screens(
+        titleId = R.string.explore,
+        iconIdInactive = R.drawable.grid_view,
+        iconIdActive = R.drawable.grid_view,
+        route = "explore_tab"
+    )
+
     object Search : Screens(
         titleId = R.string.search,
         iconIdInactive = R.drawable.search,
@@ -45,7 +53,15 @@ sealed class Screens(
         route = "library"
     )
 
+    // Profile picture, history, stats, Listen Together and the account settings.
+    object Profile : Screens(
+        titleId = R.string.profile_tab,
+        iconIdInactive = R.drawable.person,
+        iconIdActive = R.drawable.person,
+        route = "profile_tab"
+    )
+
     companion object {
-        val MainScreens = listOf(Home, Search, ListenTogether, Library)
+        val MainScreens = listOf(Home, Search, ListenTogether, Library, Profile)
     }
 }

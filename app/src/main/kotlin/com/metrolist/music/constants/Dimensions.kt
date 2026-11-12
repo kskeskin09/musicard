@@ -17,13 +17,18 @@ const val CONTENT_TYPE_ARTIST = 3
 const val CONTENT_TYPE_ALBUM = 4
 const val CONTENT_TYPE_PLAYLIST = 5
 
-val NavigationBarHeight = 80.dp
-val SlimNavBarHeight = 64.dp
+val NavigationBarHeight = 70.dp
+val SlimNavBarHeight = 56.dp
 val MiniPlayerHeight = 64.dp
 val MinMiniPlayerHeight = 16.dp
-val MiniPlayerBottomSpacing = 8.dp // Space between MiniPlayer and NavigationBar
+val MiniPlayerBottomSpacing = 4.dp // Space between MiniPlayer and NavigationBar
 val QueuePeekHeight = 64.dp
 val AppBarHeight = 64.dp
+// Large title, search pill and profile picture on the main tabs (below the status bar).
+val TopLevelHeaderHeight = 132.dp
+
+// The search bar and the gap above it in the main tabs' header.
+val TopLevelSearchHeight = 58.dp
 
 val ListItemHeight = 64.dp
 val SuggestionItemHeight = 56.dp
@@ -33,7 +38,7 @@ val SmallGridThumbnailHeight = 104.dp
 val GridThumbnailHeight = 128.dp
 val AlbumThumbnailSize = 144.dp
 
-val ThumbnailCornerRadius = 3.dp
+val ThumbnailCornerRadius = 6.dp
 
 val PlayerHorizontalPadding = 32.dp
 

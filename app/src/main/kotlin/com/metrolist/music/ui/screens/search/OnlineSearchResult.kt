@@ -5,6 +5,19 @@
 
 package com.metrolist.music.ui.screens.search
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Alignment
+import coil3.compose.AsyncImage
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -230,6 +243,60 @@ fun OnlineSearchResult(
         }
     }
 
+    // What tapping a result does: play a song or episode, open an album, artist or playlist.
+    val openYtItem: (YTItem) -> Unit = { item ->
+        when (item) {
+                                is SongItem -> {
+                                    if (item.id == mediaMetadata?.id) {
+                                        playerConnection.togglePlayPause()
+                                    } else {
+                                        playerConnection.playQueue(
+                                            if (autoRadioQueue) {
+                                                YouTubeQueue(
+                                                    WatchEndpoint(videoId = item.id),
+                                                    item.toMediaMetadata(),
+                                                )
+                                            } else {
+                                                ListQueue(
+                                                    title = item.title,
+                                                    items = listOf(item.toMediaItem())
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+
+                                is AlbumItem -> {
+                                    navController.navigate("album/${item.id}")
+                                }
+
+                                is ArtistItem -> {
+                                    navController.navigate("artist/${item.id}")
+                                }
+
+                                is PlaylistItem -> {
+                                    navController.navigate("online_playlist/${item.id}")
+                                }
+
+                                is PodcastItem -> {
+                                    navController.navigate("online_podcast/${item.id}")
+                                }
+
+                                is EpisodeItem -> {
+                                    if (item.id == mediaMetadata?.id) {
+                                        playerConnection.togglePlayPause()
+                                    } else {
+                                        playerConnection.playQueue(
+                                            YouTubeQueue(
+                                                WatchEndpoint(videoId = item.id),
+                                                item.toMediaMetadata(),
+                                            ),
+                                        )
+                                    }
+                                }
+                            }
+    }
+
     val ytItemContent: @Composable LazyItemScope.(YTItem) -> Unit = { item: YTItem ->
         val longClick = {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -304,58 +371,7 @@ fun OnlineSearchResult(
             modifier =
                 Modifier
                     .combinedClickable(
-                        onClick = {
-                            when (item) {
-                                is SongItem -> {
-                                    if (item.id == mediaMetadata?.id) {
-                                        playerConnection.togglePlayPause()
-                                    } else {
-                                        playerConnection.playQueue(
-                                            if (autoRadioQueue) {
-                                                YouTubeQueue(
-                                                    WatchEndpoint(videoId = item.id),
-                                                    item.toMediaMetadata(),
-                                                )
-                                            } else {
-                                                ListQueue(
-                                                    title = item.title,
-                                                    items = listOf(item.toMediaItem())
-                                                )
-                                            }
-                                        )
-                                    }
-                                }
-
-                                is AlbumItem -> {
-                                    navController.navigate("album/${item.id}")
-                                }
-
-                                is ArtistItem -> {
-                                    navController.navigate("artist/${item.id}")
-                                }
-
-                                is PlaylistItem -> {
-                                    navController.navigate("online_playlist/${item.id}")
-                                }
-
-                                is PodcastItem -> {
-                                    navController.navigate("online_podcast/${item.id}")
-                                }
-
-                                is EpisodeItem -> {
-                                    if (item.id == mediaMetadata?.id) {
-                                        playerConnection.togglePlayPause()
-                                    } else {
-                                        playerConnection.playQueue(
-                                            YouTubeQueue(
-                                                WatchEndpoint(videoId = item.id),
-                                                item.toMediaMetadata(),
-                                            ),
-                                        )
-                                    }
-                                }
-                            }
-                        },
+                        onClick = { openYtItem(item) },
                         onLongClick = longClick,
                     ).animateItem(),
         )
@@ -453,38 +469,25 @@ fun OnlineSearchResult(
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
+                // One filter at a time; tapping the selected one again shows everything.
                 val visibleChips =
                     listOf(
-                        null to stringResource(R.string.filter_all),
-                        FILTER_SONG to stringResource(R.string.filter_songs),
-                    ).let { baseChips ->
-                        if (!hideVideoSongs) {
-                            baseChips + (FILTER_VIDEO to stringResource(R.string.filter_videos))
-                        } else {
-                            baseChips
-                        }
-                    } +
-                        listOf(
-                            FILTER_ALBUM to stringResource(R.string.filter_albums),
-                            FILTER_ARTIST to stringResource(R.string.filter_artists),
-                            FILTER_COMMUNITY_PLAYLIST to stringResource(R.string.filter_community_playlists),
-                            FILTER_FEATURED_PLAYLIST to stringResource(R.string.filter_featured_playlists),
-                            FILTER_PODCAST to stringResource(R.string.filter_podcasts),
-                            FILTER_EPISODE to stringResource(R.string.filter_episodes),
-                            FILTER_PROFILE to stringResource(R.string.filter_profiles),
-                        )
+                        FILTER_SONG to stringResource(R.string.search_filter_music),
+                        FILTER_ALBUM to stringResource(R.string.library_kind_album),
+                        FILTER_ARTIST to stringResource(R.string.library_kind_artist),
+                        FILTER_COMMUNITY_PLAYLIST to stringResource(R.string.library_kind_playlist),
+                    )
 
                 ChipsRow(
                     chips = visibleChips,
                     currentValue = searchFilter,
                     onValueUpdate = {
-                        if (viewModel.filter.value != it) {
-                            viewModel.filter.value = it
-                        }
+                        viewModel.filter.value = if (viewModel.filter.value == it) null else it
                         coroutineScope.launch {
                             lazyListState.animateScrollToItem(0)
                         }
                     },
+                    fillWidth = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -493,13 +496,55 @@ fun OnlineSearchResult(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (searchFilter == null) {
-                        searchSummary?.summaries?.forEach { summary ->
+                        val summaries = searchSummary?.summaries.orEmpty()
+                        // The first result gets a large card, then the songs whose title is the
+                        // search itself ("Exact matches"), then the usual sections.
+                        val topItem = summaries.firstOrNull()?.items?.firstOrNull()
+                        val exactMatches =
+                            summaries
+                                .flatMap { it.items }
+                                .filter { it is SongItem && it.id != topItem?.id && isExactMatch(it.title, decodedQuery) }
+                                .distinctBy { it.id }
+                                .take(3)
+                        if (topItem != null) {
+                            item(key = "top_title") {
+                                NavigationTitle(stringResource(R.string.search_top_result))
+                            }
+                            item(key = "top_card") {
+                                TopResultCard(
+                                    item = topItem,
+                                    isActive = topItem is SongItem && topItem.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    onClick = { openYtItem(topItem) },
+                                    onLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        openYtItem(topItem)
+                                    },
+                                )
+                            }
+                        }
+                        if (exactMatches.isNotEmpty()) {
+                            item(key = "exact_title") {
+                                NavigationTitle(stringResource(R.string.search_exact_matches))
+                            }
+                            items(
+                                items = exactMatches,
+                                key = { "exact_${it.id}" },
+                                itemContent = ytItemContent,
+                            )
+                        }
+                        summaries.forEachIndexed { sectionIndex, summary ->
+                            val sectionItems =
+                                summary.items.filter { item ->
+                                    !(sectionIndex == 0 && item.id == topItem?.id) && exactMatches.none { it.id == item.id }
+                                }
+                            if (sectionItems.isEmpty()) return@forEachIndexed
                             item {
                                 NavigationTitle(summary.title.toLocalizedSearchSection())
                             }
 
                             itemsIndexed(
-                                items = summary.items,
+                                items = sectionItems,
                                 key = { index, item -> "${summary.title}/${item.id}/$index" },
                                 itemContent = { index, item -> ytItemContent(item) },
                             )
@@ -591,3 +636,151 @@ private fun String.toLocalizedSearchSection(): String =
         "Profiles" -> stringResource(R.string.filter_profiles)
         else -> this
     }
+
+/**
+ * Whether a song title is what was searched: the title contains the search, or the search
+ * contains the title's main part (before any "(", "-", "/" or "[" extra).
+ */
+private fun isExactMatch(
+    title: String,
+    query: String,
+): Boolean {
+    fun normalize(text: String) =
+        java.text.Normalizer
+            .normalize(text.lowercase(), java.text.Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "")
+            .replace("ß", "ss")
+            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+            .trim()
+    val q = normalize(query)
+    if (q.isBlank()) return false
+    val t = normalize(title)
+    if (t.contains(q)) return true
+    val main = normalize(title.split('(', '-', '/', '／', '[', '|').first())
+    return main.length >= 3 && q.contains(main)
+}
+
+/** Large card for the first search result: cover, name, kind and artist, and a round play button. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TopResultCard(
+    item: YTItem,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val coverColor = com.metrolist.music.ui.theme.rememberCoverColor(item.thumbnail)
+    val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val tint = coverColor?.let { com.metrolist.music.ui.theme.albumBackgroundColor(it, darkTheme) } ?: MaterialTheme.colorScheme.surfaceContainer
+    val kind =
+        when (item) {
+            is SongItem -> stringResource(R.string.search_kind_song)
+            is AlbumItem -> stringResource(R.string.library_kind_album)
+            is ArtistItem -> stringResource(R.string.library_kind_artist)
+            is PlaylistItem -> stringResource(R.string.library_kind_playlist)
+            else -> ""
+        }
+    val by =
+        when (item) {
+            is SongItem -> item.artists.joinToString { it.name }
+            is AlbumItem -> item.artists?.joinToString { it.name }.orEmpty()
+            is PlaylistItem -> item.author?.name.orEmpty()
+            else -> ""
+        }
+    Column(
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(tint, androidx.compose.ui.graphics.lerp(tint, Color.Black, 0.35f)),
+                    ),
+                ).combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(18.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .size(120.dp)
+                    .clip(if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp)),
+        ) {
+            AsyncImage(
+                model = item.thumbnail,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            // The playing song shows the same moving bars as in the lists, sized for this cover.
+            if (isActive) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                )
+                if (isPlaying) {
+                    com.metrolist.music.ui.component.PlayingIndicator(
+                        color = Color.White,
+                        barWidth = 10.dp,
+                        cornerRadius = 3.dp,
+                        modifier = Modifier.height(52.dp),
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.title,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = if (by.isNotBlank()) "$kind · $by" else kind,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .clickable(onClick = onClick),
+            ) {
+                Icon(
+                    painter =
+                        painterResource(
+                            when {
+                                item !is SongItem -> R.drawable.navigate_next
+                                isActive && isPlaying -> R.drawable.player_pause
+                                else -> R.drawable.player_play
+                            },
+                        ),
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+        }
+    }
+}

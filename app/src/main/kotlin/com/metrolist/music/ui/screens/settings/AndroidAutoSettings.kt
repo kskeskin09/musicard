@@ -5,6 +5,18 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.WindowInsetsSides
+import com.metrolist.music.ui.component.ReorderableToggleList
+
+import com.metrolist.music.ui.component.ReorderableToggleItem
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+
+import androidx.compose.ui.draw.clip
+
+import androidx.compose.foundation.background
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -24,7 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import com.metrolist.music.ui.component.ThemedSwitch as Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -127,19 +139,6 @@ fun AndroidAutoSettings(
         mutableStateOf(deserializeSections(sectionsRaw))
     }
 
-    val lazyListState = rememberLazyListState()
-    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val fromReal = from.index
-        val toReal = to.index
-        if (fromReal >= 0 && toReal >= 0 && fromReal < sections.size && toReal < sections.size) {
-            sections = sections.toMutableList().apply {
-                add(toReal, removeAt(fromReal))
-            }
-            onSectionsChange(serializeSections(sections))
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        }
-    }
-
     val playlistOptions = listOf(MediaSessionConstants.TARGET_PLAYLIST_AUTO) +
             userPlaylists.map { it.id }
 
@@ -153,90 +152,63 @@ fun AndroidAutoSettings(
 
     Column(
         modifier = Modifier
-            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
+            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
             .verticalScroll(rememberScrollState())
+            // Inside the scroll, so the page runs on under the mini player.
+            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom))
             .padding(horizontal = 16.dp)
     ) {
-        // Visible sections
-        Material3SettingsGroup(
-            title = stringResource(R.string.android_auto_visible_sections),
-            items = listOf(
-                Material3SettingsItem(
-                    title = {},
-                    description = { Text(stringResource(R.string.android_auto_reorder_hint)) },
-                    onClick = null
-                )
-            )
+        // Visible sections: one box like the lyrics provider list; hold a section to move it.
+        Text(
+            text = stringResource(R.string.android_auto_visible_sections),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 20.dp, bottom = 8.dp, top = 8.dp),
         )
-
-        LazyColumn(
-            state = lazyListState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height((sections.size * 80).dp),
-            userScrollEnabled = false,
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(16.dp),
         ) {
-            items(sections, key = { (section, _) -> section.id }) { (section, enabled) ->
-                ReorderableItem(reorderableState, key = section.id) {
-                    Material3SettingsGroup(
-                        items = listOf(
-                            Material3SettingsItem(
-                                icon = painterResource(
+            Text(
+                text = stringResource(R.string.android_auto_reorder_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 12.dp),
+            )
+            ReorderableToggleList(
+                items =
+                    sections.map { (section, enabled) ->
+                        ReorderableToggleItem(
+                            id = section.id,
+                            title = section.label(),
+                            icon =
+                                painterResource(
                                     when (section) {
                                         AndroidAutoSection.LIKED -> R.drawable.favorite
                                         AndroidAutoSection.SONGS -> R.drawable.music_note
                                         AndroidAutoSection.ARTISTS -> R.drawable.artist
                                         AndroidAutoSection.ALBUMS -> R.drawable.album
                                         AndroidAutoSection.PLAYLISTS -> R.drawable.queue_music
-                                    }
-                                ),
-                                title = { Text(section.label()) },
-                                trailingContent = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.drag_handle),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .longPressDraggableHandle(
-                                            onDragStarted = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            }
-                                        ),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Switch(
-                                    checked = enabled,
-                                    onCheckedChange = { newValue ->
-                                        sections = sections.map { (s, e) ->
-                                            if (s == section) s to newValue else s to e
-                                        }
-                                        onSectionsChange(serializeSections(sections))
                                     },
-                                    thumbContent = {
-                                        Icon(
-                                            painter = painterResource(
-                                                if (enabled) R.drawable.check else R.drawable.close
-                                            ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    }
-                                )
-                            }
-                        },
-                        onClick = {
-                            sections = sections.map { (s, e) ->
-                                if (s == section) s to !e else s to e
-                            }
-                            onSectionsChange(serializeSections(sections))
-                        },
-                    )
-                )
+                                ),
+                            enabled = enabled,
+                        )
+                    },
+                onReorder = { ids ->
+                    val byId = sections.associateBy { it.first.id }
+                    sections = ids.mapNotNull { byId[it] }
+                    onSectionsChange(serializeSections(sections))
+                },
+                onToggle = { id, on ->
+                    sections = sections.map { (s, e) -> if (s.id == id) s to on else s to e }
+                    onSectionsChange(serializeSections(sections))
+                },
+                rowColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             )
-        }
-            }
         }
 
         Spacer(Modifier.height(27.dp))
