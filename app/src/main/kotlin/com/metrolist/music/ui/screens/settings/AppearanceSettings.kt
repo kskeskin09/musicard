@@ -862,6 +862,13 @@ fun AppearanceSettings(
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom))
             .padding(horizontal = 16.dp),
     ) {
+        val (batteryOptimization, onBatteryOptimizationChange) =
+            rememberPreference(com.metrolist.music.utils.BatteryOptimizationKey, defaultValue = false)
+        val (batteryOptimizationThreshold) =
+            rememberPreference(
+                com.metrolist.music.utils.BatteryOptimizationThresholdKey,
+                defaultValue = com.metrolist.music.utils.DEFAULT_BATTERY_OPTIMIZATION_THRESHOLD,
+            )
         Material3SettingsGroup(
             title = stringResource(R.string.theme),
             items =
@@ -968,6 +975,32 @@ fun AppearanceSettings(
                             title = { Text(stringResource(R.string.theme)) },
                             description = { Text(stringResource(R.string.theme_desc)) },
                             onClick = { navController.navigate("settings/appearance/theme") },
+                        ),
+                    )
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.battery_saver),
+                            title = { Text(stringResource(R.string.battery_optimization)) },
+                            description = {
+                                Text(stringResource(R.string.battery_optimization_summary, batteryOptimizationThreshold))
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = batteryOptimization,
+                                    onCheckedChange = onBatteryOptimizationChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    id = if (batteryOptimization) R.drawable.check else R.drawable.close,
+                                                ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            onClick = { navController.navigate("settings/appearance/battery_optimization") },
                         ),
                     )
                 },

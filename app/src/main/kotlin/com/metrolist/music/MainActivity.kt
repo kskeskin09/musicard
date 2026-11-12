@@ -494,14 +494,17 @@ class MainActivity : FragmentActivity() {
         }
 
         setContent {
-            MetrolistApp(
-                latestVersionName = latestVersionName,
-                onLatestVersionNameChange = { latestVersionName = it },
-                playerConnection = playerConnectionSnapshot,
-                database = database,
-                downloadUtil = downloadUtil,
-                syncUtils = syncUtils,
-            )
+            val batterySaver = com.metrolist.music.utils.rememberBatterySaverState()
+            CompositionLocalProvider(com.metrolist.music.utils.LocalBatterySaver provides batterySaver) {
+                MetrolistApp(
+                    latestVersionName = latestVersionName,
+                    onLatestVersionNameChange = { latestVersionName = it },
+                    playerConnection = playerConnectionSnapshot,
+                    database = database,
+                    downloadUtil = downloadUtil,
+                    syncUtils = syncUtils,
+                )
+            }
         }
     }
 
@@ -591,8 +594,12 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
-        val enableHighRefreshRate by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
+        // Battery optimization can turn these off for a while without touching the saved settings.
+        val batterySaver = com.metrolist.music.utils.LocalBatterySaver.current
+        val dynamicThemePreference by rememberPreference(DynamicThemeKey, defaultValue = true)
+        val enableDynamicTheme = dynamicThemePreference && !batterySaver.dynamicColors
+        val highRefreshRatePreference by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
+        val enableHighRefreshRate = highRefreshRatePreference && !batterySaver.highRefreshRate
 
         LaunchedEffect(enableHighRefreshRate) {
             val window = this@MainActivity.window

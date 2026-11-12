@@ -212,8 +212,12 @@ fun OriginalLyrics(
     val romanizeLyricsList = rememberPreference(LyricsRomanizeList, "")
     val romanizeAsMain by rememberPreference(LyricsRomanizeAsMainKey, false)
     val romanizeCyrillicByLine by rememberPreference(LyricsRomanizeCyrillicByLineKey, false)
-    val lyricsGlowEffect by rememberPreference(LyricsGlowEffectKey, false)
-    val lyricsAnimationStyle by rememberEnumPreference(LyricsAnimationStyleKey, LyricsAnimationStyle.APPLE)
+    // Battery optimization shows plain lyrics (no glow, no word animation) for a while.
+    val batterySaverLyricsOff = com.metrolist.music.utils.LocalBatterySaver.current.lyricsAnimations
+    val lyricsGlowEffectPreference by rememberPreference(LyricsGlowEffectKey, false)
+    val lyricsGlowEffect = lyricsGlowEffectPreference && !batterySaverLyricsOff
+    val lyricsAnimationStylePreference by rememberEnumPreference(LyricsAnimationStyleKey, LyricsAnimationStyle.APPLE)
+    val lyricsAnimationStyle = if (batterySaverLyricsOff) LyricsAnimationStyle.NONE else lyricsAnimationStylePreference
     val lyricsTextSize by rememberPreference(LyricsTextSizeKey, 24f)
     val lyricsLineSpacing by rememberPreference(LyricsLineSpacingKey, 1.3f)
 
