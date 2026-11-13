@@ -1101,6 +1101,8 @@
     <string name="audio_output_phone">%1$s\'s phone</string>
     <string name="audio_output_phone_default">Phone</string>
     <string name="audio_output_show_battery">Show battery</string>
+    <string name="audio_output">Audio output</string>
+    <string name="audio_output_tap_to_choose">Tap to choose where the sound plays</string>
     <string name="genre_filter_for_you">For You</string>
     <string name="genre_filter_popular">Popular</string>
     <string name="genre_filter_new">New</string>

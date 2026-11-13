@@ -358,6 +358,16 @@
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
         <activity
+            android:name=".playback.AudioOutputActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:taskAffinity="${applicationId}.audiooutput"
+            android:theme="@style/Theme.Metrolist.Transparent" />
+
+        <activity
             android:name=".recognition.RecognitionLaunchActivity"
             android:excludeFromRecents="true"
             android:exported="false"

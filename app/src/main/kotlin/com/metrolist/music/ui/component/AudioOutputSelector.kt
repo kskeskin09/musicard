@@ -141,9 +141,13 @@ private fun currentOutputs(context: Context): List<AudioDeviceInfo> {
  * scrolls sideways.
  */
 @Composable
-fun AudioOutputSelector(modifier: Modifier = Modifier) {
+fun AudioOutputSelector(
+    modifier: Modifier = Modifier,
+    // Given by screens outside the main app (the notification's audio output sheet).
+    player: androidx.media3.exoplayer.ExoPlayer? = null,
+) {
     val context = LocalContext.current
-    val playerConnection = LocalPlayerConnection.current ?: return
+    val exoPlayer = player ?: LocalPlayerConnection.current?.service?.player ?: return
     val (username) = rememberPreference(ListenTogetherUsernameKey, "")
     var devices by remember { mutableStateOf(currentOutputs(context)) }
     DisposableEffect(context) {
@@ -159,7 +163,7 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
                     val selected = AudioOutputChoice.selectedKey.value
                     if (selected != null && devices.none { outputKey(it) == selected }) {
                         AudioOutputChoice.selectedKey.value = null
-                        runCatching { AudioOutputChoice.switchTo(playerConnection.service.player, null) }
+                        runCatching { AudioOutputChoice.switchTo(exoPlayer, null) }
                     }
                 }
             }
@@ -196,7 +200,7 @@ fun AudioOutputSelector(modifier: Modifier = Modifier) {
         // Tapping the output already in use does nothing (no needless rerouting).
         if (option.key != AudioOutputChoice.selectedKey.value) {
             AudioOutputChoice.selectedKey.value = option.key
-            runCatching { AudioOutputChoice.switchTo(playerConnection.service.player, option.device) }
+            runCatching { AudioOutputChoice.switchTo(exoPlayer, option.device) }
         }
     }
 

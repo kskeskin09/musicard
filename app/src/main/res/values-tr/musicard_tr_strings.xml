@@ -129,6 +129,8 @@
     <string name="audio_output_phone">Telefon (%1$s)</string>
     <string name="audio_output_phone_default">Telefon</string>
     <string name="audio_output_show_battery">Pil durumunu göster</string>
+    <string name="audio_output">Ses çıkışı</string>
+    <string name="audio_output_tap_to_choose">Sesin nereden çalacağını seçmek için dokun</string>
 
     <!-- Notification center -->
     <string name="notification_center">Bildirim merkezi</string>

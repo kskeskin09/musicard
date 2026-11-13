@@ -19,6 +19,7 @@ object MediaSessionConstants {
     const val ACTION_SKIP_NEXT = "SKIP_NEXT"
     const val ACTION_SEEK_BACK_5 = "SEEK_BACK_5"
     const val ACTION_SEEK_FORWARD_5 = "SEEK_FORWARD_5"
+    const val ACTION_OPEN_AUDIO_OUTPUT = "OPEN_AUDIO_OUTPUT"
 
     val CommandToggleLibrary = SessionCommand(ACTION_TOGGLE_LIBRARY, Bundle.EMPTY)
     val CommandToggleLike = SessionCommand(ACTION_TOGGLE_LIKE, Bundle.EMPTY)
@@ -30,6 +31,7 @@ object MediaSessionConstants {
     val CommandSkipNext = SessionCommand(ACTION_SKIP_NEXT, Bundle.EMPTY)
     val CommandSeekBack5 = SessionCommand(ACTION_SEEK_BACK_5, Bundle.EMPTY)
     val CommandSeekForward5 = SessionCommand(ACTION_SEEK_FORWARD_5, Bundle.EMPTY)
+    val CommandOpenAudioOutput = SessionCommand(ACTION_OPEN_AUDIO_OUTPUT, Bundle.EMPTY)
 
     /** Every custom command the session accepts. */
     val AllCustomCommands = listOf(
@@ -43,6 +45,7 @@ object MediaSessionConstants {
         CommandSkipNext,
         CommandSeekBack5,
         CommandSeekForward5,
+        CommandOpenAudioOutput,
     )
 
     const val SEEK_STEP_MS = 5_000L
