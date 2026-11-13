@@ -109,7 +109,7 @@ import com.metrolist.music.ui.component.EmptyPlaceholder
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.SongListItem
-import com.metrolist.music.ui.component.SortHeader
+import com.metrolist.music.ui.component.ListSortRow
 import com.metrolist.music.ui.menu.SelectionSongMenu
 import com.metrolist.music.ui.menu.SongMenu
 import com.metrolist.music.ui.menu.TopPlaylistMenu
@@ -318,24 +318,22 @@ fun TopPlaylistScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(start = 16.dp),
                             ) {
-                                SortHeader(
-                                    sortType = sortType,
-                                    sortDescending = false,
-                                    onSortTypeChange = {
-                                        viewModel.topPeriod.value = it
+                                ListSortRow(
+                                    options = MyTopFilter.entries,
+                                    selected = sortType,
+                                    label = { period ->
+                                        stringResource(
+                                            when (period) {
+                                                MyTopFilter.ALL_TIME -> R.string.all_time
+                                                MyTopFilter.DAY -> R.string.past_24_hours
+                                                MyTopFilter.WEEK -> R.string.past_week
+                                                MyTopFilter.MONTH -> R.string.past_month
+                                                MyTopFilter.YEAR -> R.string.past_year
+                                            },
+                                        )
                                     },
-                                    onSortDescendingChange = {},
-                                    sortTypeText = { sortType ->
-                                        when (sortType) {
-                                            MyTopFilter.ALL_TIME -> R.string.all_time
-                                            MyTopFilter.DAY -> R.string.past_24_hours
-                                            MyTopFilter.WEEK -> R.string.past_week
-                                            MyTopFilter.MONTH -> R.string.past_month
-                                            MyTopFilter.YEAR -> R.string.past_year
-                                        }
-                                    },
+                                    onSelect = { viewModel.topPeriod.value = it },
                                     modifier = Modifier.weight(1f),
-                                    showDescending = false,
                                 )
                             }
                         }
