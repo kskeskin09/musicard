@@ -7,6 +7,15 @@
     <string name="downloads_group">Downloads</string>
     <string name="auto_download_library">Automatically download library</string>
     <string name="auto_download_library_desc">Downloads liked songs and songs in your playlists. Pauses while battery optimization is on.</string>
-    <string name="auto_download_cellular">Use cellular too</string>
-    <string name="auto_download_cellular_desc">Off: only downloads on Wi-Fi</string>
+    <string name="auto_download_wifi_only">Download only via Wi-Fi</string>
+    <string name="auto_download_wifi_only_desc">Off: also downloads on mobile data</string>
+    <!-- TEMPORARY: Library list clean-up, remove once the old-account songs are gone -->
+    <string name="clean_up_library">Clean up library</string>
+    <string name="clean_up_library_confirm">Remove</string>
+    <string name="clean_up_library_none">Every song in your library is liked or in one of your playlists.</string>
+    <string name="clean_up_library_done">Removed %d songs from the library</string>
+    <plurals name="clean_up_library_message">
+        <item quantity="one">%d song is neither liked nor in any of your playlists. Remove it from the library? It is also removed from your YouTube Music library if you are logged in. Songs you downloaded yourself stay in Downloaded.</item>
+        <item quantity="other">%d songs are neither liked nor in any of your playlists. Remove them from the library? They are also removed from your YouTube Music library if you are logged in. Songs you downloaded yourself stay in Downloaded.</item>
+    </plurals>
 </resources>

@@ -52,7 +52,7 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AudioQuality
-import com.metrolist.music.constants.AutoDownloadCellularKey
+import com.metrolist.music.constants.AutoDownloadWifiOnlyKey
 import com.metrolist.music.constants.AutoDownloadLibraryKey
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.DownloadQuality
@@ -114,8 +114,8 @@ fun StorageSettings(
     var showDownloadQualityDialog by remember { mutableStateOf(false) }
     val (autoDownloadLibrary, onAutoDownloadLibraryChange) =
         rememberPreference(AutoDownloadLibraryKey, defaultValue = false)
-    val (autoDownloadCellular, onAutoDownloadCellularChange) =
-        rememberPreference(AutoDownloadCellularKey, defaultValue = false)
+    val (autoDownloadWifiOnly, onAutoDownloadWifiOnlyChange) =
+        rememberPreference(AutoDownloadWifiOnlyKey, defaultValue = true)
     // "Same as playing quality (Auto)": only the name of the playing setting, without the Auto hint.
     val playingQualityName = when (playingQuality) {
         AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
@@ -378,17 +378,17 @@ fun StorageSettings(
                     ),
                     if (autoDownloadLibrary) {
                         Material3SettingsItem(
-                            icon = painterResource(R.drawable.signal_cellular),
-                            title = { Text(stringResource(R.string.auto_download_cellular)) },
-                            description = { Text(stringResource(R.string.auto_download_cellular_desc)) },
+                            icon = painterResource(R.drawable.wifi),
+                            title = { Text(stringResource(R.string.auto_download_wifi_only)) },
+                            description = { Text(stringResource(R.string.auto_download_wifi_only_desc)) },
                             trailingContent = {
                                 Switch(
-                                    checked = autoDownloadCellular,
-                                    onCheckedChange = onAutoDownloadCellularChange,
+                                    checked = autoDownloadWifiOnly,
+                                    onCheckedChange = onAutoDownloadWifiOnlyChange,
                                     thumbContent = {
                                         Icon(
                                             painter = painterResource(
-                                                id = if (autoDownloadCellular) R.drawable.check else R.drawable.close,
+                                                id = if (autoDownloadWifiOnly) R.drawable.check else R.drawable.close,
                                             ),
                                             contentDescription = null,
                                             modifier = Modifier.size(SwitchDefaults.IconSize),
@@ -396,7 +396,7 @@ fun StorageSettings(
                                     },
                                 )
                             },
-                            onClick = { onAutoDownloadCellularChange(!autoDownloadCellular) },
+                            onClick = { onAutoDownloadWifiOnlyChange(!autoDownloadWifiOnly) },
                         )
                     } else {
                         null

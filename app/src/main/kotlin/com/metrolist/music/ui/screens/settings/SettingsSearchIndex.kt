@@ -141,7 +141,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.downloaded_songs, R.string.storage, "settings/storage"),
     SettingsSearchEntry(R.string.download_quality, R.string.storage, "settings/storage"),
     SettingsSearchEntry(R.string.auto_download_library, R.string.storage, "settings/storage"),
-    SettingsSearchEntry(R.string.auto_download_cellular, R.string.storage, "settings/storage"),
+    SettingsSearchEntry(R.string.auto_download_wifi_only, R.string.storage, "settings/storage"),
     SettingsSearchEntry(R.string.clear_all_downloads, R.string.storage, "settings/storage"),
     SettingsSearchEntry(R.string.enable_song_cache, R.string.storage, "settings/storage"),
     SettingsSearchEntry(R.string.max_song_cache_size, R.string.storage, "settings/storage"),

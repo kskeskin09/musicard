@@ -9,6 +9,11 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.utils.parseCookieString
+import com.metrolist.music.constants.InnerTubeCookieKey
+import kotlinx.coroutines.flow.first
+import timber.log.Timber
 import com.metrolist.music.constants.AutoDownloadedSongIdsKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
@@ -40,7 +45,7 @@ import javax.inject.Inject
 class AutoPlaylistViewModel
 @Inject
 constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val database: MusicDatabase,
     savedStateHandle: SavedStateHandle,
     private val syncUtils: SyncUtils,
@@ -99,6 +104,31 @@ constructor(
 
     fun syncUploadedSongs() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncUploadedSongs() }
+    }
+
+    /** How many library songs are neither liked nor in one of your playlists. */
+    suspend fun looseLibrarySongCount(): Int = database.looseLibrarySongCount()
+
+    /**
+     * TEMPORARY (asked 2026-11-13 to clear songs left over from an old account; remove later):
+     * takes loose songs out of the app's library and, when logged in, out of the YouTube Music
+     * library too, so the next sync doesn't bring them back.
+     */
+    fun removeLooseLibrarySongs(onDone: (Int) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ids = database.looseLibrarySongIds()
+            val removed = database.removeLooseLibrarySongs()
+            kotlinx.coroutines.withContext(Dispatchers.Main) { onDone(removed) }
+            val cookie = context.dataStore.data.map { it[InnerTubeCookieKey] }.first()
+            val loggedIn = cookie?.let { "SAPISID" in parseCookieString(it) } ?: false
+            if (loggedIn) {
+                ids.forEach { id ->
+                    YouTube.toggleSongLibrary(id, addToLibrary = false)
+                        .onFailure { Timber.w(it, "Failed to remove $id from the YouTube Music library") }
+                    kotlinx.coroutines.delay(150)
+                }
+            }
+        }
     }
 
     fun refresh() {
