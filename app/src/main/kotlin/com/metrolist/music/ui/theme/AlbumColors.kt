@@ -131,7 +131,7 @@ fun rememberPageCoverColor(
     return loaded ?: last
 }
 
-private const val PAGE_COLOR_PREFS = "page_colors"
+private const val PAGE_COLOR_PREFS = "page_colors_v2"
 private const val PAGE_COLOR_LIMIT = 400
 
 /** Reads the cover color of [url] in the background so a page opened from this card starts tinted. */
@@ -193,8 +193,40 @@ private suspend fun loadCoverColor(
                 .maximumColorCount(8)
                 .resizeBitmapArea(100 * 100)
                 .generate()
-        Color(palette.rankedColors(1, android.graphics.Color.DKGRAY).first())
+        matchCoverColorfulness(
+            Color(palette.rankedColors(1, android.graphics.Color.DKGRAY).first()),
+            palette,
+        )
     }.also { coverColorCache.put(url, it) }
+}
+
+/**
+ * The color ranking above always prefers a colorful swatch, even when it is only a small detail
+ * of the cover (a gold logo on a grey poster turns the whole page olive). So the color is
+ * desaturated to match how colorful the cover is overall: a black-and-white cover gives a neutral
+ * grey, a muted one a muted color, and a colorful one keeps its color.
+ */
+private fun matchCoverColorfulness(
+    picked: Color,
+    palette: Palette,
+): Color {
+    val swatches = palette.swatches
+    val total = swatches.sumOf { it.population }
+    if (total == 0) return picked
+    // Population-weighted chroma (0..1) of the whole cover.
+    val colorfulness =
+        swatches.sumOf { swatch ->
+            val r = android.graphics.Color.red(swatch.rgb)
+            val g = android.graphics.Color.green(swatch.rgb)
+            val b = android.graphics.Color.blue(swatch.rgb)
+            (maxOf(r, g, b) - minOf(r, g, b)) / 255.0 * swatch.population
+        } / total
+    val keep = ((colorfulness - 0.04) / 0.12).toFloat().coerceIn(0f, 1f)
+    if (keep >= 1f) return picked
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(picked.toArgb(), hsl)
+    hsl[1] *= keep
+    return Color(ColorUtils.HSLToColor(hsl))
 }
 
 /**

@@ -32,7 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
+import com.metrolist.music.ui.component.RefreshIndicator
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -479,7 +479,7 @@ fun LibraryPodcastsScreen(
             }
         }
 
-        Indicator(
+        RefreshIndicator(
             isRefreshing = isRefreshing,
             state = pullToRefreshState,
             modifier =
