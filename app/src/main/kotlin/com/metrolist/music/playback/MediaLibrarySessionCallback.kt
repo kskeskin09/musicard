@@ -151,6 +151,7 @@ constructor(
                 val duration = it.duration
                 it.seekTo(if (duration > 0) target.coerceAtMost(duration) else target)
             }
+            MediaSessionConstants.ACTION_OPEN_AUDIO_OUTPUT -> service.openAudioOutputSheet()
         }
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

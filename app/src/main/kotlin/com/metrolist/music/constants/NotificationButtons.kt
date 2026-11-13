@@ -23,6 +23,7 @@ enum class NotificationButton(
     SEEK_FORWARD_5(R.string.seek_forward_5, R.drawable.player_seek_forward_5),
     START_RADIO(R.string.start_radio, R.drawable.player_radio),
     ADD_TO_PLAYLIST(R.string.android_auto_target_playlist, R.drawable.player_playlist_add),
+    AUDIO_OUTPUT(R.string.audio_output, R.drawable.audio_output_auto),
 }
 
 /**

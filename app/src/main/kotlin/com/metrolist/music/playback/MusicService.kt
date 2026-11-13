@@ -1778,8 +1778,62 @@ class MusicService :
                 .setIconResId(R.drawable.player_playlist_add)
                 .setSessionCommand(CommandAddToTargetPlaylist)
                 .setEnabled(hasSong)
+
+            NotificationButton.AUDIO_OUTPUT -> builder
+                .setDisplayName(getString(R.string.audio_output))
+                .setIconResId(R.drawable.audio_output_auto)
+                .setSessionCommand(MediaSessionConstants.CommandOpenAudioOutput)
         }
         return builder.setSlots(slot).build()
+    }
+
+    /**
+     * Opens the app's own audio output sheet (from the notification's "Audio output" button).
+     * Some Android versions don't let an app open a screen from a notification button; then a
+     * short notification appears instead, and tapping it opens the sheet.
+     */
+    fun openAudioOutputSheet() {
+        runCatching { startActivity(AudioOutputActivity.intent(this)) }
+        scope.launch {
+            delay(AUDIO_OUTPUT_OPEN_CHECK_MS)
+            if (!AudioOutputActivity.isShowing) showAudioOutputPrompt()
+        }
+    }
+
+    private fun showAudioOutputPrompt() {
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        nm.createNotificationChannel(
+            NotificationChannel(
+                AUDIO_OUTPUT_CHANNEL_ID,
+                getString(R.string.audio_output),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+            },
+        )
+        val pending =
+            PendingIntent.getActivity(
+                this,
+                AUDIO_OUTPUT_NOTIFICATION_ID,
+                AudioOutputActivity.intent(this),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(this, AUDIO_OUTPUT_CHANNEL_ID)
+                .setSmallIcon(R.drawable.small_icon)
+                .setContentTitle(getString(R.string.audio_output))
+                .setContentText(getString(R.string.audio_output_tap_to_choose))
+                .setContentIntent(pending)
+                .setAutoCancel(true)
+                .setTimeoutAfter(AUDIO_OUTPUT_PROMPT_TIMEOUT_MS)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .build()
+        runCatching { nm.notify(AUDIO_OUTPUT_NOTIFICATION_ID, notification) }
     }
 
     /**
@@ -5229,6 +5283,11 @@ class MusicService :
     }
 
     companion object {
+        private const val AUDIO_OUTPUT_CHANNEL_ID = "audio_output_prompt"
+        const val AUDIO_OUTPUT_NOTIFICATION_ID = 7342
+        private const val AUDIO_OUTPUT_OPEN_CHECK_MS = 900L
+        private const val AUDIO_OUTPUT_PROMPT_TIMEOUT_MS = 15_000L
+
         const val ACTION_ALARM_TRIGGER = "com.metrolist.music.action.ALARM_TRIGGER"
         const val EXTRA_ALARM_ID = "extra_alarm_id"
         const val EXTRA_ALARM_PLAYLIST_ID = "extra_alarm_playlist_id"
