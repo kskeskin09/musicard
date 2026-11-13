@@ -208,6 +208,17 @@ fun AppearanceSettings(
             com.metrolist.music.constants.EdgeToEdgeAlbumArtKey,
             defaultValue = false,
         )
+    val (edgeToEdgeArtEdge, onEdgeToEdgeArtEdgeChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.EdgeToEdgeArtEdgeKey,
+            defaultValue = MiniPlayerEdgeEffect.BLACKOUT,
+        )
+    var showEdgeToEdgeArtEdgeDialog by rememberSaveable { mutableStateOf(false) }
+    val (showPlayingFrom, onShowPlayingFromChange) =
+        rememberPreference(
+            com.metrolist.music.constants.ShowPlayingFromKey,
+            defaultValue = true,
+        )
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
             PlayerBackgroundStyleKey,
@@ -640,6 +651,20 @@ fun AppearanceSettings(
             title = stringResource(R.string.mini_player_edge_effect),
             current = miniPlayerEdgeEffect,
             values = MiniPlayerEdgeEffect.values().toList(),
+            valueText = { miniPlayerEdgeEffectText(it) },
+        )
+    }
+
+    if (showEdgeToEdgeArtEdgeDialog) {
+        EnumDialog(
+            onDismiss = { showEdgeToEdgeArtEdgeDialog = false },
+            onSelect = {
+                onEdgeToEdgeArtEdgeChange(it)
+                showEdgeToEdgeArtEdgeDialog = false
+            },
+            title = stringResource(R.string.edge_to_edge_art_edge),
+            current = edgeToEdgeArtEdge,
+            values = listOf(MiniPlayerEdgeEffect.NONE, MiniPlayerEdgeEffect.BLACKOUT, MiniPlayerEdgeEffect.BLUR),
             valueText = { miniPlayerEdgeEffectText(it) },
         )
     }
@@ -1302,7 +1327,7 @@ fun AppearanceSettings(
         Material3SettingsGroup(
             title = stringResource(R.string.player),
             items =
-                listOf(
+                listOfNotNull(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.hide_image),
                         title = { Text(stringResource(R.string.hide_player_thumbnail)) },
@@ -1368,6 +1393,38 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onEdgeToEdgeArtChange(!edgeToEdgeArt) },
+                    ),
+                    if (edgeToEdgeArt) {
+                        Material3SettingsItem(
+                            icon = painterResource(if (edgeToEdgeArtEdge == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
+                            title = { Text(stringResource(R.string.edge_to_edge_art_edge)) },
+                            description = { Text(miniPlayerEdgeEffectText(edgeToEdgeArtEdge)) },
+                            onClick = { showEdgeToEdgeArtEdgeDialog = true },
+                        )
+                    } else {
+                        null
+                    },
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.queue_music),
+                        title = { Text(stringResource(R.string.show_playing_location)) },
+                        description = { Text(stringResource(R.string.show_playing_location_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = showPlayingFrom,
+                                onCheckedChange = onShowPlayingFromChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (showPlayingFrom) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onShowPlayingFromChange(!showPlayingFrom) },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),

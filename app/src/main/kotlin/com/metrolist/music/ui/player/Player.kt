@@ -32,6 +32,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Spring
+import com.metrolist.music.ui.component.bottomEdgeBlur
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -291,6 +292,11 @@ fun BottomSheetPlayer(
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
     val edgeToEdgeArtPref by rememberPreference(com.metrolist.music.constants.EdgeToEdgeAlbumArtKey, false)
     val edgeToEdgeArt = edgeToEdgeArtPref && !hidePlayerThumbnail
+    val edgeToEdgeArtEdge by rememberEnumPreference(
+        com.metrolist.music.constants.EdgeToEdgeArtEdgeKey,
+        com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT,
+    )
+    val showPlayingFrom by rememberPreference(com.metrolist.music.constants.ShowPlayingFromKey, true)
 
     var showInlineLyrics by rememberSaveable {
         mutableStateOf(false)
@@ -2336,14 +2342,17 @@ fun BottomSheetPlayer(
                         // Edge to edge: the art fills the top of the player behind the handle,
                         // title and progress bar, and fades into the background. The usual art
                         // stays in place (invisible) for swiping and for the lyrics header.
+                        val edgeArtHeight = topInset + 44.dp + artSize + 110.dp
                         EdgeToEdgeAlbumArt(
                             artworkUrl = mediaMetadata?.thumbnailUrl,
                             isPlaying = effectiveIsPlaying,
+                            edge = edgeToEdgeArtEdge,
+                            blurFromBottomPx = with(density) { (edgeArtHeight * 0.45f).toPx() },
                             alphaProvider = { (1f - cardExpand * 3f).coerceIn(0f, 1f) },
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .height(topInset + 44.dp + artSize + 110.dp),
+                                    .height(edgeArtHeight),
                         )
                     }
                     Column(
@@ -2368,7 +2377,7 @@ fun BottomSheetPlayer(
                         // Sits halfway between the handle and the cover; tapping it opens the list.
                         val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
                         val sourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
-                        val playingFrom = queueTitle?.takeIf { it.isNotBlank() && sourceRoute != null }
+                        val playingFrom = queueTitle?.takeIf { showPlayingFrom && it.isNotBlank() && sourceRoute != null }
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier =
@@ -3139,6 +3148,8 @@ private fun PlayerControlButton(
 private fun EdgeToEdgeAlbumArt(
     artworkUrl: String?,
     isPlaying: Boolean,
+    edge: com.metrolist.music.constants.MiniPlayerEdgeEffect,
+    blurFromBottomPx: Float,
     alphaProvider: () -> Float,
     modifier: Modifier = Modifier,
 ) {
@@ -3163,9 +3174,15 @@ private fun EdgeToEdgeAlbumArt(
                     shape = RoundedCornerShape((28f * shrink).dp)
                     clip = shrink > 0f
                     compositingStrategy = CompositingStrategy.Offscreen
-                }.drawWithContent {
+                }.bottomEdgeBlur(
+                    // Blur: the lower part where the controls sit is blurred.
+                    enabled = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR,
+                    startFromBottomPx = { blurFromBottomPx },
+                ).drawWithContent {
                     drawContent()
-                    // Fades out over the lower part, into the player's background.
+                    // Blackout: fades out over the lower part, into the player's background.
+                    // Nothing: the art simply ends.
+                    if (edge != com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT) return@drawWithContent
                     drawRect(
                         brush =
                             Brush.verticalGradient(

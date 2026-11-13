@@ -3,5 +3,8 @@
     <string name="ai_auto_translate">Sözleri otomatik çevir</string>
     <string name="ai_auto_translate_desc">Hedef dilden farklı dildeki sözler açıldığında çevrilir. Zaten hedef dildeki sözler atlanır</string>
     <string name="edge_to_edge_album_art">Kenardan kenara albüm resmi</string>
-    <string name="edge_to_edge_album_art_desc">Albüm resmi oynatıcının üst kısmını ekran kenarlarına kadar doldurur ve arka plana doğru kaybolur</string>
+    <string name="edge_to_edge_album_art_desc">Albüm resmi oynatıcının üst kısmını ekran kenarlarına kadar doldurur</string>
+    <string name="edge_to_edge_art_edge">Resmin tuşlarla kesiştiği yer</string>
+    <string name="show_playing_location">Çalınan konumu göster</string>
+    <string name="show_playing_location_desc">Şarkının başlatıldığı listeyi oynatıcının üstünde "Şuradan çalınıyor" yazısıyla göster</string>
 </resources>
