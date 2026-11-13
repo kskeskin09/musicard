@@ -225,8 +225,16 @@ private fun AudioOutputSheet(
                     )
                 }
                 Spacer(Modifier.height(14.dp))
-                val player = service?.player
-                if (player != null) {
+                if (service != null) {
+                    val player = service.player
+                    // Same volume slider as in the player's menu, above the outputs.
+                    val volume by service.playerVolume.collectAsState()
+                    com.metrolist.music.ui.component.VolumeSlider(
+                        value = volume,
+                        onValueChange = { service.playerVolume.value = it },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(16.dp))
                     AudioOutputSelector(player = player)
                 } else {
                     Spacer(Modifier.height(66.dp))
