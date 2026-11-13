@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" alt="Musicard app icon" width="160" />
+<img src="assets/ic_launcher-playstore.png" alt="Musicard app icon" width="160" />
 
 # Musicard
 
