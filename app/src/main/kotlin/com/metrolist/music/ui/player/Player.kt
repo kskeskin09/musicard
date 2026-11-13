@@ -289,7 +289,7 @@ fun BottomSheetPlayer(
         )
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
     val (hideStatusBarOnLyrics) = rememberPreference(HideStatusBarOnFullscreenKey, false)
-    val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    val cropAlbumArt by rememberPreference(CropAlbumArtKey, true)
     val edgeToEdgeArtPref by rememberPreference(com.metrolist.music.constants.EdgeToEdgeAlbumArtKey, false)
     val edgeToEdgeArt = edgeToEdgeArtPref && !hidePlayerThumbnail
     val edgeToEdgeArtEdge by rememberEnumPreference(

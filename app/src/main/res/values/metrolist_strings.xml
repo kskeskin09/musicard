@@ -148,7 +148,7 @@
     <string name="lyrics_provider_selection_desc">Choose which lyrics providers are enabled</string>
     <string name="auto_scroll">Re-sync</string>
     <string name="slim">Slim</string>
-    <string name="force_bottom_navbar">Force bottom navigation bar</string>
+    <string name="force_bottom_navbar">Keep tab bar at the bottom</string>
     <string name="slim_navbar">Slim bottom navigation bar</string>
     <string name="auto_playlists">Auto playlists</string>
     <string name="show_liked_playlist">Show Liked playlist</string>
@@ -178,7 +178,7 @@
     <string name="token_shown">Tap again to copy or edit</string>
     <string name="token_adv_login_description">This is an ADVANCED login method. Instead of using the web portal, you can enter or update your login token directly. This can be useful for signing in across multiple devices quickly. Tokens in an unrecognized format will be rejected</string>
     <string name="yt_sync">Auto-sync with account</string>
-    <string name="more_content">More content</string>
+    <string name="more_content">Personalized content</string>
 
     <string name="sort_ascending">Sort ascending</string>
     <string name="sort_descending">Sort descending</string>
@@ -1125,11 +1125,11 @@
     <string name="home_section_youtube">YouTube Music sections</string>
     <!-- Import from other services -->
     <string name="import_services">Import from other apps</string>
-    <string name="import_services_desc">Spotify, Apple Music and playlist files</string>
+    <string name="import_services_desc">YouTube Music sign-in, Spotify, Apple Music and playlist files</string>
     <string name="import_services_intro">Bring your playlists and liked songs to Musicard. Each song is matched on YouTube Music.</string>
     <string name="import_spotify_desc">Spotify\'s official data file or a CSV</string>
     <string name="import_apple_desc">Apple\'s official transfer or data file</string>
-    <string name="import_ytm_desc">Sign in with your account and everything comes over on its own</string>
+    <string name="import_ytm_desc">Sign in and your library syncs on its own. Tap for sign-in options.</string>
     <string name="import_ytm_badge">Already built in</string>
     <string name="import_file">From a file (CSV / TXT)</string>
     <string name="import_file_desc">Exportify, TuneMyMusic, Soundiiz and similar files</string>

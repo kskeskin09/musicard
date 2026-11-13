@@ -28,6 +28,8 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
+import com.metrolist.music.constants.DownloadQuality
+import com.metrolist.music.constants.DownloadQualityKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.AlbumEntity
 import com.metrolist.music.db.entities.FormatEntity
@@ -74,7 +76,17 @@ constructor(
 ) {
     private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
-    private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
+    private val playingQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
+    private val downloadQuality by enumPreference(context, DownloadQualityKey, DownloadQuality.SAME_AS_PLAYING)
+
+    // "Download quality" in Storage settings; "Same as playing quality" uses the player's setting.
+    private val audioQuality: AudioQuality
+        get() =
+            when (downloadQuality) {
+                DownloadQuality.SAME_AS_PLAYING -> playingQuality
+                DownloadQuality.LOW -> AudioQuality.LOW
+                DownloadQuality.HIGH -> AudioQuality.HIGH
+            }
     private val songUrlCache = StreamUrlCache()
     private val streamHttpClient =
         OkHttpClient.Builder()

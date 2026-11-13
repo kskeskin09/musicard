@@ -59,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
-import com.metrolist.music.constants.ChipSortTypeKey
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DensityScale
@@ -71,11 +70,8 @@ import com.metrolist.music.constants.EnableHighRefreshRateKey
 import com.metrolist.music.constants.EnableLandscapeScalingKey
 import com.metrolist.music.constants.ExperimentalLyricsKey
 import com.metrolist.music.constants.ForceBottomNavBarKey
-import com.metrolist.music.constants.GridItemSize
-import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
-import com.metrolist.music.constants.LibraryFilter
 import com.metrolist.music.constants.ListenTogetherInTopBarKey
 import com.metrolist.music.constants.LyricsAnimationStyle
 import com.metrolist.music.constants.LyricsAnimationStyleKey
@@ -108,10 +104,8 @@ import com.metrolist.music.constants.ShowLikedPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.SliderStyle
 import com.metrolist.music.constants.SliderStyleKey
-import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.SwipeSensitivityKey
 import com.metrolist.music.constants.SwipeThumbnailKey
-import com.metrolist.music.constants.SwipeToRemoveSongKey
 import com.metrolist.music.constants.SwipeToSongKey
 import com.metrolist.music.constants.UseNewPlayerDesignKey
 import com.metrolist.music.ui.component.DefaultDialog
@@ -201,7 +195,7 @@ fun AppearanceSettings(
     val (cropAlbumArt, onCropAlbumArtChange) =
         rememberPreference(
             CropAlbumArtKey,
-            defaultValue = false,
+            defaultValue = true,
         )
     val (edgeToEdgeArt, onEdgeToEdgeArtChange) =
         rememberPreference(
@@ -336,23 +330,56 @@ fun AppearanceSettings(
             SwipeSensitivityKey,
             defaultValue = 0.73f,
         )
-    val (gridItemSize, onGridItemSizeChange) =
-        rememberEnumPreference(
-            GridItemsSizeKey,
-            defaultValue = GridItemSize.SMALL,
-        )
 
     val (forceBottomNav, onForceBottomNavChange) =
         rememberPreference(
             ForceBottomNavBarKey,
             defaultValue = false,
         )
-    val (slimNav, onSlimNavChange) =
-        rememberPreference(
-            SlimNavBarKey,
-            defaultValue = false,
+    val (autoHideNavBar, onAutoHideNavBarChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.AutoHideNavBarKey,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
         )
-
+    var showAutoHideNavBarDialog by rememberSaveable { mutableStateOf(false) }
+    val (autoHideStatusBar, onAutoHideStatusBarChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.AutoHideStatusBarKey,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+        )
+    var showAutoHideStatusBarDialog by rememberSaveable { mutableStateOf(false) }
+    val autoHideNavBarText: @Composable (com.metrolist.music.constants.AutoHideNavBarDelay) -> String = {
+        when (it) {
+            com.metrolist.music.constants.AutoHideNavBarDelay.OFF -> stringResource(R.string.auto_hide_nav_off)
+            else -> stringResource(R.string.auto_hide_nav_after, (it.millis / 1000).toInt())
+        }
+    }
+    if (showAutoHideStatusBarDialog) {
+        EnumDialog(
+            onDismiss = { showAutoHideStatusBarDialog = false },
+            onSelect = {
+                onAutoHideStatusBarChange(it)
+                showAutoHideStatusBarDialog = false
+            },
+            title = stringResource(R.string.auto_hide_status),
+            current = autoHideStatusBar,
+            values = com.metrolist.music.constants.AutoHideNavBarDelay.entries.toList(),
+            valueText = autoHideNavBarText,
+        )
+    }
+    if (showAutoHideNavBarDialog) {
+        EnumDialog(
+            onDismiss = { showAutoHideNavBarDialog = false },
+            onSelect = {
+                onAutoHideNavBarChange(it)
+                showAutoHideNavBarDialog = false
+            },
+            title = stringResource(R.string.auto_hide_nav),
+            current = autoHideNavBar,
+            values = com.metrolist.music.constants.AutoHideNavBarDelay.entries.toList(),
+            valueText = autoHideNavBarText,
+        )
+    }
     val (densityScale, onDensityScaleChange) = rememberPreference(DensityScaleKey, defaultValue = 1f)
     var showDensityScaleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -365,12 +392,6 @@ fun AppearanceSettings(
     val (swipeToSong, onSwipeToSongChange) =
         rememberPreference(
             SwipeToSongKey,
-            defaultValue = false,
-        )
-
-    val (swipeToRemoveSong, onSwipeToRemoveSongChange) =
-        rememberPreference(
-            SwipeToRemoveSongKey,
             defaultValue = false,
         )
 
@@ -399,12 +420,6 @@ fun AppearanceSettings(
         PlayerBackgroundStyle.entries.filter {
             it != PlayerBackgroundStyle.BLUR || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
         }
-
-    val (defaultChip, onDefaultChipChange) =
-        rememberEnumPreference(
-            key = ChipSortTypeKey,
-            defaultValue = LibraryFilter.LIBRARY,
-        )
 
     var showSliderOptionDialog by rememberSaveable {
         mutableStateOf(false)
@@ -708,56 +723,6 @@ fun AppearanceSettings(
                     NavigationTab.HOME -> stringResource(R.string.home)
                     NavigationTab.SEARCH -> stringResource(R.string.search)
                     NavigationTab.LIBRARY -> stringResource(R.string.filter_library)
-                }
-            },
-        )
-    }
-
-    var showDefaultChipDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    if (showDefaultChipDialog) {
-        EnumDialog(
-            onDismiss = { showDefaultChipDialog = false },
-            onSelect = {
-                onDefaultChipChange(it)
-                showDefaultChipDialog = false
-            },
-            title = stringResource(R.string.default_lib_chips),
-            current = defaultChip,
-            values = LibraryFilter.values().toList(),
-            valueText = {
-                when (it) {
-                    LibraryFilter.SONGS -> stringResource(R.string.songs)
-                    LibraryFilter.ARTISTS -> stringResource(R.string.artists)
-                    LibraryFilter.ALBUMS -> stringResource(R.string.albums)
-                    LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
-                    LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
-                    LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
-                }
-            },
-        )
-    }
-
-    var showGridSizeDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    if (showGridSizeDialog) {
-        EnumDialog(
-            onDismiss = { showGridSizeDialog = false },
-            onSelect = {
-                onGridItemSizeChange(it)
-                showGridSizeDialog = false
-            },
-            title = stringResource(R.string.grid_cell_size),
-            current = gridItemSize,
-            values = GridItemSize.values().toList(),
-            valueText = {
-                when (it) {
-                    GridItemSize.BIG -> stringResource(R.string.big)
-                    GridItemSize.SMALL -> stringResource(R.string.small)
                 }
             },
         )
@@ -1657,23 +1622,6 @@ fun AppearanceSettings(
                         onClick = { showDefaultOpenTabDialog = true },
                     ),
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.tab),
-                        title = { Text(stringResource(R.string.default_lib_chips)) },
-                        description = {
-                            Text(
-                                when (defaultChip) {
-                                    LibraryFilter.SONGS -> stringResource(R.string.songs)
-                                    LibraryFilter.ARTISTS -> stringResource(R.string.artists)
-                                    LibraryFilter.ALBUMS -> stringResource(R.string.albums)
-                                    LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
-                                    LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
-                                    LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
-                                },
-                            )
-                        },
-                        onClick = { showDefaultChipDialog = true },
-                    ),
-                    Material3SettingsItem(
                         icon = painterResource(R.drawable.swipe),
                         title = { Text(stringResource(R.string.swipe_song_to_add)) },
                         trailingContent = {
@@ -1695,29 +1643,9 @@ fun AppearanceSettings(
                         onClick = { onSwipeToSongChange(!swipeToSong) },
                     ),
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.swipe),
-                        title = { Text(stringResource(R.string.swipe_song_to_remove)) },
-                        trailingContent = {
-                            Switch(
-                                checked = swipeToRemoveSong,
-                                onCheckedChange = onSwipeToRemoveSongChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (swipeToRemoveSong) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onSwipeToRemoveSongChange(!swipeToRemoveSong) },
-                    ),
-                    Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
                         title = { Text(stringResource(R.string.force_bottom_navbar)) },
+                        description = { Text(stringResource(R.string.force_bottom_navbar_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = forceBottomNav,
@@ -1738,24 +1666,19 @@ fun AppearanceSettings(
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
-                        title = { Text(stringResource(R.string.slim_navbar)) },
-                        trailingContent = {
-                            Switch(
-                                checked = slimNav,
-                                onCheckedChange = onSlimNavChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (slimNav) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
+                        title = { Text(stringResource(R.string.auto_hide_nav)) },
+                        description = {
+                            Text(stringResource(R.string.auto_hide_nav_desc) + "\n" + autoHideNavBarText(autoHideNavBar))
                         },
-                        onClick = { onSlimNavChange(!slimNav) },
+                        onClick = { showAutoHideNavBarDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.nav_bar),
+                        title = { Text(stringResource(R.string.auto_hide_status)) },
+                        description = {
+                            Text(stringResource(R.string.auto_hide_status_desc) + "\n" + autoHideNavBarText(autoHideStatusBar))
+                        },
+                        onClick = { showAutoHideStatusBarDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.group_outlined),
@@ -1778,19 +1701,6 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onListenTogetherInTopBarChange(!listenTogetherInTopBar) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.grid_view),
-                        title = { Text(stringResource(R.string.grid_cell_size)) },
-                        description = {
-                            Text(
-                                when (gridItemSize) {
-                                    GridItemSize.BIG -> stringResource(R.string.big)
-                                    GridItemSize.SMALL -> stringResource(R.string.small)
-                                },
-                            )
-                        },
-                        onClick = { showGridSizeDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.grid_view),

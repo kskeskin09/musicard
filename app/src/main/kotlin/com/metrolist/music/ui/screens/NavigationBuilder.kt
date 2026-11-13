@@ -442,6 +442,10 @@ fun NavGraphBuilder.navigationBuilder(
         UpdaterScreen(navController)
     }
 
+    composable("settings/update_available") {
+        com.metrolist.music.ui.screens.settings.UpdateAvailableScreen(navController)
+    }
+
     composable("settings/about") {
         AboutScreen(navController)
     }

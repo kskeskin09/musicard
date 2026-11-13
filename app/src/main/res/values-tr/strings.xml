@@ -180,7 +180,7 @@
     <string name="proxy_url">Proxy URL\'si</string>
     <string name="restart_to_take_effect">Etkinleştirmek için yeniden başlatın</string>
     <string name="player_and_audio">Müzik çalar ve ses</string>
-    <string name="audio_quality">Ses kalitesi</string>
+    <string name="audio_quality">Çalma kalitesi</string>
     <string name="audio_quality_auto">Otomatik</string>
     <string name="audio_quality_high">Yüksek</string>
     <string name="audio_quality_low">Düşük</string>
@@ -209,7 +209,7 @@
     <string name="clear_search_history_confirm">Tüm arama geçmişini temizlemekten emin misiniz?</string>
     <string name="enable_lrclib">LrcLib şarkı sözü sağlayıcısını etkinleştir</string>
     <string name="enable_kugou">KuGou şarkı sözü sağlayıcısını etkinleştir</string>
-    <string name="backup_restore">Yedekleme ve geri yükleme</string>
+    <string name="backup_restore">İçe veya Dışa Aktar</string>
     <string name="action_backup">Yedekle</string>
     <string name="action_restore">Geri yükle</string>
     <string name="imported_playlist">Çalma listesi içe aktarıldı</string>
