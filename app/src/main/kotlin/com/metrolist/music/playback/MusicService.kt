@@ -1639,17 +1639,17 @@ class MusicService :
         when (button) {
             NotificationButton.PREVIOUS -> builder
                 .setDisplayName(getString(R.string.previous))
-                .setIconResId(R.drawable.skip_previous)
+                .setIconResId(R.drawable.player_backward)
                 .setSessionCommand(MediaSessionConstants.CommandSkipPrevious)
 
             NotificationButton.NEXT -> builder
                 .setDisplayName(getString(R.string.next))
-                .setIconResId(R.drawable.skip_next)
+                .setIconResId(R.drawable.player_forward)
                 .setSessionCommand(MediaSessionConstants.CommandSkipNext)
 
             NotificationButton.LIKE -> builder
                 .setDisplayName(getString(if (isLiked == true) R.string.action_remove_like else R.string.action_like))
-                .setIconResId(if (isLiked == true) R.drawable.ic_heart else R.drawable.ic_heart_outline)
+                .setIconResId(if (isLiked == true) R.drawable.player_heart_filled else R.drawable.player_heart)
                 .setSessionCommand(CommandToggleLike)
                 .setEnabled(hasSong)
 
@@ -1664,38 +1664,38 @@ class MusicService :
                     ),
                 ).setIconResId(
                     when (player.repeatMode) {
-                        REPEAT_MODE_ONE -> R.drawable.repeat_one_on
-                        REPEAT_MODE_ALL -> R.drawable.repeat_on
-                        else -> R.drawable.repeat
+                        REPEAT_MODE_ONE -> R.drawable.player_repeat_one
+                        REPEAT_MODE_ALL -> R.drawable.player_repeat
+                        else -> R.drawable.player_repeat_off
                     },
                 ).setSessionCommand(CommandToggleRepeatMode)
 
             NotificationButton.SHUFFLE -> builder
                 .setDisplayName(getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on))
-                .setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
+                .setIconResId(if (player.shuffleModeEnabled) R.drawable.player_shuffle else R.drawable.player_shuffle_off)
                 .setSessionCommand(CommandToggleShuffle)
 
             NotificationButton.SEEK_BACK_5 -> builder
                 .setDisplayName(getString(R.string.seek_back_5))
-                .setIconResId(R.drawable.replay_5)
+                .setIconResId(R.drawable.player_seek_back_5)
                 .setSessionCommand(MediaSessionConstants.CommandSeekBack5)
                 .setEnabled(hasSong)
 
             NotificationButton.SEEK_FORWARD_5 -> builder
                 .setDisplayName(getString(R.string.seek_forward_5))
-                .setIconResId(R.drawable.forward_5)
+                .setIconResId(R.drawable.player_seek_forward_5)
                 .setSessionCommand(MediaSessionConstants.CommandSeekForward5)
                 .setEnabled(hasSong)
 
             NotificationButton.START_RADIO -> builder
                 .setDisplayName(getString(R.string.start_radio))
-                .setIconResId(R.drawable.radio)
+                .setIconResId(R.drawable.player_radio)
                 .setSessionCommand(CommandToggleStartRadio)
                 .setEnabled(hasSong)
 
             NotificationButton.ADD_TO_PLAYLIST -> builder
                 .setDisplayName(getString(R.string.android_auto_target_playlist))
-                .setIconResId(R.drawable.playlist_add)
+                .setIconResId(R.drawable.player_playlist_add)
                 .setSessionCommand(CommandAddToTargetPlaylist)
                 .setEnabled(hasSong)
         }
