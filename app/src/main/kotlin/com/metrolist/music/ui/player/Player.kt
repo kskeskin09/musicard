@@ -3181,16 +3181,25 @@ private fun EdgeToEdgeAlbumArt(
                 ).drawWithContent {
                     drawContent()
                     // Blackout: fades out over the lower part, into the player's background.
-                    // Nothing: the art simply ends.
-                    if (edge != com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT) return@drawWithContent
+                    // Nothing and Blur: the art stays as it is and only its last edge softens,
+                    // so it never ends in a hard line.
+                    val blackout = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
                     drawRect(
                         brush =
-                            Brush.verticalGradient(
-                                0f to Color.Black,
-                                0.55f to Color.Black,
-                                0.8f to Color.Black.copy(alpha = 0.45f),
-                                1f to Color.Transparent,
-                            ),
+                            if (blackout) {
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    0.55f to Color.Black,
+                                    0.8f to Color.Black.copy(alpha = 0.45f),
+                                    1f to Color.Transparent,
+                                )
+                            } else {
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    0.88f to Color.Black,
+                                    1f to Color.Transparent,
+                                )
+                            },
                         blendMode = BlendMode.DstIn,
                     )
                 },
