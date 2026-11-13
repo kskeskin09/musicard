@@ -91,6 +91,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.artist_page_settings, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.proxy, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.lyrics, R.string.content, "settings/content"),
+    SettingsSearchEntry(R.string.prefetch_next_lyrics, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.misc, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.lyrics_provider, R.string.content, "settings/content/lyrics_providers"),
     SettingsSearchEntry(R.string.lyrics_romanize_as_main, R.string.content, "settings/content/romanization"),

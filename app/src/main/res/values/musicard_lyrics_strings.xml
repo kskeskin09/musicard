@@ -14,4 +14,8 @@
     <string name="song_change_animation">Song change animation</string>
     <string name="song_change_animation_desc">The album art slides to the next song, and while swiping the next song\'s art is already visible. Off: the art changes without sliding</string>
     <string name="battery_opt_song_change_animation_desc">The album art changes without sliding</string>
+    <string name="prefetch_next_lyrics">Fetch next songs\' lyrics</string>
+    <string name="prefetch_next_lyrics_desc">Also fetches the lyrics of upcoming songs in the queue before they start, so they show up right away. Uses extra internet data. Paused while battery optimization is active</string>
+    <string name="prefetch_next_lyrics_count">Songs to fetch ahead: %1$d</string>
+    <string name="prefetch_next_lyrics_count_desc">How many upcoming songs in the queue get their lyrics fetched early</string>
 </resources>

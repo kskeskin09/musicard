@@ -262,6 +262,7 @@ import java.util.Collections
 
 private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
+private const val LYRICS_PREFETCH_DELAY_MS = 4_000L
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -350,6 +351,28 @@ class MusicService :
     var queueTitle: String? = null
 
     val currentMediaMetadata = MutableStateFlow<com.metrolist.music.models.MediaMetadata?>(null)
+
+    /** Bumped when the queue order changes, so the lyrics prefetch looks at the new upcoming songs. */
+    private val lyricsPrefetchQueueVersion = MutableStateFlow(0)
+
+    /** The next [count] songs that will play after the current one, in play order (shuffle aware). */
+    private fun upcomingQueueMetadata(count: Int): List<com.metrolist.music.models.MediaMetadata> {
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty) return emptyList()
+        val current = player.currentMediaItemIndex
+        val repeatMode = if (player.repeatMode == Player.REPEAT_MODE_ONE) Player.REPEAT_MODE_OFF else player.repeatMode
+        val result = mutableListOf<com.metrolist.music.models.MediaMetadata>()
+        val seen = mutableSetOf<String>()
+        var index = current
+        val window = Timeline.Window()
+        while (result.size < count) {
+            index = timeline.getNextWindowIndex(index, repeatMode, player.shuffleModeEnabled)
+            if (index == C.INDEX_UNSET || index == current) break
+            val metadata = timeline.getWindow(index, window).mediaItem.metadata ?: continue
+            if (seen.add(metadata.id)) result.add(metadata)
+        }
+        return result
+    }
     private val currentSong =
         currentMediaMetadata
             .flatMapLatest { mediaMetadata ->
@@ -897,6 +920,63 @@ class MusicService :
                             provider = lyricsWithProvider.provider,
                         ),
                     )
+                }
+            }
+        }
+
+        // Fetch the lyrics of the next few songs in the queue ahead of time (Lyrics settings).
+        combine(
+            currentMediaMetadata.distinctUntilChangedBy { it?.id },
+            lyricsPrefetchQueueVersion,
+            dataStore.data
+                .map { prefs ->
+                    val enabled = prefs[com.metrolist.music.constants.PrefetchNextLyricsKey] ?: false
+                    val count = (prefs[com.metrolist.music.constants.PrefetchNextLyricsCountKey]
+                        ?: com.metrolist.music.constants.DEFAULT_PREFETCH_NEXT_LYRICS_COUNT)
+                        .coerceIn(1, com.metrolist.music.constants.MAX_PREFETCH_NEXT_LYRICS_COUNT)
+                    if (enabled) count else 0
+                }.distinctUntilChanged(),
+        ) { mediaMetadata, _, count ->
+            mediaMetadata?.id to count
+        }.collectLatest(scope) { (currentId, count) ->
+            if (currentId == null || count <= 0) return@collectLatest
+            // Let the current song's own lyrics load first, and don't fetch while the user is skipping.
+            delay(LYRICS_PREFETCH_DELAY_MS)
+            val upcoming = upcomingQueueMetadata(count)
+            if (upcoming.isEmpty()) return@collectLatest
+            withContext(Dispatchers.IO) {
+                for (metadata in upcoming) {
+                    if (!isActive) break
+                    if (!connectivityObserver.isCurrentlyConnected()) break
+                    val prefs = dataStore.data.first()
+                    val batterySaving =
+                        com.metrolist.music.utils.isBatteryOptimizationActive(
+                            context = this@MusicService,
+                            enabled = prefs[com.metrolist.music.utils.BatteryOptimizationKey] ?: false,
+                            threshold = prefs[com.metrolist.music.utils.BatteryOptimizationThresholdKey]
+                                ?: com.metrolist.music.utils.DEFAULT_BATTERY_OPTIMIZATION_THRESHOLD,
+                            followSystem = prefs[com.metrolist.music.utils.BatteryOptimizationFollowSystemKey] ?: true,
+                        )
+                    if (batterySaving) break
+                    try {
+                        if (database.lyrics(metadata.id).first() != null) continue
+                        val fetched = lyricsHelper.getLyrics(metadata, cancelOtherJobs = false)
+                        // Offline or timed out mid-fetch: don't store "not found" for a song that may have lyrics.
+                        if (fetched.lyrics == LyricsEntity.LYRICS_NOT_FOUND && !connectivityObserver.isCurrentlyConnected()) break
+                        database.query {
+                            upsert(
+                                LyricsEntity(
+                                    id = metadata.id,
+                                    lyrics = fetched.lyrics,
+                                    provider = fetched.provider,
+                                ),
+                            )
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.tag("LyricsPrefetch").w(e, "Prefetch failed for ${metadata.id}")
+                    }
                 }
             }
         }
@@ -2913,6 +2993,9 @@ class MusicService :
         }
         if (events.containsAny(EVENT_TIMELINE_CHANGED, EVENT_POSITION_DISCONTINUITY)) {
             currentMediaMetadata.value = player.currentMetadata
+        }
+        if (events.containsAny(EVENT_TIMELINE_CHANGED, Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED, Player.EVENT_REPEAT_MODE_CHANGED)) {
+            lyricsPrefetchQueueVersion.value++
         }
 
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {

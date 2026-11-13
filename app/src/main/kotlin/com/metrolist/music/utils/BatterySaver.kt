@@ -127,3 +127,21 @@ fun rememberBatterySaverState(): BatterySaverState {
         songChangeAnimation = reduceSongChangeAnimation,
     )
 }
+
+/**
+ * Whether battery optimization is on and active right now, for code outside Compose (for example
+ * the music service). Reads the sticky battery broadcast, so no receiver stays registered.
+ */
+fun isBatteryOptimizationActive(
+    context: Context,
+    enabled: Boolean,
+    threshold: Int,
+    followSystem: Boolean,
+): Boolean {
+    if (!enabled) return false
+    val status =
+        runCatching {
+            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        }.getOrNull().toBatteryStatus(context)
+    return !status.charging && (status.level <= threshold || (followSystem && status.systemPowerSave))
+}
