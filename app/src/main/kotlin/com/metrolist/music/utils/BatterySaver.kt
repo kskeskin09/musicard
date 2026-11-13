@@ -31,6 +31,7 @@ val BatteryOptimizationFollowSystemKey = booleanPreferencesKey("batteryOptimizat
 val BatteryOptReduceBlurKey = booleanPreferencesKey("batteryOptReduceBlur")
 val BatteryOptReduceDynamicColorsKey = booleanPreferencesKey("batteryOptReduceDynamicColors")
 val BatteryOptReduceLyricsAnimationsKey = booleanPreferencesKey("batteryOptReduceLyricsAnimations")
+val BatteryOptReduceSongChangeAnimationKey = booleanPreferencesKey("batteryOptReduceSongChangeAnimation")
 
 const val DEFAULT_BATTERY_OPTIMIZATION_THRESHOLD = 20
 
@@ -52,6 +53,7 @@ data class BatterySaverState(
     val blur: Boolean = false,
     val dynamicColors: Boolean = false,
     val lyricsAnimations: Boolean = false,
+    val songChangeAnimation: Boolean = false,
 )
 
 val LocalBatterySaver = staticCompositionLocalOf { BatterySaverState() }
@@ -110,6 +112,7 @@ fun rememberBatterySaverState(): BatterySaverState {
     val reduceBlur by rememberPreference(BatteryOptReduceBlurKey, true)
     val reduceDynamicColors by rememberPreference(BatteryOptReduceDynamicColorsKey, true)
     val reduceLyricsAnimations by rememberPreference(BatteryOptReduceLyricsAnimationsKey, true)
+    val reduceSongChangeAnimation by rememberPreference(BatteryOptReduceSongChangeAnimationKey, true)
 
     if (!enabled) return BatterySaverState()
     val battery = rememberBatteryStatus()
@@ -121,5 +124,6 @@ fun rememberBatterySaverState(): BatterySaverState {
         blur = reduceBlur,
         dynamicColors = reduceDynamicColors,
         lyricsAnimations = reduceLyricsAnimations,
+        songChangeAnimation = reduceSongChangeAnimation,
     )
 }

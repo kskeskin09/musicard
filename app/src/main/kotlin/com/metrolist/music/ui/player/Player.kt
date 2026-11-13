@@ -32,9 +32,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Spring
-import com.metrolist.music.ui.component.bottomEdgeBlur
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -2295,6 +2295,7 @@ fun BottomSheetPlayer(
                 // lyrics (bottom panel). Measured only while the card is closed.
                 var boxBottomPx by remember { mutableFloatStateOf(0f) }
                 var boxTopPx by remember { mutableFloatStateOf(0f) }
+                val thumbnailCarousel = remember { ThumbnailCarousel() }
                 var playbackTopPx by remember { mutableFloatStateOf(0f) }
                 var playbackHeightPx by remember { mutableFloatStateOf(0f) }
                 // Art and title row at rest (measured while the card is closed). While the card opens
@@ -2356,23 +2357,26 @@ fun BottomSheetPlayer(
                         val blackout = edgeToEdgeArtEdge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
                         val tailPx = with(density) { EdgeToEdgeTail.toPx() }
                         val fallbackHeightPx = with(density) { (topInset + 44.dp + artSize + 110.dp).toPx() }
-                        // Blackout keeps its height and fade; Nothing and Blur reach below the
-                        // play controls, so the art shows sharp behind them.
+                        // Blackout keeps its height and fade. Nothing and Blur reach down behind
+                        // the play controls and stop just above the lyrics / up next card, with a
+                        // short fade at the very end so the art never runs into the card.
                         val edgeArtHeightPx =
                             if (blackout || playbackHeightPx == 0f) {
                                 fallbackHeightPx
                             } else {
-                                controlsBottomInBox + tailPx
+                                controlsBottomInBox.toFloat()
                             }
-                        val blurFromBottomPx =
-                            if (titleRowPos.y == 0f) edgeArtHeightPx * 0.3f else edgeArtHeightPx - titleTopInBox
+                        val blurStartPx =
+                            if (titleRowPos.y == 0f) edgeArtHeightPx * 0.6f else titleTopInBox.toFloat()
                         EdgeToEdgeAlbumArt(
                             artworkUrl = mediaMetadata?.thumbnailUrl,
+                            carousel = thumbnailCarousel,
+                            slide = rememberSongChangeSlide(),
                             isPlaying = effectiveIsPlaying,
                             edge = edgeToEdgeArtEdge,
                             heightPx = edgeArtHeightPx,
                             tailPx = tailPx,
-                            blurFromBottomPx = blurFromBottomPx,
+                            blurStartPx = blurStartPx,
                             expandProvider = { cardExpand },
                             headerLeftPx = marginPx,
                             headerTopPx = headerTopPx,
@@ -2474,6 +2478,7 @@ fun BottomSheetPlayer(
                                             }.nestedScroll(state.preUpPostDownNestedScrollConnection),
                                     isPlayerExpanded = isExpandedProvider,
                                     isListenTogetherGuest = isListenTogetherGuest,
+                                    carousel = thumbnailCarousel,
                                     compact = true,
                                     isPlaying = effectiveIsPlaying,
                                     // The art is scaled down into the lyrics / up next header, so its
@@ -3167,18 +3172,22 @@ private fun PlayerControlButton(
 
 /**
  * The album art drawn edge to edge across the top of the player. Its lower edge follows the
- * setting: Blackout fades it into the background, Blur blurs it from the title down, Nothing
- * leaves it sharp. While paused it shrinks slightly and its corners round off. While the card
- * opens ([expandProvider] 0..1) it shrinks straight into the header's small art.
+ * setting: Blackout fades it into the background, Blur blurs it from the title down (stronger
+ * toward the bottom), Nothing leaves it sharp. While paused it shrinks slightly and its corners
+ * round off. While the card opens ([expandProvider] 0..1) it shrinks straight into the header's
+ * small art. With the song change animation on it slides along with the art carousel, so the
+ * next song's art shows while swiping.
  */
 @Composable
 private fun EdgeToEdgeAlbumArt(
     artworkUrl: String?,
+    carousel: ThumbnailCarousel,
+    slide: Boolean,
     isPlaying: Boolean,
     edge: com.metrolist.music.constants.MiniPlayerEdgeEffect,
     heightPx: Float,
     tailPx: Float,
-    blurFromBottomPx: Float,
+    blurStartPx: Float,
     expandProvider: () -> Float,
     headerLeftPx: Float,
     headerTopPx: Float,
@@ -3191,10 +3200,10 @@ private fun EdgeToEdgeAlbumArt(
         label = "edgeArtScale",
     )
     val blackout = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
-    androidx.compose.animation.Crossfade(
-        targetState = artworkUrl,
-        animationSpec = tween(400),
-        label = "edgeArt",
+    val blur =
+        edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR &&
+            !com.metrolist.music.utils.LocalBatterySaver.current.blur
+    Box(
         modifier =
             modifier
                 .layout { measurable, constraints ->
@@ -3220,18 +3229,13 @@ private fun EdgeToEdgeAlbumArt(
                     val shrink = ((1f - pauseScale) / (1f - EdgeToEdgePausedScale)).coerceIn(0f, 1f)
                     val radius = lerp(28f * shrink, 10f, p)
                     shape = RoundedCornerShape(radius.dp)
-                    clip = radius > 0f
+                    clip = true
                     compositingStrategy = CompositingStrategy.Offscreen
-                }.bottomEdgeBlur(
-                    // Blur: from the title down, over the progress bar and controls.
-                    enabled = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR,
-                    startFromBottomPx = { if (expandProvider() > 0f) 0f else blurFromBottomPx },
-                ).drawWithContent {
+                }.drawWithContent {
                     drawContent()
                     val p = expandProvider().coerceIn(0f, 1f)
                     if (p >= 1f) return@drawWithContent
-                    val keep = p
-                    fun a(alpha: Float) = Color.Black.copy(alpha = lerp(alpha, 1f, keep))
+                    fun a(alpha: Float) = Color.Black.copy(alpha = lerp(alpha, 1f, p))
                     drawRect(
                         brush =
                             if (blackout) {
@@ -3243,8 +3247,8 @@ private fun EdgeToEdgeAlbumArt(
                                     1f to a(0f),
                                 )
                             } else {
-                                // Nothing and Blur: no darkening; only the strip below the
-                                // controls fades, so the art doesn't end in a hard line.
+                                // Nothing and Blur: no darkening, only a short fade at the very
+                                // end, just above the lyrics / up next card.
                                 val tailStart = (1f - tailPx / size.height).coerceIn(0f, 1f)
                                 Brush.verticalGradient(
                                     0f to Color.Black,
@@ -3255,7 +3259,72 @@ private fun EdgeToEdgeAlbumArt(
                         blendMode = BlendMode.DstIn,
                     )
                 },
-    ) { url ->
+    ) {
+        val gridState = carousel.gridState
+        if (slide && gridState != null) {
+            // The current art and the one it is sliding towards, moved with the carousel.
+            val base by remember(carousel) {
+                derivedStateOf { kotlin.math.floor(carousel.position()).toInt() }
+            }
+            for (index in listOf(base, base + 1)) {
+                val url = carousel.artworks.getOrNull(index) ?: continue
+                androidx.compose.runtime.key(index) {
+                    EdgeArtImage(
+                        url = url,
+                        blur = blur,
+                        blurStartPx = blurStartPx,
+                        expandProvider = expandProvider,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { translationX = (index - carousel.position()) * size.width },
+                    )
+                }
+            }
+        } else {
+            androidx.compose.animation.Crossfade(
+                targetState = artworkUrl,
+                animationSpec = tween(250),
+                label = "edgeArt",
+            ) { url ->
+                EdgeArtImage(
+                    url = url,
+                    blur = blur,
+                    blurStartPx = blurStartPx,
+                    expandProvider = expandProvider,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * One edge-to-edge art. With [blur], two blurred copies are laid over it, faded in from
+ * [blurStartPx] down, the stronger one lower, so the blur grows toward the bottom. The images
+ * reach a little below the visible frame, so the blur stays full right to the bottom edge.
+ */
+@Composable
+private fun EdgeArtImage(
+    url: String?,
+    blur: Boolean,
+    blurStartPx: Float,
+    expandProvider: () -> Float,
+    modifier: Modifier = Modifier,
+) {
+    val overhangPx = if (blur) with(LocalDensity.current) { EdgeBlurOverhang.roundToPx() } else 0
+    Box(
+        modifier =
+            modifier
+                .clipToBounds()
+                .layout { measurable, constraints ->
+                    val placeable =
+                        measurable.measure(
+                            androidx.compose.ui.unit.Constraints.fixed(constraints.maxWidth, constraints.maxHeight + overhangPx),
+                        )
+                    layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
+                },
+    ) {
         AsyncImage(
             model = url,
             contentDescription = null,
@@ -3263,10 +3332,43 @@ private fun EdgeToEdgeAlbumArt(
             alignment = Alignment.TopCenter,
             modifier = Modifier.fillMaxSize(),
         )
+        if (blur) {
+            for ((radius, range) in listOf(EdgeBlurLight to (0f to 0.5f), EdgeBlurStrong to (0.3f to 1f))) {
+                AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = 1f - expandProvider().coerceIn(0f, 1f)
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }.drawWithContent {
+                                drawContent()
+                                val visible = size.height - overhangPx
+                                val span = (visible - blurStartPx).coerceAtLeast(1f)
+                                drawRect(
+                                    brush =
+                                        Brush.verticalGradient(
+                                            colors = listOf(Color.Transparent, Color.Black),
+                                            startY = blurStartPx + span * range.first,
+                                            endY = blurStartPx + span * range.second,
+                                        ),
+                                    blendMode = BlendMode.DstIn,
+                                )
+                            }.blur(radius, androidx.compose.ui.draw.BlurredEdgeTreatment.Rectangle),
+                )
+            }
+        }
     }
 }
 
-private val EdgeToEdgeTail = 24.dp
+private val EdgeToEdgeTail = 40.dp
+private val EdgeBlurOverhang = 64.dp
+private val EdgeBlurLight = 14.dp
+private val EdgeBlurStrong = 34.dp
 
 private const val EdgeToEdgePausedScale = 0.93f
 

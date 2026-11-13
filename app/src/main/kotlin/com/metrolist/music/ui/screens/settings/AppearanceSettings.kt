@@ -197,6 +197,11 @@ fun AppearanceSettings(
             CropAlbumArtKey,
             defaultValue = true,
         )
+    val (songChangeAnimation, onSongChangeAnimationChange) =
+        rememberPreference(
+            com.metrolist.music.constants.SongChangeAnimationKey,
+            defaultValue = true,
+        )
     val (edgeToEdgeArt, onEdgeToEdgeArtChange) =
         rememberPreference(
             com.metrolist.music.constants.EdgeToEdgeAlbumArtKey,
@@ -1336,6 +1341,28 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onCropAlbumArtChange(!cropAlbumArt) },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.skip_next),
+                        title = { Text(stringResource(R.string.song_change_animation)) },
+                        description = { Text(stringResource(R.string.song_change_animation_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = songChangeAnimation,
+                                onCheckedChange = onSongChangeAnimationChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (songChangeAnimation) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onSongChangeAnimationChange(!songChangeAnimation) },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.fullscreen),

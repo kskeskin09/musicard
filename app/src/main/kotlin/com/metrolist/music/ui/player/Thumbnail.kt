@@ -77,6 +77,9 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import coil3.imageLoader
+import androidx.compose.runtime.SideEffect
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.metrolist.music.LocalListenTogetherManager
@@ -208,6 +211,33 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     }
 }
 
+/**
+ * Shared with the edge-to-edge art: the art carousel's scroll state and each item's artwork, so
+ * that art can slide along with the (invisible) carousel when songs change.
+ */
+class ThumbnailCarousel {
+    var gridState by mutableStateOf<androidx.compose.foundation.lazy.grid.LazyGridState?>(null)
+    var artworks by mutableStateOf<List<String?>>(emptyList())
+
+    /** Where the carousel is, in items (2.5 = halfway between the third and fourth art). */
+    fun position(): Float {
+        val state = gridState ?: return 0f
+        val width = state.layoutInfo.visibleItemsInfo.firstOrNull()?.size?.width ?: return state.firstVisibleItemIndex.toFloat()
+        if (width <= 0) return state.firstVisibleItemIndex.toFloat()
+        return state.firstVisibleItemIndex + state.firstVisibleItemScrollOffset / width.toFloat()
+    }
+}
+
+/**
+ * Whether song changes slide the art (Appearance > Song change animation), unless battery
+ * optimization turns that off right now.
+ */
+@Composable
+fun rememberSongChangeSlide(): Boolean {
+    val pref by rememberPreference(com.metrolist.music.constants.SongChangeAnimationKey, defaultValue = true)
+    return pref && !com.metrolist.music.utils.LocalBatterySaver.current.songChangeAnimation
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Thumbnail(
@@ -222,6 +252,7 @@ fun Thumbnail(
     isPlaying: Boolean = true,
     // Overrides the art's corner radius frame by frame (read only while drawing).
     cornerRadiusProvider: (() -> Dp)? = null,
+    carousel: ThumbnailCarousel? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -266,6 +297,32 @@ fun Thumbnail(
     val currentMediaIndex = mediaItemsData.currentIndex
     // Starts on the current song's art, so opening the player shows it right away.
     val thumbnailLazyGridState = rememberLazyGridState(initialFirstVisibleItemIndex = currentMediaIndex.coerceAtLeast(0))
+    val slide = rememberSongChangeSlide()
+    val artworks =
+        remember(mediaItems, mediaMetadata?.id, mediaMetadata?.thumbnailUrl) {
+            mediaItems.map { item ->
+                if (item.mediaId == mediaMetadata?.id && !mediaMetadata?.thumbnailUrl.isNullOrBlank()) {
+                    mediaMetadata?.thumbnailUrl
+                } else {
+                    item.mediaMetadata.artworkUri?.toString()
+                }
+            }
+        }
+    if (carousel != null) {
+        SideEffect {
+            carousel.gridState = thumbnailLazyGridState
+            carousel.artworks = artworks
+        }
+    }
+    // Loads the neighbouring songs' art ahead of time, so a song change shows the new art at
+    // once instead of waiting for it to download.
+    LaunchedEffect(artworks, currentMediaIndex) {
+        val loader = context.imageLoader
+        for (offset in listOf(1, -1, 2)) {
+            val url = artworks.getOrNull(currentMediaIndex + offset) ?: continue
+            loader.enqueue(ImageRequest.Builder(context).data(url).build())
+        }
+    }
 
     // Snap behavior - created once per grid state
     val thumbnailSnapLayoutInfoProvider = remember(thumbnailLazyGridState) {
@@ -339,7 +396,11 @@ fun Thumbnail(
             if (from >= 0 && from != index && settledKey == previousId) {
                 thumbnailLazyGridState.scrollToItem(from)
             }
-            thumbnailLazyGridState.animateScrollToItem(index)
+            if (slide) {
+                thumbnailLazyGridState.animateScrollToItem(index)
+            } else {
+                thumbnailLazyGridState.scrollToItem(index)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -427,8 +488,8 @@ fun Thumbnail(
                     }
                     
                     // Derive scroll enabled state to prevent unnecessary recomposition
-                    val isScrollEnabled by remember(swipeThumbnail) {
-                        derivedStateOf { swipeThumbnail && isPlayerExpanded() }
+                    val isScrollEnabled by remember(swipeThumbnail, slide) {
+                        derivedStateOf { swipeThumbnail && slide && isPlayerExpanded() }
                     }
                     
                     LazyHorizontalGrid(
@@ -436,10 +497,32 @@ fun Thumbnail(
                         rows = GridCells.Fixed(1),
                         flingBehavior = rememberSnapFlingBehavior(thumbnailSnapLayoutInfoProvider),
                         userScrollEnabled = isScrollEnabled,
-                        modifier = if (isLandscape) {
+                        modifier = (if (isLandscape) {
                             Modifier.size(dimensions.thumbnailSize + (PlayerHorizontalPadding * 2))
                         } else {
                             Modifier.fillMaxSize()
+                        }).pointerInput(slide, swipeThumbnail) {
+                            // No slide: the carousel doesn't move under the finger; a sideways
+                            // swipe changes the song and the new art simply replaces the old.
+                            if (slide || !swipeThumbnail) return@pointerInput
+                            var dragged = 0f
+                            detectHorizontalDragGestures(
+                                onDragStart = { dragged = 0f },
+                                onDragEnd = {
+                                    val threshold = size.width / 5f
+                                    val forward = if (layoutDirection == LayoutDirection.Rtl) dragged > 0 else dragged < 0
+                                    if (abs(dragged) > threshold) {
+                                        if (forward && latestCanSkipNext) {
+                                            playerConnection.player.seekToNext()
+                                        } else if (!forward && latestCanSkipPrevious) {
+                                            playerConnection.player.seekToPreviousMediaItem()
+                                        }
+                                    }
+                                },
+                            ) { change, amount ->
+                                change.consume()
+                                dragged += amount
+                            }
                         }
                     ) {
                         items(
@@ -471,22 +554,7 @@ fun Thumbnail(
             }
         }
 
-        // Seek effect
-        LaunchedEffect(showSeekEffect) {
-            if (showSeekEffect) {
-                delay(1000)
-                showSeekEffect = false
-            }
-        }
-
-        AnimatedVisibility(
-            visible = showSeekEffect,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            SeekEffectOverlay(seekDirection = seekDirection)
-        }
+        // Double-tap seeking shows no "+5 seconds" text; the progress bar shows the jump.
     }
 }
 
