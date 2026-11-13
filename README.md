@@ -1,63 +1,25 @@
-> [!NOTE]
-> **Musicard** is a fork of [Metrolist](https://github.com/MetrolistGroup/Metrolist), licensed under the [GPL-3.0](LICENSE).
-> It uses its own application ID (`com.kskeskin09.musicard`) so it can be installed alongside Metrolist,
-> and its builds are published on the [Musicard releases page](https://github.com/kskeskin09/musicard/releases).
-> Everything below is the original Metrolist README.
-
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" />
+<img src="fastlane/metadata/android/en-US/images/icon.png" alt="Musicard app icon" width="160" />
 
-# Metrolist
+# Musicard
 
-### YouTube Music client for Android
-
-<br/>
-
-<a href="https://www.blacksmith.sh">
-  <img src="assets/blacksmith-powered.png" alt="CI powered by Blacksmith" width="280" />
-</a>
-
-<br/>
-<br/>
-
-[![Latest release](https://img.shields.io/github/v/release/MetrolistGroup/Metrolist?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/releases)
-[![License](https://img.shields.io/github/license/MetrolistGroup/metrolist?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/MetrolistGroup/Metrolist/total?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/releases)
+### A YouTube Music client for Android, with a card-style player
 
 <br/>
 
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white&labelColor=0d1117)](https://dsc.gg/metrolist)
-[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white&labelColor=0d1117)](https://t.me/metrolistapp)
+[![Latest release](https://img.shields.io/github/v/release/kskeskin09/musicard?style=for-the-badge&labelColor=0d1117)](https://github.com/kskeskin09/musicard/releases/latest)
+[![License](https://img.shields.io/github/license/kskeskin09/musicard?style=for-the-badge&labelColor=0d1117)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/kskeskin09/musicard/total?style=for-the-badge&labelColor=0d1117)](https://github.com/kskeskin09/musicard/releases)
 
 <br/>
 
-[**Download**](#download-now) · [**Features**](#features) · [**Translate**](#translations) · [**FAQ**](#faq) · [**Support**](#support-the-project)
+[**Website**](https://kskeskin09.github.io/musicard/) · [**Download**](#download) · [**Features**](#features) · [**Credits**](#credits)
 
 </div>
 
 > [!WARNING]
-> # MAINTENANCE MODE
-> Metrolist is currently in maintenance mode. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
-> The app is **NOT** dead, please stay tuned for updates on our discord (found above).
-
-> [!WARNING]
-> **Regional Restriction** - If YouTube Music is unavailable in your region, this app will not work without a **VPN or proxy** connecting to a supported region.
-
----
-
-<div align="center">
-
-<h1><a id="screenshots"></a>Screenshots</h1>
-
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_1.png" alt="Home screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_2.png" alt="Artist screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_3.png" alt="Recognize music screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_4.png" alt="Listen together screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_5.png" alt="Player screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_6.png" alt="Player lyrics screen" width="30%" />
-
-</div>
+> **Regional restriction:** if YouTube Music is not available in your country, Musicard will not work without a VPN or proxy to a supported region.
 
 ---
 
@@ -69,62 +31,61 @@
   <tr>
     <td width="50%" valign="top">
 
-#### Playback
-- Stream any song or video from YouTube Music
-- Background playback
-- Download & cache for offline use
-- Skip silence
-- Sleep timer
+#### Player
+- Card-style now playing screen that opens from the mini player
+- Edge-to-edge album art with Nothing, Blackout and Blur edge styles
+- Auto-hiding status and navigation bars
+- Shows where the song is playing from
+- Redesigned sleep timer
 
 </td>
     <td width="50%" valign="top">
 
-#### Audio
-- Audio normalization
-- Tempo & pitch control
-- Equalizer
-- Crossfade
-
-</td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-
-#### Lyrics & Discovery
-- Live synced lyrics
-- AI-powered lyrics translation
-- Personalized quick picks
-- Search songs, albums, artists, videos, and playlists
-
-</td>
-    <td width="50%" valign="top">
-
-#### Library & Account
-- Full library management
-- Local playlists
-- Import playlists
-- Reorder songs in playlist or queue
-- YouTube Music account login
-- Sync songs, artists, albums, and playlists
+#### Lyrics
+- 10+ lyrics sources, including word-by-word synced lyrics
+- "Always find the best-synced lyrics" asks every source at once
+- AI lyrics translation that each song remembers
+- Up next and lyrics with soft edge blur
 
 </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
 
-#### Social
-- Listen together with friends in real-time
-- Last.fm integration for scrobbling
-- Safe Discord Rich Presence
+#### Library & import
+- Import from Spotify, Apple Music and playlist files
+- YouTube Music sign-in and library sync
+- Downloads and offline playback
+- Listening stats
 
 </td>
     <td width="50%" valign="top">
 
-#### Interface
+#### Look & feel
+- Pick your app logo, in dark or light
+- Material 3 with dynamic colour
+- Home screen you can rearrange
+- Fully translated into Turkish
+
+</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+
+#### Playback & audio
+- Background playback, skip silence, crossfade
+- Audio normalization, equalizer, tempo and pitch
+- Choose stream and download quality
+- Chromecast / Google TV casting (standard build)
+
+</td>
+    <td width="50%" valign="top">
+
+#### Also included
+- Listen together with friends
+- Last.fm scrobbling and Discord Rich Presence
+- Android Auto
 - Home screen widget
-- Light / Dark / Black / Dynamic theme modes
-- Dynamic color + 19 preset color palettes
-- Built with Material 3
 
 </td>
   </tr>
@@ -136,55 +97,22 @@
 
 <div align="center">
 
-<h1><a id="download-now"></a>Download Now</h1>
-
-<h2>Stable Release</h2>
+<h1><a id="download"></a>Download</h1>
 
 <table>
   <tr>
-    <th align="center">Obtainium</th>
-    <th align="center">IzzyOnDroid</th>
+    <th align="center">GitHub (latest release)</th>
+    <th align="center">Obtainium (auto updates)</th>
   </tr>
   <tr>
     <td align="center">
-      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/MetrolistGroup/Metrolist/">
-        <img src="assets/badges/obtainium.svg" alt="Add Metrolist to Obtainium" height="100">
+      <a href="https://github.com/kskeskin09/musicard/releases/latest/download/Musicard.apk">
+        <img src="assets/badges/github-stable.svg" alt="Download Musicard from GitHub" height="100">
       </a>
     </td>
     <td align="center">
-      <a href="https://apt.izzysoft.de/fdroid/index/apk/com.metrolist.music">
-        <img src="assets/badges/izzyondroid.svg" alt="Get Metrolist on IzzyOnDroid" height="100">
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <th align="center">OpenAPK</th>
-    <th align="center">GitHub</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://www.openapk.net/metrolist/com.metrolist.music/">
-        <img src="assets/badges/openapk.svg" alt="Get Metrolist on OpenAPK" height="100">
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.apk">
-        <img src="assets/badges/github-stable.svg" alt="Get the stable Metrolist release on GitHub" height="100">
-      </a>
-    </td>
-  </tr>
-</table>
-
-<h2>Nightly Build</h2>
-
-<table>
-  <tr>
-    <th align="center">GitHub</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/MetrolistGroup/Metrolist/releases/download/nightly/Metrolist-with-Google-Cast.apk">
-        <img src="assets/badges/github-nightly.svg" alt="Get the Metrolist nightly build on GitHub" height="120">
+      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/kskeskin09/musicard/">
+        <img src="assets/badges/obtainium.svg" alt="Add Musicard to Obtainium" height="100">
       </a>
     </td>
   </tr>
@@ -192,143 +120,48 @@
 
 </div>
 
----
+**Which APK should I pick?**
 
-<div align="center">
+| File | For |
+| --- | --- |
+| `Musicard.apk` | Most phones. Includes casting to Chromecast, Google TV and Nest speakers (needs Google Play Services). |
+| `Musicard-without-Google-Cast.apk` | Phones without Google Play Services. No Google components. |
+| `Musicard-Nightly.apk` | The [nightly build](https://github.com/kskeskin09/musicard/releases/tag/nightly), built from every change on `main`. May be unstable. |
 
-<h1><a id="faq"></a>FAQ</h1>
-
-<h3>Got questions? Check out our <a href="https://metrolist.cc/#faq">FAQ page</a> for answers to the most common ones.</h3>
-
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="translations"></a>Translations</h1>
-
-[![Translation status](https://img.shields.io/weblate/progress/metrolist?style=for-the-badge&labelColor=0d1117)](https://hosted.weblate.org/engage/metrolist/)
-
-<h3>We use Weblate to translate Metrolist. <a href="https://hosted.weblate.org/projects/Metrolist/">Help us bring Metrolist to more people!</a></h3>
-
-<a href="https://hosted.weblate.org/projects/Metrolist/">
-  <img src="https://hosted.weblate.org/widget/Metrolist/horizontal-auto.svg" alt="Translation status" />
-</a>
-
-<h3>Thank you! Every translation makes Metrolist a little more accessible to someone, somewhere in the world.</h3>
-
-</div>
+Musicard uses its own app ID (`com.kskeskin09.musicard`), so it installs alongside Metrolist or other clients.
 
 ---
 
 <div align="center">
 
-<h1><a id="support-the-project"></a>Support the Project</h1>
-
-<h3>Metrolist is free and open-source. If it brings you joy, consider supporting its development!</h3>
-
-#### Monero (XMR)
-
-<img src="assets/XMR.png" alt="Monero QR code" width="150" />
-
-```text
-44XjSELSWcgJTZiCKzjpCQWyXhokrH9RqH3rpp35FkSKi57T25hniHWHQNhLeXyFn3DDYqufmfRB1iEtENerZpJc7xJCcqt
-```
-
-#### Buy Me a Coffee
-
-<a href="https://www.buymeacoffee.com/mostafaalagamy">
-  <img src="assets/buymeacoffee.png" alt="Buy Me a Coffee" width="150" />
-</a>
+<h1><a id="credits"></a>Credits</h1>
 
 </div>
+
+Musicard is a fork of **[Metrolist](https://github.com/MetrolistGroup/Metrolist)** by [Mo Agamy](https://github.com/mostafaalagamy) and the Metrolist contributors. Most of the app's foundation (YouTube Music support, playback, downloads, sync and more) comes from their work. Thank you!
+
+Metrolist itself builds on:
+
+- **InnerTune** by [Zion Huang](https://github.com/z-huang) and [Malopieds](https://github.com/Malopieds)
+- **OuterTune** by [Davide Garberi](https://github.com/DD3Boh) and [Michael Zh](https://github.com/mikooomich)
+- [Better Lyrics](https://better-lyrics.boidu.dev) for word-by-word synced lyrics
+- [metroserver](https://github.com/MetrolistGroup/metroserver) for Listen together
+- [MusicRecognizer](https://github.com/aleksey-saenko/MusicRecognizer) for music recognition
+- [zemer-cipher](https://github.com/ZemerTeam/zemer-cipher) for YouTube cipher and PoToken handling
+
+And every other open-source library, tool and API the app uses.
 
 ---
 
 <div align="center">
 
-<h1>Special Thanks</h1>
-
-<h3>Metrolist stands on the shoulders of incredible open-source work.</h3>
-
-<h3>Main Inspirations</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">Project</th>
-      <th align="center">Authors</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><strong>InnerTune</strong></td>
-      <td align="center"><a href="https://github.com/z-huang">Zion Huang</a> · <a href="https://github.com/Malopieds">Malopieds</a></td>
-    </tr>
-    <tr>
-      <td align="center"><strong>OuterTune</strong></td>
-      <td align="center"><a href="https://github.com/DD3Boh">Davide Garberi</a> · <a href="https://github.com/mikooomich">Michael Zh</a></td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>Libraries & Integrations</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">Project</th>
-      <th align="center">Contribution</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><a href="https://better-lyrics.boidu.dev"><strong>Better Lyrics</strong></a></td>
-      <td>Time-synced lyrics with word-by-word highlighting & YouTube Music integration</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/MetrolistGroup/metroserver"><strong>metroserver</strong></a></td>
-      <td>Listen-together real-time backend</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/aleksey-saenko/MusicRecognizer"><strong>MusicRecognizer</strong></a></td>
-      <td>Music recognition feature & Shazam API integration</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/ZemerTeam/zemer-cipher"><strong>zemer-cipher</strong></a></td>
-      <td>YouTube cipher deobfuscation and PoToken generation</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://www.blacksmith.sh"><strong>Blacksmith</strong></a></td>
-      <td>High-performance GitHub Actions runners powering our CI</td>
-    </tr>
-  </tbody>
-</table>
-
-<br/>
-
-<a href="https://www.blacksmith.sh">
-  <img src="assets/blacksmith-powered.png" alt="CI powered by Blacksmith" width="280" />
-</a>
-
-<h3>We also thank the entire open-source community! For every library, tool, and API that powers this project.</h3>
+<h1>License</h1>
 
 </div>
 
----
+Musicard is free software, released under the **[GNU General Public License v3.0](LICENSE)**, the same license as Metrolist. You may use, study, share and change it, and any app you build from it must also be released under GPL-3.0 with its source code.
 
-<div align="center">
-
-<h1>Contributors</h1>
-
-<h3>This project wouldn't exist without these amazing people!</h3>
-
-<a href="https://github.com/MetrolistGroup/Metrolist/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=MetrolistGroup/Metrolist" alt="Contributors" />
-</a>
-
-</div>
+Copyright notices from Metrolist and the projects above are kept in the source files.
 
 ---
 
@@ -336,20 +169,6 @@
 
 <h1>Disclaimer</h1>
 
-This project is **not affiliated with, funded, authorized, endorsed by, or in any way associated** with YouTube, Google LLC, Metrolist Group LLC, or any of their affiliates and subsidiaries.
-
-All trademarks, service marks, and intellectual property rights referenced in this project belong to their respective owners.
-
 </div>
 
----
-
-<div align="center">
-
-<br/>
-
-**Made with ❤️ by [Mo Agamy](https://github.com/mostafaalagamy)**
-
-**This project stands with Palestine 🇵🇸**
-
-</div>
+This project is **not affiliated with, funded, authorized or endorsed by** YouTube, Google LLC, Metrolist Group LLC, or any of their affiliates. All trademarks belong to their respective owners.
