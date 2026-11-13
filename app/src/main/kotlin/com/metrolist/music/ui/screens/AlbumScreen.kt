@@ -347,7 +347,7 @@ fun AlbumScreen(
                                                 if (albumWithSongs.album.bookmarkedAt != null) {
                                                     com.metrolist.music.ui.theme.likedTint(MaterialTheme.colorScheme.onBackground)
                                                 } else {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                    MaterialTheme.colorScheme.onBackground
                                                 },
                                             modifier = Modifier.size(24.dp),
                                         )
