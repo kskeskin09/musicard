@@ -36,10 +36,23 @@ data class Playlist(
     override val thumbnailUrl: String?
         get() = null
     
+    /**
+     * The playlist's own cover, when it has one. On the user's own playlists the picture YouTube
+     * gives a synced playlist (one of its songs' covers) is not counted, so they show the
+     * four-song collage instead; a cover the user chose (a photo, a link, or a cover uploaded on
+     * YouTube) still counts.
+     */
+    val coverUrl: String?
+        get() =
+            playlist.thumbnailUrl?.takeIf { url ->
+                !playlist.isEditable || isChosenPlaylistCover(url) || songThumbnails.all { it == null }
+            }
+
     val thumbnails: List<String>
-        get() {
-            return if (playlist.thumbnailUrl != null)
-                listOf(playlist.thumbnailUrl)
-            else songThumbnails.filterNotNull()
-        }
+        get() = coverUrl?.let { listOf(it) } ?: songThumbnails.filterNotNull()
 }
+
+/** Whether [url] is a cover the user picked rather than a song cover YouTube filled in. */
+fun isChosenPlaylistCover(url: String): Boolean =
+    url.contains("studio_square_thumbnail") ||
+        !(url.contains("i.ytimg.com") || url.contains("googleusercontent.com") || url.contains("ggpht.com"))

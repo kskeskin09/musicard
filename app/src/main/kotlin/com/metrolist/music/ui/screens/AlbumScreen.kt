@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -198,6 +199,10 @@ fun AlbumScreen(
         }
     }
 
+    // "Glass" page background: the blurred cover behind the whole page.
+    val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
+    val pageGlassUrl = albumWithSongs?.album?.thumbnailUrl
+
     // The page takes the color of the album cover.
     val tint = rememberCoverPageTint(albumWithSongs?.album?.thumbnailUrl)
 
@@ -207,6 +212,7 @@ fun AlbumScreen(
                 .fillMaxSize()
                 .background(tint),
     ) {
+        if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl)
     TintedPageColors(tint) {
             val albumListState = androidx.compose.foundation.lazy.rememberLazyListState()
             val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(albumListState)
@@ -225,13 +231,9 @@ fun AlbumScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             // Album cover, as large as a playlist's cover
-                            Surface(
-                                modifier =
-                                    Modifier
-                                        .albumCoverSharedElement(viewModel.albumId)
-                                        .size(280.dp)
-                                        .shadow(elevation = 24.dp, shape = RoundedCornerShape(16.dp)),
-                                shape = RoundedCornerShape(16.dp),
+                            com.metrolist.music.ui.component.PageCoverFrame(
+                                modifier = Modifier.albumCoverSharedElement(viewModel.albumId),
+                                color = MaterialTheme.colorScheme.surface,
                             ) {
                                 // The small cover (already loaded) under the sharp one while it loads.
                                 AsyncImage(
@@ -513,13 +515,9 @@ fun AlbumScreen(
                                         .fillMaxWidth()
                                         .padding(top = 8.dp, bottom = 20.dp),
                             ) {
-                                Surface(
-                                    modifier =
-                                        Modifier
-                                            .albumCoverSharedElement(viewModel.albumId)
-                                            .size(280.dp)
-                                            .shadow(elevation = 24.dp, shape = RoundedCornerShape(16.dp)),
-                                    shape = RoundedCornerShape(16.dp),
+                                com.metrolist.music.ui.component.PageCoverFrame(
+                                    modifier = Modifier.albumCoverSharedElement(viewModel.albumId),
+                                    color = MaterialTheme.colorScheme.surface,
                                 ) {
                                     AsyncImage(
                                         model = previewCover,
@@ -545,8 +543,18 @@ fun AlbumScreen(
                 }
             }
 
+            // An edge-to-edge cover shows through the top bar until the title scrolls under it.
+            val pageOverCover = com.metrolist.music.ui.component.rememberPageEdgeToEdgeCover() && !titleState.titleHidden
+            val pageTopBarGlassAlpha = com.metrolist.music.ui.component.pageTopBarGlassAlpha(pageOverCover)
+            if (pageGlass) {
+                com.metrolist.music.ui.component.PageGlassBackground(
+                    pageGlassUrl,
+                    modifier = Modifier.graphicsLayer { alpha = pageTopBarGlassAlpha },
+                    topBarOnly = true,
+                )
+            }
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = tint, scrolledContainerColor = tint),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover), scrolledContainerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover)),
                 title = {
                     if (inSelectMode) {
                         Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))

@@ -237,6 +237,11 @@ fun AppearanceSettings(
     // The slider's value while dragging: the percentage follows the finger, the blur itself is
     // saved (and redrawn) only when the finger lifts.
     var tempLyricsBlurStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
+    val (pageBackground, onPageBackgroundChange) =
+        rememberEnumPreference(com.metrolist.music.constants.PageBackgroundKey, defaultValue = PlayerCardBackground.CLASSIC)
+    var showPageBackgroundDialog by rememberSaveable { mutableStateOf(false) }
+    val (pageEdgeToEdgeCover, onPageEdgeToEdgeCoverChange) =
+        rememberPreference(com.metrolist.music.constants.PageEdgeToEdgeCoverKey, defaultValue = false)
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -249,6 +254,25 @@ fun AppearanceSettings(
             },
             title = stringResource(R.string.player_background),
             current = playerCardBackground,
+            values = PlayerCardBackground.entries,
+            valueText = {
+                when (it) {
+                    PlayerCardBackground.CLASSIC -> stringResource(R.string.style_classic)
+                    PlayerCardBackground.GLASS -> stringResource(R.string.style_glass)
+                }
+            },
+        )
+    }
+
+    if (showPageBackgroundDialog) {
+        EnumDialog(
+            onDismiss = { showPageBackgroundDialog = false },
+            onSelect = {
+                onPageBackgroundChange(it)
+                showPageBackgroundDialog = false
+            },
+            title = stringResource(R.string.page_background),
+            current = pageBackground,
             values = PlayerCardBackground.entries,
             valueText = {
                 when (it) {
@@ -1148,6 +1172,51 @@ fun AppearanceSettings(
         Spacer(modifier = Modifier.height(27.dp))
 
         var showSensitivityDialog by rememberSaveable { mutableStateOf(false) }
+
+        // Album and playlist pages.
+        Material3SettingsGroup(
+            title = stringResource(R.string.page_appearance),
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.gradient),
+                        title = { Text(stringResource(R.string.page_background)) },
+                        description = {
+                            Text(
+                                when (pageBackground) {
+                                    PlayerCardBackground.CLASSIC -> stringResource(R.string.style_classic)
+                                    PlayerCardBackground.GLASS -> stringResource(R.string.style_glass)
+                                },
+                            )
+                        },
+                        onClick = { showPageBackgroundDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.fullscreen),
+                        title = { Text(stringResource(R.string.page_edge_to_edge_cover)) },
+                        description = { Text(stringResource(R.string.page_edge_to_edge_cover_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = pageEdgeToEdgeCover,
+                                onCheckedChange = onPageEdgeToEdgeCoverChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (pageEdgeToEdgeCover) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onPageEdgeToEdgeCoverChange(!pageEdgeToEdgeCover) },
+                    ),
+                ),
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
 
         Material3SettingsGroup(
             title = stringResource(R.string.music_player_appearance),
