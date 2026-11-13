@@ -3,4 +3,7 @@
 <resources>
     <color name="logo_bg_black">#FF000000</color>
     <color name="logo_bg_white">#FFFFFFFF</color>
+    <!-- "System" logo theme: light phone = white tile, dark phone = black tile (see values-night). -->
+    <color name="logo_bg_system">#FFFFFFFF</color>
+    <color name="logo_fg_system">#FF000000</color>
 </resources>

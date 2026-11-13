@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Musicard logo glyph for the "System" logo theme: colour follows the phone's light/dark mode. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/logo_fg_system"
+        android:pathData="M59.12 66.58C57.97 63.71 60.02 60.18 63.7 58.69C65.31 58.04 66.95 57.89 68.4 58.15V42.21L49.2 46.75V69.88H48.69C48.25 71.99 46.47 74.03 43.9 75.07C40.21 76.56 36.28 75.44 35.12 72.58C33.97 69.71 36.02 66.18 39.7 64.69C41.31 64.04 42.95 63.89 44.4 64.15V39.08L73.2 32.28V63.88H72.69C72.25 65.99 70.47 68.03 67.9 69.07C64.21 70.56 60.28 69.44 59.12 66.58Z" />
+</vector>

@@ -8,6 +8,8 @@ package com.metrolist.music.ui.screens.settings
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import android.os.Build
@@ -1042,7 +1044,8 @@ fun AppearanceSettings(
         Spacer(modifier = Modifier.height(27.dp))
 
         // Launcher logo: which mark, and its fixed colours.
-        val logoColors: (LogoTheme) -> Pair<Color, Color> = { theme -> theme.background to theme.foreground }
+        val systemDark = isSystemInDarkTheme()
+        val logoColors: (LogoTheme) -> Pair<Color, Color> = { theme -> theme.colors(systemDark) }
         Material3SettingsGroup(
             title = stringResource(R.string.logo),
             items =
@@ -1114,7 +1117,11 @@ fun AppearanceSettings(
                                 Text(stringResource(R.string.logo_theme))
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    stringResource(R.string.logo_theme_desc, stringResource(logoTheme.label)),
+                                    if (logoTheme == LogoTheme.SYSTEM) {
+                                        stringResource(R.string.logo_theme_desc_system)
+                                    } else {
+                                        stringResource(R.string.logo_theme_desc, stringResource(logoTheme.label))
+                                    },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1145,8 +1152,17 @@ fun AppearanceSettings(
                                                 Modifier
                                                     .size(16.dp)
                                                     .clip(RoundedCornerShape(5.dp))
-                                                    .background(bg)
-                                                    .border(1.dp, fg.copy(alpha = 0.6f), RoundedCornerShape(5.dp)),
+                                                    .background(
+                                                        // System shows both colours, split diagonally.
+                                                        if (theme == LogoTheme.SYSTEM) {
+                                                            Brush.linearGradient(
+                                                                0.5f to Color.White,
+                                                                0.5f to Color.Black,
+                                                            )
+                                                        } else {
+                                                            SolidColor(bg)
+                                                        },
+                                                    ).border(1.dp, fg.copy(alpha = 0.6f), RoundedCornerShape(5.dp)),
                                             )
                                             Spacer(Modifier.width(6.dp))
                                             Text(

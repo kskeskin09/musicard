@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colours come from values / values-night, so the launcher swaps them with the phone's dark mode. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/logo_bg_system" />
+    <foreground android:drawable="@drawable/ic_logo_single_system" />
+</adaptive-icon>

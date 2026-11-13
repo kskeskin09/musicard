@@ -20,16 +20,24 @@ enum class AppLogo(
 }
 
 /**
- * Colour of the launcher logo. Both are fixed colours with no monochrome layer, so the icon
- * looks the same whatever the phone's theme, wallpaper or themed-icons setting is.
+ * Colour of the launcher logo. Dark and Light are fixed colours with no monochrome layer, so the
+ * icon looks the same whatever the phone's theme, wallpaper or themed-icons setting is. System
+ * uses night-qualified colour resources, so the launcher shows Light or Dark to match the phone's
+ * dark mode.
  */
 enum class LogoTheme(
-    val background: Color,
-    val foreground: Color,
     @StringRes val label: Int,
 ) {
-    BLACK(Color(0xFF000000), Color.White, R.string.logo_theme_dark),
-    WHITE(Color.White, Color(0xFF000000), R.string.logo_theme_light),
+    BLACK(R.string.logo_theme_dark),
+    WHITE(R.string.logo_theme_light),
+    SYSTEM(R.string.logo_theme_system),
+    ;
+
+    /** Tile and glyph colours as the launcher shows them, given whether the phone is in dark mode. */
+    fun colors(systemDark: Boolean): Pair<Color, Color> {
+        val dark = this == BLACK || (this == SYSTEM && systemDark)
+        return if (dark) Color(0xFF000000) to Color.White else Color.White to Color(0xFF000000)
+    }
 }
 
 // Matches the alias names in AndroidManifest.xml, e.g. .LogoNotesBlack. The names come from

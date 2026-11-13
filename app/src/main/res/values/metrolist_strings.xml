@@ -1188,6 +1188,8 @@
     <string name="logo_theme_desc">%s · independent of the phone theme</string>
     <string name="logo_theme_dark">Dark</string>
     <string name="logo_theme_light">Light</string>
+    <string name="logo_theme_system">System</string>
+    <string name="logo_theme_desc_system">Follows the phone\'s light or dark theme</string>
     <string name="history_duration_desc">A song is added to your history and stats after you listen to it for %1$d seconds. Songs you skip sooner are not counted.</string>
     <string name="battery_optimization">Battery optimization</string>
     <string name="battery_optimization_summary">Turns off heavy effects below %1$d%% battery</string>

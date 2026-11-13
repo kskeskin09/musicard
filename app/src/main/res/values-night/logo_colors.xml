@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "System" logo theme in dark mode: black tile with a white glyph. -->
+<resources>
+    <color name="logo_bg_system">#FF000000</color>
+    <color name="logo_fg_system">#FFFFFFFF</color>
+</resources>
