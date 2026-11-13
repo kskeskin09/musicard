@@ -75,6 +75,18 @@ enum class DensityScale(
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val ForceBottomNavBarKey = booleanPreferencesKey("forceBottomNavBar")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
+
+// Hide Android's navigation bar on the full-screen player after a short idle delay.
+val AutoHideNavBarKey = stringPreferencesKey("autoHideNavBar")
+// Same for the status bar (clock, battery) at the top.
+val AutoHideStatusBarKey = stringPreferencesKey("autoHideStatusBar")
+
+enum class AutoHideNavBarDelay(val millis: Long) {
+    OFF(0L),
+    SECONDS_3(3_000L),
+    SECONDS_5(5_000L),
+    SECONDS_10(10_000L),
+}
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
@@ -135,6 +147,15 @@ val AudioQualityKey = stringPreferencesKey("audioQuality")
 
 enum class AudioQuality {
     AUTO,
+    LOW,
+    HIGH,
+}
+
+// Quality for downloaded songs; SAME_AS_PLAYING follows AudioQualityKey ("Playing quality").
+val DownloadQualityKey = stringPreferencesKey("downloadQuality")
+
+enum class DownloadQuality {
+    SAME_AS_PLAYING,
     LOW,
     HIGH,
 }

@@ -247,6 +247,9 @@ fun PlayerSettings(
                     AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                     AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
                 }
+            },
+            valueDescription = {
+                if (it == AudioQuality.AUTO) stringResource(R.string.audio_quality_auto_desc) else ""
             }
         )
     }
@@ -289,7 +292,9 @@ fun PlayerSettings(
                     description = {
                         Text(
                             when (audioQuality) {
-                                AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
+                                AudioQuality.AUTO ->
+                                    stringResource(R.string.audio_quality_auto) + " · " +
+                                        stringResource(R.string.audio_quality_auto_desc)
                                 AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                                 AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
                             }
