@@ -699,7 +699,7 @@ private fun UpNextList(
     }
 }
 
-private const val UpNextHistoryCount = 5
+private const val UpNextHistoryCount = 10
 
 @Composable
 private fun UpNextRow(
