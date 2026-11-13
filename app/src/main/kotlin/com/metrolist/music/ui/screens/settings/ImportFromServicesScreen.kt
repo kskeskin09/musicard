@@ -216,12 +216,23 @@ fun ImportFromServicesScreen(
 
                 SourceCard(
                     badge = { BrandBadge(R.drawable.brand_youtube_music) },
-                    title = "YouTube Music",
+                    title = stringResource(R.string.login_with_ytm),
                     description = stringResource(R.string.import_ytm_desc),
-                    chips = listOf(stringResource(R.string.import_ytm_badge)),
-                    expanded = false,
-                    onClick = null,
-                ) {}
+                    chips = listOf(
+                        stringResource(R.string.import_chip_playlists),
+                        stringResource(R.string.import_chip_liked),
+                        stringResource(R.string.import_chip_library),
+                        stringResource(R.string.import_chip_albums),
+                        stringResource(R.string.import_chip_artists),
+                        stringResource(R.string.import_chip_uploads),
+                        stringResource(R.string.import_chip_podcasts),
+                    ),
+                    expanded = expanded == "ytm",
+                    onClick = { expanded = if (expanded == "ytm") null else "ytm" },
+                ) {
+                    // Sign in (web or token); once signed in: account, Personalized content, Auto-sync.
+                    AccountLoginSettings(navController = navController)
+                }
 
                 SourceCard(
                     badge = {

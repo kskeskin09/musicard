@@ -181,7 +181,6 @@ import com.metrolist.music.constants.SYSTEM_DEFAULT
 import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.constants.SimpMusicMigrationDoneKey
 import com.metrolist.music.constants.SlimNavBarHeight
-import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.UpdateNotificationsEnabledKey
 import com.metrolist.music.constants.VideoThumbnailMigrationDoneKey
@@ -795,7 +794,8 @@ class MainActivity : FragmentActivity() {
                     navigationItems.mapIndexed { i, s -> s.route to i }.toMap()
                 }
                 val (forceBottomNav) = rememberPreference(ForceBottomNavBarKey, defaultValue = false)
-                val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
+                // The slim tab bar setting was removed; always use the normal tab bar.
+                val slimNav = false
                 val oldMiniPlayerBlackout by rememberPreference(com.metrolist.music.constants.MiniPlayerBlackoutKey, defaultValue = true)
                 val oldMiniPlayerBlur by rememberPreference(com.metrolist.music.constants.MiniPlayerBlurKey, defaultValue = false)
                 val miniPlayerEdgeEffect by rememberEnumPreference(
@@ -908,6 +908,20 @@ class MainActivity : FragmentActivity() {
                                 MiniPlayerHeight,
                         expandedBound = maxHeight,
                     )
+
+                val autoHideNavBar by rememberEnumPreference(
+                    com.metrolist.music.constants.AutoHideNavBarKey,
+                    defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+                )
+                val autoHideStatusBar by rememberEnumPreference(
+                    com.metrolist.music.constants.AutoHideStatusBarKey,
+                    defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+                )
+                com.metrolist.music.ui.utils.AutoHideNavigationBar(
+                    active = playerBottomSheetState.isExpanded,
+                    delayOption = autoHideNavBar,
+                    statusDelayOption = autoHideStatusBar,
+                )
 
                 val playerReadyState =
                     playerConnection?.service?.isPlayerReady?.collectAsStateWithLifecycle()

@@ -31,6 +31,11 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import com.metrolist.music.ui.component.bottomEdgeBlur
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -284,7 +289,14 @@ fun BottomSheetPlayer(
         )
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
     val (hideStatusBarOnLyrics) = rememberPreference(HideStatusBarOnFullscreenKey, false)
-    val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    val cropAlbumArt by rememberPreference(CropAlbumArtKey, true)
+    val edgeToEdgeArtPref by rememberPreference(com.metrolist.music.constants.EdgeToEdgeAlbumArtKey, false)
+    val edgeToEdgeArt = edgeToEdgeArtPref && !hidePlayerThumbnail
+    val edgeToEdgeArtEdge by rememberEnumPreference(
+        com.metrolist.music.constants.EdgeToEdgeArtEdgeKey,
+        com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT,
+    )
+    val showPlayingFrom by rememberPreference(com.metrolist.music.constants.ShowPlayingFromKey, true)
 
     var showInlineLyrics by rememberSaveable {
         mutableStateOf(false)
@@ -2326,6 +2338,23 @@ fun BottomSheetPlayer(
                             minOf(maxWidth - PlayerHorizontalPadding * 2, maxHeight - topInset - 500.dp),
                             120.dp,
                         )
+                    if (edgeToEdgeArt) {
+                        // Edge to edge: the art fills the top of the player behind the handle,
+                        // title and progress bar, and fades into the background. The usual art
+                        // stays in place (invisible) for swiping and for the lyrics header.
+                        val edgeArtHeight = topInset + 44.dp + artSize + 110.dp
+                        EdgeToEdgeAlbumArt(
+                            artworkUrl = mediaMetadata?.thumbnailUrl,
+                            isPlaying = effectiveIsPlaying,
+                            edge = edgeToEdgeArtEdge,
+                            blurFromBottomPx = with(density) { (edgeArtHeight * 0.45f).toPx() },
+                            alphaProvider = { (1f - cardExpand * 3f).coerceIn(0f, 1f) },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(edgeArtHeight),
+                        )
+                    }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxSize(),
@@ -2348,7 +2377,7 @@ fun BottomSheetPlayer(
                         // Sits halfway between the handle and the cover; tapping it opens the list.
                         val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
                         val sourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
-                        val playingFrom = queueTitle?.takeIf { it.isNotBlank() && sourceRoute != null }
+                        val playingFrom = queueTitle?.takeIf { showPlayingFrom && it.isNotBlank() && sourceRoute != null }
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier =
@@ -2395,6 +2424,11 @@ fun BottomSheetPlayer(
                                         Modifier
                                             .fillMaxWidth()
                                             .height(artSize)
+                                            .graphicsLayer {
+                                                // With edge-to-edge art it only shows while it
+                                                // moves into the lyrics / up next header.
+                                                if (edgeToEdgeArt) alpha = (cardExpand * 3f).coerceIn(0f, 1f)
+                                            }
                                             .onGloballyPositioned {
                                                 if (cardExpand == 0f) {
                                                     artBoxPos = it.positionInRoot()
@@ -3105,6 +3139,82 @@ private fun PlayerControlButton(
         )
     }
 }
+
+/**
+ * The album art drawn edge to edge across the top of the player, fading out toward the bottom.
+ * While paused it shrinks slightly, like the regular art, and its corners round off.
+ */
+@Composable
+private fun EdgeToEdgeAlbumArt(
+    artworkUrl: String?,
+    isPlaying: Boolean,
+    edge: com.metrolist.music.constants.MiniPlayerEdgeEffect,
+    blurFromBottomPx: Float,
+    alphaProvider: () -> Float,
+    modifier: Modifier = Modifier,
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isPlaying) 1f else EdgeToEdgePausedScale,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "edgeArtScale",
+    )
+    androidx.compose.animation.Crossfade(
+        targetState = artworkUrl,
+        animationSpec = tween(400),
+        label = "edgeArt",
+        modifier =
+            modifier
+                .graphicsLayer {
+                    alpha = alphaProvider()
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = TransformOrigin(0.5f, 0.4f)
+                    // Corners round off as it shrinks, like a card lifted off the screen.
+                    val shrink = ((1f - scale) / (1f - EdgeToEdgePausedScale)).coerceIn(0f, 1f)
+                    shape = RoundedCornerShape((28f * shrink).dp)
+                    clip = shrink > 0f
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }.bottomEdgeBlur(
+                    // Blur: the lower part where the controls sit is blurred.
+                    enabled = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR,
+                    startFromBottomPx = { blurFromBottomPx },
+                ).drawWithContent {
+                    drawContent()
+                    // Blackout: fades out over the lower part, into the player's background.
+                    // Nothing and Blur: the art stays as it is and only its last edge softens,
+                    // so it never ends in a hard line.
+                    val blackout = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
+                    drawRect(
+                        brush =
+                            if (blackout) {
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    0.55f to Color.Black,
+                                    0.8f to Color.Black.copy(alpha = 0.45f),
+                                    1f to Color.Transparent,
+                                )
+                            } else {
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    0.88f to Color.Black,
+                                    1f to Color.Transparent,
+                                )
+                            },
+                        blendMode = BlendMode.DstIn,
+                    )
+                },
+    ) { url ->
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+private const val EdgeToEdgePausedScale = 0.93f
 
 internal val DefaultAlbumBackground = Color(0xFF2B2A30)
 

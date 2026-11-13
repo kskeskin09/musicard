@@ -104,7 +104,6 @@ import com.metrolist.music.constants.ShowLikedPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.SliderStyle
 import com.metrolist.music.constants.SliderStyleKey
-import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.SwipeSensitivityKey
 import com.metrolist.music.constants.SwipeThumbnailKey
 import com.metrolist.music.constants.SwipeToSongKey
@@ -196,7 +195,23 @@ fun AppearanceSettings(
     val (cropAlbumArt, onCropAlbumArtChange) =
         rememberPreference(
             CropAlbumArtKey,
+            defaultValue = true,
+        )
+    val (edgeToEdgeArt, onEdgeToEdgeArtChange) =
+        rememberPreference(
+            com.metrolist.music.constants.EdgeToEdgeAlbumArtKey,
             defaultValue = false,
+        )
+    val (edgeToEdgeArtEdge, onEdgeToEdgeArtEdgeChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.EdgeToEdgeArtEdgeKey,
+            defaultValue = MiniPlayerEdgeEffect.BLACKOUT,
+        )
+    var showEdgeToEdgeArtEdgeDialog by rememberSaveable { mutableStateOf(false) }
+    val (showPlayingFrom, onShowPlayingFromChange) =
+        rememberPreference(
+            com.metrolist.music.constants.ShowPlayingFromKey,
+            defaultValue = true,
         )
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
@@ -321,12 +336,50 @@ fun AppearanceSettings(
             ForceBottomNavBarKey,
             defaultValue = false,
         )
-    val (slimNav, onSlimNavChange) =
-        rememberPreference(
-            SlimNavBarKey,
-            defaultValue = false,
+    val (autoHideNavBar, onAutoHideNavBarChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.AutoHideNavBarKey,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
         )
-
+    var showAutoHideNavBarDialog by rememberSaveable { mutableStateOf(false) }
+    val (autoHideStatusBar, onAutoHideStatusBarChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.AutoHideStatusBarKey,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+        )
+    var showAutoHideStatusBarDialog by rememberSaveable { mutableStateOf(false) }
+    val autoHideNavBarText: @Composable (com.metrolist.music.constants.AutoHideNavBarDelay) -> String = {
+        when (it) {
+            com.metrolist.music.constants.AutoHideNavBarDelay.OFF -> stringResource(R.string.auto_hide_nav_off)
+            else -> stringResource(R.string.auto_hide_nav_after, (it.millis / 1000).toInt())
+        }
+    }
+    if (showAutoHideStatusBarDialog) {
+        EnumDialog(
+            onDismiss = { showAutoHideStatusBarDialog = false },
+            onSelect = {
+                onAutoHideStatusBarChange(it)
+                showAutoHideStatusBarDialog = false
+            },
+            title = stringResource(R.string.auto_hide_status),
+            current = autoHideStatusBar,
+            values = com.metrolist.music.constants.AutoHideNavBarDelay.entries.toList(),
+            valueText = autoHideNavBarText,
+        )
+    }
+    if (showAutoHideNavBarDialog) {
+        EnumDialog(
+            onDismiss = { showAutoHideNavBarDialog = false },
+            onSelect = {
+                onAutoHideNavBarChange(it)
+                showAutoHideNavBarDialog = false
+            },
+            title = stringResource(R.string.auto_hide_nav),
+            current = autoHideNavBar,
+            values = com.metrolist.music.constants.AutoHideNavBarDelay.entries.toList(),
+            valueText = autoHideNavBarText,
+        )
+    }
     val (densityScale, onDensityScaleChange) = rememberPreference(DensityScaleKey, defaultValue = 1f)
     var showDensityScaleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -613,6 +666,20 @@ fun AppearanceSettings(
             title = stringResource(R.string.mini_player_edge_effect),
             current = miniPlayerEdgeEffect,
             values = MiniPlayerEdgeEffect.values().toList(),
+            valueText = { miniPlayerEdgeEffectText(it) },
+        )
+    }
+
+    if (showEdgeToEdgeArtEdgeDialog) {
+        EnumDialog(
+            onDismiss = { showEdgeToEdgeArtEdgeDialog = false },
+            onSelect = {
+                onEdgeToEdgeArtEdgeChange(it)
+                showEdgeToEdgeArtEdgeDialog = false
+            },
+            title = stringResource(R.string.edge_to_edge_art_edge),
+            current = edgeToEdgeArtEdge,
+            values = listOf(MiniPlayerEdgeEffect.NONE, MiniPlayerEdgeEffect.BLACKOUT, MiniPlayerEdgeEffect.BLUR),
             valueText = { miniPlayerEdgeEffectText(it) },
         )
     }
@@ -1225,7 +1292,7 @@ fun AppearanceSettings(
         Material3SettingsGroup(
             title = stringResource(R.string.player),
             items =
-                listOf(
+                listOfNotNull(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.hide_image),
                         title = { Text(stringResource(R.string.hide_player_thumbnail)) },
@@ -1269,6 +1336,60 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onCropAlbumArtChange(!cropAlbumArt) },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.fullscreen),
+                        title = { Text(stringResource(R.string.edge_to_edge_album_art)) },
+                        description = { Text(stringResource(R.string.edge_to_edge_album_art_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = edgeToEdgeArt,
+                                onCheckedChange = onEdgeToEdgeArtChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (edgeToEdgeArt) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onEdgeToEdgeArtChange(!edgeToEdgeArt) },
+                    ),
+                    if (edgeToEdgeArt) {
+                        Material3SettingsItem(
+                            icon = painterResource(if (edgeToEdgeArtEdge == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
+                            title = { Text(stringResource(R.string.edge_to_edge_art_edge)) },
+                            description = { Text(miniPlayerEdgeEffectText(edgeToEdgeArtEdge)) },
+                            onClick = { showEdgeToEdgeArtEdgeDialog = true },
+                        )
+                    } else {
+                        null
+                    },
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.queue_music),
+                        title = { Text(stringResource(R.string.show_playing_location)) },
+                        description = { Text(stringResource(R.string.show_playing_location_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = showPlayingFrom,
+                                onCheckedChange = onShowPlayingFromChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (showPlayingFrom) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onShowPlayingFromChange(!showPlayingFrom) },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),
@@ -1524,6 +1645,7 @@ fun AppearanceSettings(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
                         title = { Text(stringResource(R.string.force_bottom_navbar)) },
+                        description = { Text(stringResource(R.string.force_bottom_navbar_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = forceBottomNav,
@@ -1544,24 +1666,19 @@ fun AppearanceSettings(
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
-                        title = { Text(stringResource(R.string.slim_navbar)) },
-                        trailingContent = {
-                            Switch(
-                                checked = slimNav,
-                                onCheckedChange = onSlimNavChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (slimNav) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
+                        title = { Text(stringResource(R.string.auto_hide_nav)) },
+                        description = {
+                            Text(stringResource(R.string.auto_hide_nav_desc) + "\n" + autoHideNavBarText(autoHideNavBar))
                         },
-                        onClick = { onSlimNavChange(!slimNav) },
+                        onClick = { showAutoHideNavBarDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.nav_bar),
+                        title = { Text(stringResource(R.string.auto_hide_status)) },
+                        description = {
+                            Text(stringResource(R.string.auto_hide_status_desc) + "\n" + autoHideNavBarText(autoHideStatusBar))
+                        },
+                        onClick = { showAutoHideStatusBarDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.group_outlined),

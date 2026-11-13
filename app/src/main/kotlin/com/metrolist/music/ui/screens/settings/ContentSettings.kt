@@ -715,6 +715,11 @@ fun ContentSettings(
                     icon = painterResource(R.drawable.language_korean_latin),
                     title = { Text(stringResource(R.string.lyrics_romanization)) },
                     onClick = { navController.navigate("settings/content/romanization") }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.translate),
+                    title = { Text(stringResource(R.string.ai_lyrics_translation)) },
+                    onClick = { navController.navigate("settings/ai") }
                 )
             )
         )

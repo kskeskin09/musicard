@@ -869,7 +869,7 @@
     <string name="update_action">Güncelle</string>
     <string name="discord_integration">Discord entegrasyonu</string>
     <string name="enable_discord_rpc">Rich Presence\'i etkinleştir</string>
-    <string name="force_bottom_navbar">Alt gezinme çubuğuna zorla</string>
+    <string name="force_bottom_navbar">Sekme çubuğunu hep altta tut</string>
     <string name="player_pause">Duraklat</string>
     <string name="top_result">En iyi sonuç</string>
     <string name="other">Diğer</string>
@@ -883,11 +883,11 @@
     <string name="home_section_youtube">YouTube Music bölümleri</string>
     <!-- Başka uygulamalardan içe aktarma -->
     <string name="import_services">Başka uygulamadan aktar</string>
-    <string name="import_services_desc">Spotify, Apple Music ve çalma listesi dosyaları</string>
+    <string name="import_services_desc">YouTube Music girişi, Spotify, Apple Music ve çalma listesi dosyaları</string>
     <string name="import_services_intro">Çalma listelerini ve beğendiklerini Musicard\'a taşı. Şarkılar YouTube Music\'te eşleştirilir.</string>
     <string name="import_spotify_desc">Spotify\'ın resmi veri dosyası veya CSV</string>
     <string name="import_apple_desc">Apple\'ın resmi aktarımı veya veri dosyası</string>
-    <string name="import_ytm_desc">Hesabınla giriş yap, her şey kendiliğinden gelir</string>
+    <string name="import_ytm_desc">Giriş yap, kitaplığın kendiliğinden gelsin. Giriş seçenekleri için dokun.</string>
     <string name="import_ytm_badge">Zaten var</string>
     <string name="import_file">Dosyadan (CSV / TXT)</string>
     <string name="import_file_desc">Exportify, TuneMyMusic, Soundiiz vb. dosyalar</string>

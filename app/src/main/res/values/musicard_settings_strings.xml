@@ -13,4 +13,15 @@
     <string name="update_up_to_date">You are on the latest version</string>
     <string name="update_check_failed">Could not check for updates. Check your connection.</string>
     <string name="current_version_label">Installed: %1$s</string>
+    <string name="force_bottom_navbar_desc">When the phone is turned sideways or on a tablet, the Home / Search / Library bar stays at the bottom instead of moving to the left side</string>
+    <string name="auto_hide_nav">Auto-hide navigation bar</string>
+    <string name="auto_hide_nav_desc">Hides Android\'s navigation bar on the full-screen player and lyrics. Swipe up from the bottom to show it.</string>
+    <string name="auto_hide_nav_off">Off</string>
+    <string name="auto_hide_nav_after">After %1$d seconds</string>
+    <string name="auto_hide_status">Auto-hide status bar</string>
+    <string name="auto_hide_status_desc">Hides the clock and battery bar at the top on the full-screen player and lyrics. Swipe down from the top to show it.</string>
+    <string name="login_with_ytm">Login with YouTube Music</string>
+    <string name="import_chip_artists">Artists</string>
+    <string name="import_chip_uploads">Uploads</string>
+    <string name="import_chip_podcasts">Podcasts</string>
 </resources>

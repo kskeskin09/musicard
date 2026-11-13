@@ -75,6 +75,18 @@ enum class DensityScale(
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val ForceBottomNavBarKey = booleanPreferencesKey("forceBottomNavBar")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
+
+// Hide Android's navigation bar on the full-screen player after a short idle delay.
+val AutoHideNavBarKey = stringPreferencesKey("autoHideNavBar")
+// Same for the status bar (clock, battery) at the top.
+val AutoHideStatusBarKey = stringPreferencesKey("autoHideStatusBar")
+
+enum class AutoHideNavBarDelay(val millis: Long) {
+    OFF(0L),
+    SECONDS_3(3_000L),
+    SECONDS_5(5_000L),
+    SECONDS_10(10_000L),
+}
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
@@ -84,6 +96,9 @@ val UseNewPlayerDesignKey = booleanPreferencesKey("useNewPlayerDesign")
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
+val EdgeToEdgeAlbumArtKey = booleanPreferencesKey("edgeToEdgeAlbumArt")
+val EdgeToEdgeArtEdgeKey = stringPreferencesKey("edgeToEdgeArtEdge")
+val ShowPlayingFromKey = booleanPreferencesKey("showPlayingFrom")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
 val PauseOnMute = booleanPreferencesKey("pauseOnMute")
 val ResumeOnBluetoothConnectKey = booleanPreferencesKey("resumeOnBluetoothConnect")
