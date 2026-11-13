@@ -37,5 +37,5 @@ val PrefetchNextLyricsKey = booleanPreferencesKey("prefetchNextLyrics")
 /** How many upcoming songs to fetch lyrics for (1-10). */
 val PrefetchNextLyricsCountKey = androidx.datastore.preferences.core.intPreferencesKey("prefetchNextLyricsCount")
 
-const val DEFAULT_PREFETCH_NEXT_LYRICS_COUNT = 3
+const val DEFAULT_PREFETCH_NEXT_LYRICS_COUNT = 1
 const val MAX_PREFETCH_NEXT_LYRICS_COUNT = 10
