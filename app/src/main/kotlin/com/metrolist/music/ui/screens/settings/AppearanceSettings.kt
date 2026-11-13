@@ -213,6 +213,9 @@ fun AppearanceSettings(
         rememberPreference(com.metrolist.music.constants.LyricsBlurKeepNeighborsKey, defaultValue = true)
     val (lyricsBlurStrength, onLyricsBlurStrengthChange) =
         rememberPreference(com.metrolist.music.constants.LyricsBlurStrengthKey, defaultValue = 1f)
+    // The slider's value while dragging: the percentage follows the finger, the blur itself is
+    // saved (and redrawn) only when the finger lifts.
+    var tempLyricsBlurStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -558,13 +561,14 @@ fun AppearanceSettings(
                 showPlayerButtonsStyleDialog = false
             },
             title = stringResource(R.string.player_buttons_style),
-            current = playerButtonsStyle,
-            values = PlayerButtonsStyle.values().toList(),
+            // Two choices: Default, or Background color (the song's color). The old Tertiary
+            // choice counts as Background color.
+            current = if (playerButtonsStyle == PlayerButtonsStyle.DEFAULT) PlayerButtonsStyle.DEFAULT else PlayerButtonsStyle.PRIMARY,
+            values = listOf(PlayerButtonsStyle.DEFAULT, PlayerButtonsStyle.PRIMARY),
             valueText = {
                 when (it) {
                     PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
-                    PlayerButtonsStyle.PRIMARY -> stringResource(R.string.primary_color_style)
-                    PlayerButtonsStyle.TERTIARY -> stringResource(R.string.tertiary_color_style)
+                    else -> stringResource(R.string.player_buttons_background_color)
                 }
             },
         )
@@ -818,7 +822,7 @@ fun AppearanceSettings(
                                 )
                             },
                             trailingContent = {
-                                // White or red, as a small two-part switch.
+                                // Classic (red) or Modern (white), as a small two-part switch.
                                 Row(
                                     modifier =
                                         Modifier
@@ -1150,17 +1154,15 @@ fun AppearanceSettings(
                                     Text(
                                         stringResource(
                                             R.string.lyrics_blur_strength,
-                                            (lyricsBlurStrength * 100).roundToInt(),
+                                            (tempLyricsBlurStrength * 100).roundToInt(),
                                         ),
                                     )
                                 },
                                 description = {
-                                    // The new value is saved when the finger lifts.
-                                    var tempStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
                                     StyledSlider(
-                                        value = tempStrength,
-                                        onValueChange = { tempStrength = it },
-                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempStrength) },
+                                        value = tempLyricsBlurStrength,
+                                        onValueChange = { tempLyricsBlurStrength = it },
+                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempLyricsBlurStrength) },
                                         valueRange = 0.5f..2f,
                                         steps = 5,
                                         modifier = Modifier.fillMaxWidth(),
@@ -1275,8 +1277,7 @@ fun AppearanceSettings(
                             Text(
                                 when (playerButtonsStyle) {
                                     PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
-                                    PlayerButtonsStyle.PRIMARY -> stringResource(R.string.primary_color_style)
-                                    PlayerButtonsStyle.TERTIARY -> stringResource(R.string.tertiary_color_style)
+                                    else -> stringResource(R.string.player_buttons_background_color)
                                 },
                             )
                         },
@@ -1455,8 +1456,8 @@ fun AppearanceSettings(
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.lyrics),
-                            title = { Text(stringResource(R.string.hide_status_bar_fullscreen)) },
-                            description = { Text(stringResource(R.string.hide_status_bar_fullscreen_desc)) },
+                            title = { Text(stringResource(R.string.hide_status_bar_lyrics)) },
+                            description = { Text(stringResource(R.string.hide_status_bar_lyrics_desc)) },
                             trailingContent = {
                                 Switch(
                                     checked = hideStatusBarOnFullscreen,

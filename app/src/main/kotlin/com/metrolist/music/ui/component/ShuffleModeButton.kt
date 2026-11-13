@@ -123,8 +123,10 @@ fun ListPlayButton(
                 modifier = Modifier.size(20.dp),
             )
             androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
-            androidx.compose.material3.Text(
+            // Always as wide as "Pause", so the button keeps its size.
+            SteadyText(
                 text = stringResource(if (showPause) R.string.pause_list_button else R.string.play_list_button),
+                variants = listOf(stringResource(R.string.play_list_button), stringResource(R.string.pause_list_button)),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
             )

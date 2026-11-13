@@ -367,8 +367,9 @@ private fun PodcastHeader(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(
-                    text = stringResource(if (inLibrary) R.string.remove_from_library else R.string.add_to_library)
+                com.metrolist.music.ui.component.SteadyText(
+                    text = stringResource(if (inLibrary) R.string.remove_from_library else R.string.add_to_library),
+                    variants = listOf(stringResource(R.string.add_to_library), stringResource(R.string.remove_from_library)),
                 )
             }
 

@@ -451,8 +451,8 @@ fun ArtistScreen(
                                     modifier = Modifier.padding(bottom = 16.dp).collapsingTitleAnchor(titleState),
                                 )
 
-                                // Buttons: Play and Radio on the left like on a playlist, with the
-                                // shuffle switch; Subscribe on the far right.
+                                // Buttons: Play, the shuffle switch and Radio (icon only) on the left;
+                                // Subscribe on the far right.
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -464,22 +464,22 @@ fun ArtistScreen(
                                     }
                                     if (!showLocal && !isGuest) {
                                         startArtistRadio?.let { startRadio ->
-                                            OutlinedButton(
+                                            // Just the icon, a circle like the shuffle switch,
+                                            // so every button keeps its full width.
+                                            androidx.compose.material3.Surface(
                                                 onClick = startRadio,
-                                                shape = RoundedCornerShape(50),
-                                                contentPadding = PaddingValues(horizontal = 14.dp),
-                                                modifier = Modifier.height(40.dp),
+                                                shape = androidx.compose.foundation.shape.CircleShape,
+                                                color = com.metrolist.music.ui.theme.pageRaisedColor(),
+                                                contentColor = MaterialTheme.colorScheme.onBackground,
+                                                modifier = Modifier.size(48.dp),
                                             ) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.radio),
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(20.dp),
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = stringResource(R.string.radio),
-                                                    fontSize = 14.sp,
-                                                )
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.radio),
+                                                        contentDescription = stringResource(R.string.radio),
+                                                        modifier = Modifier.size(24.dp),
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -503,10 +503,10 @@ fun ArtistScreen(
                                         contentPadding = PaddingValues(horizontal = 14.dp),
                                         modifier = Modifier.height(40.dp),
                                     ) {
-                                        Text(
+                                        com.metrolist.music.ui.component.SteadyText(
                                             text = stringResource(if (isChannelSubscribed) R.string.subscribed else R.string.subscribe),
+                                            variants = listOf(stringResource(R.string.subscribe), stringResource(R.string.subscribed)),
                                             fontSize = 14.sp,
-                                            maxLines = 1,
                                             color = if (!isChannelSubscribed) MaterialTheme.colorScheme.error else LocalContentColor.current,
                                         )
                                     }

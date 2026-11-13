@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_auto_translate">Translate lyrics automatically</string>
+    <string name="ai_auto_translate_desc">Lyrics in another language than the target language are translated when they open. Lyrics already in the target language are skipped</string>
+</resources>
