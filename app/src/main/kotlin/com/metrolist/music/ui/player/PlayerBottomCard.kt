@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
@@ -373,6 +374,7 @@ fun PlayerBottomCard(
                             openBottomPadding = openBottomPadding,
                             followState = followState,
                         )
+                        TouchShieldUnderControls(openBottomCoverPx)
                     }
 
                 else ->
@@ -384,10 +386,36 @@ fun PlayerBottomCard(
                             openBottomPadding = openBottomPadding,
                             onSongMoreClick = onQueueSongMoreClick,
                         )
+                        TouchShieldUnderControls(openBottomCoverPx)
                     }
             }
         }
     }
+}
+
+/**
+ * The opened lyrics and list carry on under the playback controls, hidden by the fade. This
+ * covers that strip so a tap next to the progress bar or between the buttons doesn't reach a song
+ * or line nobody can see; the last tappable row is the faded one just above the controls.
+ * Touches are only taken, not consumed, so dragging the player keeps working.
+ */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.TouchShieldUnderControls(coverPx: () -> Float) {
+    Box(
+        modifier =
+            Modifier
+                .align(Alignment.BottomCenter)
+                .layout { measurable, constraints ->
+                    val h = coverPx().roundToInt().coerceIn(0, constraints.maxHeight)
+                    val placeable =
+                        measurable.measure(androidx.compose.ui.unit.Constraints.fixed(constraints.maxWidth, h))
+                    layout(constraints.maxWidth, h) { placeable.place(0, 0) }
+                }.pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) awaitPointerEvent()
+                    }
+                },
+    )
 }
 
 @Composable
