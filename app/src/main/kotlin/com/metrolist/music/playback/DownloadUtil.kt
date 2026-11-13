@@ -7,6 +7,26 @@ package com.metrolist.music.playback
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import androidx.datastore.preferences.core.edit
+import com.metrolist.music.constants.AutoDownloadCellularKey
+import com.metrolist.music.constants.AutoDownloadLibraryKey
+import com.metrolist.music.constants.AutoDownloadedSongIdsKey
+import com.metrolist.music.utils.BatteryOptimizationFollowSystemKey
+import com.metrolist.music.utils.BatteryOptimizationKey
+import com.metrolist.music.utils.BatteryOptimizationThresholdKey
+import com.metrolist.music.utils.DEFAULT_BATTERY_OPTIMIZATION_THRESHOLD
+import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.isBatteryOptimizationActive
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.media3.database.DatabaseProvider
@@ -334,9 +354,26 @@ constructor(
 
     fun download(song: SongItem) = download(song.toMediaMetadata())
 
-    fun download(mediaMetadata: MediaMetadata) {
+    fun download(mediaMetadata: MediaMetadata) = download(mediaMetadata, automatic = false)
+
+    /**
+     * [automatic] downloads come from "Automatically download library". They are remembered in
+     * [AutoDownloadedSongIdsKey] so the Downloaded list only shows what the download button saved.
+     */
+    private fun download(mediaMetadata: MediaMetadata, automatic: Boolean) {
         scope.launch {
+            try {
+                prepareDownload(mediaMetadata, automatic)
+            } finally {
+                if (automatic) autoPreparing.remove(mediaMetadata.id)
+            }
+        }
+    }
+
+    private suspend fun prepareDownload(mediaMetadata: MediaMetadata, automatic: Boolean) {
+            if (!automatic) markAutomaticDownloads(remove = setOf(mediaMetadata.id))
             downloadPreparations.withPermit {
+                if (automatic && downloads.value[mediaMetadata.id] != null) return@withPermit
                 if (!shouldPrepareDownload(downloads.value[mediaMetadata.id]?.state)) return@withPermit
 
                 mediaMetadata.album?.let { album ->
@@ -368,6 +405,11 @@ constructor(
                 if (!shouldPrepareDownload(downloadManager.downloadIndex.getDownload(mediaMetadata.id)?.state)) {
                     return@withPermit
                 }
+                if (automatic) {
+                    // Another download (e.g. the button) may have started while this one waited.
+                    if (downloadManager.downloadIndex.getDownload(mediaMetadata.id) != null) return@withPermit
+                    markAutomaticDownloads(add = setOf(mediaMetadata.id))
+                }
 
                 val request =
                     DownloadRequest
@@ -379,6 +421,7 @@ constructor(
                     context,
                     ExoDownloadService::class.java,
                     request,
+                    if (automatic && !autoDownloadAllowed.value) AUTO_DOWNLOAD_PAUSED else Download.STOP_REASON_NONE,
                     false,
                 )
 
@@ -398,7 +441,6 @@ constructor(
                 }
             }
         }
-    }
 
     fun download(songId: String) {
         scope.launch {
@@ -409,7 +451,157 @@ constructor(
     }
 
     fun release() {
+        runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }
         scope.cancel()
+    }
+
+    // ---- Automatically download library ----
+
+    private val networkState = MutableStateFlow(currentNetworkState())
+    private val autoDownloadAllowed = MutableStateFlow(false)
+
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                networkState.value = currentNetworkState()
+            }
+
+            override fun onLost(network: Network) {
+                networkState.value = currentNetworkState()
+            }
+
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                networkState.value = currentNetworkState()
+            }
+        }
+
+    // Songs whose automatic download is being prepared, so a re-check doesn't start them twice.
+    private val autoPreparing: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    init {
+        startLibraryAutoDownload()
+    }
+
+    private fun currentNetworkState(): AutoDownloadNetwork {
+        val network = connectivityManager.activeNetwork ?: return AutoDownloadNetwork.NONE
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return AutoDownloadNetwork.NONE
+        if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return AutoDownloadNetwork.NONE
+        return if (connectivityManager.isActiveNetworkMetered) AutoDownloadNetwork.METERED else AutoDownloadNetwork.UNMETERED
+    }
+
+    private suspend fun markAutomaticDownloads(
+        add: Set<String> = emptySet(),
+        remove: Set<String> = emptySet(),
+    ) {
+        if (add.isEmpty() && remove.isEmpty()) return
+        runCatching {
+            context.dataStore.edit { prefs ->
+                val current = prefs[AutoDownloadedSongIdsKey].orEmpty()
+                val updated = (current - remove) + add
+                if (updated != current) prefs[AutoDownloadedSongIdsKey] = updated
+            }
+        }.onFailure { Timber.tag(TAG).w(it, "Failed to update automatic download list") }
+    }
+
+    private data class AutoDownloadSettings(
+        val enabled: Boolean,
+        val cellular: Boolean,
+        val batteryOptimization: Boolean,
+        val batteryThreshold: Int,
+        val batteryFollowSystem: Boolean,
+    )
+
+    private fun batteryOptimizationActive(settings: AutoDownloadSettings) =
+        isBatteryOptimizationActive(
+            context,
+            settings.batteryOptimization,
+            settings.batteryThreshold,
+            settings.batteryFollowSystem,
+        )
+
+    @OptIn(FlowPreview::class)
+    private fun startLibraryAutoDownload() {
+        runCatching { connectivityManager.registerDefaultNetworkCallback(networkCallback) }
+            .onFailure { Timber.tag(TAG).w(it, "Failed to watch the network") }
+
+        val settings =
+            context.dataStore.data
+                .map {
+                    AutoDownloadSettings(
+                        enabled = it[AutoDownloadLibraryKey] ?: false,
+                        cellular = it[AutoDownloadCellularKey] ?: false,
+                        batteryOptimization = it[BatteryOptimizationKey] ?: false,
+                        batteryThreshold = it[BatteryOptimizationThresholdKey] ?: DEFAULT_BATTERY_OPTIMIZATION_THRESHOLD,
+                        batteryFollowSystem = it[BatteryOptimizationFollowSystemKey] ?: true,
+                    )
+                }.distinctUntilChanged()
+        val autoIds = context.dataStore.data.map { it[AutoDownloadedSongIdsKey].orEmpty() }.distinctUntilChanged()
+        // Battery level has no callback here, so look again every few minutes.
+        val batteryTicker =
+            flow {
+                while (true) {
+                    emit(Unit)
+                    delay(BATTERY_CHECK_INTERVAL_MS)
+                }
+            }
+
+        scope.launch {
+            combine(
+                settings,
+                database.autoDownloadLibrarySongIds().map { it.toSet() }.distinctUntilChanged(),
+                autoIds,
+                networkState,
+                downloads.map { map -> map.mapValues { it.value.state to it.value.stopReason } }.distinctUntilChanged(),
+            ) { s, library, auto, network, states -> AutoDownloadInputs(s, library, auto, network, states) }
+                .combine(batteryTicker) { inputs, _ -> inputs }
+                .debounce(1_000)
+                .collectLatest { inputs -> runCatching { applyLibraryAutoDownload(inputs) }
+                    .onFailure { Timber.tag(TAG).e(it, "Automatic library download failed") } }
+        }
+    }
+
+    private data class AutoDownloadInputs(
+        val settings: AutoDownloadSettings,
+        val library: Set<String>,
+        val auto: Set<String>,
+        val network: AutoDownloadNetwork,
+        val states: Map<String, Pair<Int, Int>>,
+    )
+
+    private suspend fun applyLibraryAutoDownload(inputs: AutoDownloadInputs) {
+        val (settings, library, auto, network, states) = inputs
+        val allowed =
+            settings.enabled &&
+                network.allowsAutoDownload(settings.cellular) &&
+                !batteryOptimizationActive(settings)
+        autoDownloadAllowed.value = allowed
+
+        val plan = planLibraryAutoDownload(
+            enabled = settings.enabled,
+            allowed = allowed,
+            library = library,
+            automatic = auto,
+            states = states,
+            pausedReason = AUTO_DOWNLOAD_PAUSED,
+        )
+
+        plan.remove.forEach { id ->
+            DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, id, false)
+        }
+        markAutomaticDownloads(remove = plan.forget)
+        if (plan.pause.isNotEmpty()) {
+            // The download manager lives on the main thread; this avoids one service call per song.
+            withContext(Dispatchers.Main) {
+                plan.pause.forEach { id -> downloadManager.setStopReason(id, AUTO_DOWNLOAD_PAUSED) }
+            }
+        }
+        plan.resume.forEach { id ->
+            DownloadService.sendSetStopReason(context, ExoDownloadService::class.java, id, Download.STOP_REASON_NONE, false)
+        }
+        plan.start.filter(autoPreparing::add).forEach { id ->
+            val song = database.getSongByIdBlocking(id)
+            if (song != null) download(song.toMediaMetadata(), automatic = true) else autoPreparing.remove(id)
+        }
     }
 
     private fun removeFromPlayerCache(songId: String) {
@@ -429,6 +621,79 @@ constructor(
         }
         return false
     }
+}
+
+/** Stop reason for automatic library downloads waiting for Wi-Fi or for battery optimization to end. */
+internal const val AUTO_DOWNLOAD_PAUSED = 0x4D43 // "MC"
+
+private const val BATTERY_CHECK_INTERVAL_MS = 5 * 60 * 1000L
+
+internal enum class AutoDownloadNetwork {
+    NONE,
+    METERED,
+    UNMETERED,
+    ;
+
+    fun allowsAutoDownload(cellular: Boolean) =
+        when (this) {
+            NONE -> false
+            METERED -> cellular
+            UNMETERED -> true
+        }
+}
+
+internal data class LibraryAutoDownloadPlan(
+    val start: List<String> = emptyList(),
+    val pause: List<String> = emptyList(),
+    val resume: List<String> = emptyList(),
+    val remove: List<String> = emptyList(),
+    val forget: Set<String> = emptySet(),
+)
+
+/**
+ * Decides what "Automatically download library" does next.
+ *
+ * [states] maps a song id to its download state and stop reason. Only downloads this feature
+ * started ([automatic]) are ever paused or removed; the download button's are left alone.
+ */
+internal fun planLibraryAutoDownload(
+    enabled: Boolean,
+    allowed: Boolean,
+    library: Set<String>,
+    automatic: Set<String>,
+    states: Map<String, Pair<Int, Int>>,
+    pausedReason: Int,
+): LibraryAutoDownloadPlan {
+    // Turned off: drop unfinished automatic downloads, keep the finished ones.
+    // A song that left the library: its automatic download goes too. An empty library is more
+    // likely a database that is still loading than one emptied by hand, so nothing goes then.
+    val unfinished = { id: String -> states[id]?.first != Download.STATE_COMPLETED }
+    val leftLibrary = { id: String -> library.isNotEmpty() && id !in library }
+    val remove =
+        automatic.filter { id ->
+            states[id] != null && (leftLibrary(id) || (!enabled && unfinished(id)))
+        }
+    val forget =
+        automatic.filter { id ->
+            leftLibrary(id) || (!enabled && unfinished(id))
+        }.toSet()
+    if (!enabled) return LibraryAutoDownloadPlan(remove = remove, forget = forget)
+
+    val kept = automatic - forget
+    val active = setOf(Download.STATE_QUEUED, Download.STATE_DOWNLOADING, Download.STATE_RESTARTING)
+    if (!allowed) {
+        return LibraryAutoDownloadPlan(
+            pause = kept.filter { states[it]?.first in active },
+            remove = remove,
+            forget = forget,
+        )
+    }
+    return LibraryAutoDownloadPlan(
+        start = library.filter { it !in states }.sorted(),
+        resume = kept.filter { id -> states[id]?.let { it.first == Download.STATE_STOPPED && it.second == pausedReason } == true },
+        remove = remove,
+        forget = forget,
+    )
 }
 
 internal fun shouldPrepareDownload(downloadState: Int?): Boolean = downloadState != Download.STATE_COMPLETED

@@ -159,6 +159,7 @@ fun AutoPlaylistScreen(
         when (viewModel.playlist) {
             "liked" -> stringResource(R.string.liked)
             "uploaded" -> stringResource(R.string.uploaded_playlist)
+            "library" -> stringResource(R.string.library_playlist)
             else -> stringResource(R.string.offline)
         }
 
