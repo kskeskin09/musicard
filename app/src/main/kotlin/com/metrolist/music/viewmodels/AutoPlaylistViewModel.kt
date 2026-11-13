@@ -101,6 +101,16 @@ constructor(
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncUploadedSongs() }
     }
 
+    /** How many library songs are neither liked nor in one of your playlists. */
+    suspend fun looseLibrarySongCount(): Int = database.looseLibrarySongCount()
+
+    fun removeLooseLibrarySongs(onDone: (Int) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val removed = database.removeLooseLibrarySongs()
+            kotlinx.coroutines.withContext(Dispatchers.Main) { onDone(removed) }
+        }
+    }
+
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             _isRefreshing.value = true

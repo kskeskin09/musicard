@@ -10,8 +10,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import androidx.datastore.preferences.core.edit
-import com.metrolist.music.constants.AutoDownloadCellularKey
 import com.metrolist.music.constants.AutoDownloadLibraryKey
+import com.metrolist.music.constants.AutoDownloadWifiOnlyKey
 import com.metrolist.music.constants.AutoDownloadedSongIdsKey
 import com.metrolist.music.utils.BatteryOptimizationFollowSystemKey
 import com.metrolist.music.utils.BatteryOptimizationKey
@@ -505,7 +505,7 @@ constructor(
 
     private data class AutoDownloadSettings(
         val enabled: Boolean,
-        val cellular: Boolean,
+        val wifiOnly: Boolean,
         val batteryOptimization: Boolean,
         val batteryThreshold: Int,
         val batteryFollowSystem: Boolean,
@@ -529,7 +529,7 @@ constructor(
                 .map {
                     AutoDownloadSettings(
                         enabled = it[AutoDownloadLibraryKey] ?: false,
-                        cellular = it[AutoDownloadCellularKey] ?: false,
+                        wifiOnly = it[AutoDownloadWifiOnlyKey] ?: true,
                         batteryOptimization = it[BatteryOptimizationKey] ?: false,
                         batteryThreshold = it[BatteryOptimizationThresholdKey] ?: DEFAULT_BATTERY_OPTIMIZATION_THRESHOLD,
                         batteryFollowSystem = it[BatteryOptimizationFollowSystemKey] ?: true,
@@ -572,7 +572,7 @@ constructor(
         val (settings, library, auto, network, states) = inputs
         val allowed =
             settings.enabled &&
-                network.allowsAutoDownload(settings.cellular) &&
+                network.allowsAutoDownload(wifiOnly = settings.wifiOnly) &&
                 !batteryOptimizationActive(settings)
         autoDownloadAllowed.value = allowed
 
@@ -634,10 +634,10 @@ internal enum class AutoDownloadNetwork {
     UNMETERED,
     ;
 
-    fun allowsAutoDownload(cellular: Boolean) =
+    fun allowsAutoDownload(wifiOnly: Boolean) =
         when (this) {
             NONE -> false
-            METERED -> cellular
+            METERED -> !wifiOnly
             UNMETERED -> true
         }
 }
