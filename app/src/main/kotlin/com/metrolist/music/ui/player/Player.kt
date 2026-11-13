@@ -2294,6 +2294,7 @@ fun BottomSheetPlayer(
                 // Where the playback controls sit at rest, and where they end up in the full-screen
                 // lyrics (bottom panel). Measured only while the card is closed.
                 var boxBottomPx by remember { mutableFloatStateOf(0f) }
+                var boxTopPx by remember { mutableFloatStateOf(0f) }
                 var playbackTopPx by remember { mutableFloatStateOf(0f) }
                 var playbackHeightPx by remember { mutableFloatStateOf(0f) }
                 // Art and title row at rest (measured while the card is closed). While the card opens
@@ -2321,7 +2322,10 @@ fun BottomSheetPlayer(
                         Modifier
                             .fillMaxSize()
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                            .onGloballyPositioned { boxBottomPx = it.positionInRoot().y + it.size.height }
+                            .onGloballyPositioned {
+                                boxTopPx = it.positionInRoot().y
+                                boxBottomPx = it.positionInRoot().y + it.size.height
+                            }
                             // Any touch on the opened card shows its auto-hidden controls again.
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
@@ -2340,19 +2344,40 @@ fun BottomSheetPlayer(
                         )
                     if (edgeToEdgeArt) {
                         // Edge to edge: the art fills the top of the player behind the handle,
-                        // title and progress bar, and fades into the background. The usual art
-                        // stays in place (invisible) for swiping and for the lyrics header.
-                        val edgeArtHeight = topInset + 44.dp + artSize + 110.dp
+                        // title and controls. The usual art stays in place (invisible) for
+                        // swiping; while the card opens this art itself shrinks into the lyrics /
+                        // up next header.
+                        val titleTopInBox by remember {
+                            derivedStateOf { (titleRowPos.y - boxTopPx).roundToInt() }
+                        }
+                        val controlsBottomInBox by remember {
+                            derivedStateOf { (playbackTopPx + playbackHeightPx - boxTopPx).roundToInt() }
+                        }
+                        val blackout = edgeToEdgeArtEdge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
+                        val tailPx = with(density) { EdgeToEdgeTail.toPx() }
+                        val fallbackHeightPx = with(density) { (topInset + 44.dp + artSize + 110.dp).toPx() }
+                        // Blackout keeps its height and fade; Nothing and Blur reach below the
+                        // play controls, so the art shows sharp behind them.
+                        val edgeArtHeightPx =
+                            if (blackout || playbackHeightPx == 0f) {
+                                fallbackHeightPx
+                            } else {
+                                controlsBottomInBox + tailPx
+                            }
+                        val blurFromBottomPx =
+                            if (titleRowPos.y == 0f) edgeArtHeightPx * 0.3f else edgeArtHeightPx - titleTopInBox
                         EdgeToEdgeAlbumArt(
                             artworkUrl = mediaMetadata?.thumbnailUrl,
                             isPlaying = effectiveIsPlaying,
                             edge = edgeToEdgeArtEdge,
-                            blurFromBottomPx = with(density) { (edgeArtHeight * 0.45f).toPx() },
-                            alphaProvider = { (1f - cardExpand * 3f).coerceIn(0f, 1f) },
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(edgeArtHeight),
+                            heightPx = edgeArtHeightPx,
+                            tailPx = tailPx,
+                            blurFromBottomPx = blurFromBottomPx,
+                            expandProvider = { cardExpand },
+                            headerLeftPx = marginPx,
+                            headerTopPx = headerTopPx,
+                            headerSizePx = headerArtPx,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     Column(
@@ -2425,9 +2450,9 @@ fun BottomSheetPlayer(
                                             .fillMaxWidth()
                                             .height(artSize)
                                             .graphicsLayer {
-                                                // With edge-to-edge art it only shows while it
-                                                // moves into the lyrics / up next header.
-                                                if (edgeToEdgeArt) alpha = (cardExpand * 3f).coerceIn(0f, 1f)
+                                                // With edge-to-edge art the big art itself moves
+                                                // into the lyrics / up next header instead.
+                                                if (edgeToEdgeArt) alpha = 0f
                                             }
                                             .onGloballyPositioned {
                                                 if (cardExpand == 0f) {
@@ -3141,63 +3166,90 @@ private fun PlayerControlButton(
 }
 
 /**
- * The album art drawn edge to edge across the top of the player, fading out toward the bottom.
- * While paused it shrinks slightly, like the regular art, and its corners round off.
+ * The album art drawn edge to edge across the top of the player. Its lower edge follows the
+ * setting: Blackout fades it into the background, Blur blurs it from the title down, Nothing
+ * leaves it sharp. While paused it shrinks slightly and its corners round off. While the card
+ * opens ([expandProvider] 0..1) it shrinks straight into the header's small art.
  */
 @Composable
 private fun EdgeToEdgeAlbumArt(
     artworkUrl: String?,
     isPlaying: Boolean,
     edge: com.metrolist.music.constants.MiniPlayerEdgeEffect,
+    heightPx: Float,
+    tailPx: Float,
     blurFromBottomPx: Float,
-    alphaProvider: () -> Float,
+    expandProvider: () -> Float,
+    headerLeftPx: Float,
+    headerTopPx: Float,
+    headerSizePx: Float,
     modifier: Modifier = Modifier,
 ) {
-    val scale by animateFloatAsState(
+    val pauseScale by animateFloatAsState(
         targetValue = if (isPlaying) 1f else EdgeToEdgePausedScale,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "edgeArtScale",
     )
+    val blackout = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
     androidx.compose.animation.Crossfade(
         targetState = artworkUrl,
         animationSpec = tween(400),
         label = "edgeArt",
         modifier =
             modifier
-                .graphicsLayer {
-                    alpha = alphaProvider()
+                .layout { measurable, constraints ->
+                    // Full size at rest; while the card opens, the art's own frame shrinks to the
+                    // header art (the image is cropped anew each frame, so it never stretches).
+                    val p = expandProvider().coerceIn(0f, 1f)
+                    val fullWidth = constraints.maxWidth.toFloat()
+                    val fullHeight = heightPx.coerceIn(1f, constraints.maxHeight.toFloat())
+                    val width = lerp(fullWidth, headerSizePx, p).roundToInt().coerceAtLeast(1)
+                    val height = lerp(fullHeight, headerSizePx, p).roundToInt().coerceAtLeast(1)
+                    val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(width, height))
+                    layout(constraints.maxWidth, fullHeight.roundToInt()) {
+                        placeable.place(lerp(0f, headerLeftPx, p).roundToInt(), lerp(0f, headerTopPx, p).roundToInt())
+                    }
+                }.graphicsLayer {
+                    val p = expandProvider().coerceIn(0f, 1f)
+                    val scale = lerp(pauseScale, 1f, p)
                     scaleX = scale
                     scaleY = scale
                     transformOrigin = TransformOrigin(0.5f, 0.4f)
-                    // Corners round off as it shrinks, like a card lifted off the screen.
-                    val shrink = ((1f - scale) / (1f - EdgeToEdgePausedScale)).coerceIn(0f, 1f)
-                    shape = RoundedCornerShape((28f * shrink).dp)
-                    clip = shrink > 0f
+                    // Corners round off as it shrinks while paused, and end as round as the
+                    // header art's when the card is open.
+                    val shrink = ((1f - pauseScale) / (1f - EdgeToEdgePausedScale)).coerceIn(0f, 1f)
+                    val radius = lerp(28f * shrink, 10f, p)
+                    shape = RoundedCornerShape(radius.dp)
+                    clip = radius > 0f
                     compositingStrategy = CompositingStrategy.Offscreen
                 }.bottomEdgeBlur(
-                    // Blur: the lower part where the controls sit is blurred.
+                    // Blur: from the title down, over the progress bar and controls.
                     enabled = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR,
-                    startFromBottomPx = { blurFromBottomPx },
+                    startFromBottomPx = { if (expandProvider() > 0f) 0f else blurFromBottomPx },
                 ).drawWithContent {
                     drawContent()
-                    // Blackout: fades out over the lower part, into the player's background.
-                    // Nothing and Blur: the art stays as it is and only its last edge softens,
-                    // so it never ends in a hard line.
-                    val blackout = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
+                    val p = expandProvider().coerceIn(0f, 1f)
+                    if (p >= 1f) return@drawWithContent
+                    val keep = p
+                    fun a(alpha: Float) = Color.Black.copy(alpha = lerp(alpha, 1f, keep))
                     drawRect(
                         brush =
                             if (blackout) {
+                                // Blackout: fades out over the lower part, into the background.
                                 Brush.verticalGradient(
                                     0f to Color.Black,
                                     0.55f to Color.Black,
-                                    0.8f to Color.Black.copy(alpha = 0.45f),
-                                    1f to Color.Transparent,
+                                    0.8f to a(0.45f),
+                                    1f to a(0f),
                                 )
                             } else {
+                                // Nothing and Blur: no darkening; only the strip below the
+                                // controls fades, so the art doesn't end in a hard line.
+                                val tailStart = (1f - tailPx / size.height).coerceIn(0f, 1f)
                                 Brush.verticalGradient(
                                     0f to Color.Black,
-                                    0.88f to Color.Black,
-                                    1f to Color.Transparent,
+                                    tailStart to Color.Black,
+                                    1f to a(0f),
                                 )
                             },
                         blendMode = BlendMode.DstIn,
@@ -3213,6 +3265,8 @@ private fun EdgeToEdgeAlbumArt(
         )
     }
 }
+
+private val EdgeToEdgeTail = 24.dp
 
 private const val EdgeToEdgePausedScale = 0.93f
 
