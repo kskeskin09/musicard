@@ -9,7 +9,7 @@
 - Home rows such as Keep listening restyled to match the rest of the app
 
 ## New features
-- "Audio output" button in the notification, opening the app's own sheet
+- "Audio output" button in the notification, opening the app's own sheet with a volume slider
 - System logo theme that follows the phone's dark mode
 - Lyrics of the next songs in the queue load ahead of time
 - Search prefers songs over videos
@@ -33,7 +33,7 @@
 - Mini oynatıcı artık sayfanın arka planına da uyabiliyor
 - Kütüphanede ayrı İndirilenler, Önbellek ve Kütüphane listeleri, kütüphanenin otomatik indirilmesi (varsayılan olarak sadece Wi-Fi)
 - Karıştırmada önceki şarkılar kaybolmuyor, geri gitmek her zaman çalışıyor
-- Bildirimde ses çıkışı butonu, telefonun karanlık moduna uyan Sistem logo teması
+- Bildirimde ses düzeyi kaydırıcılı ses çıkışı paneli, telefonun karanlık moduna uyan Sistem logo teması
 - Uyku zamanlayıcısı 5 saate kadar çıkıyor, uzun süreler "1 saat 30 dakika" şeklinde yazıyor; çalışırken basınca kalan süreyi ve iptal butonunu gösteriyor
 - Ana sayfadaki eski görünümlü satırlar yeni temaya uyarlandı, birçok küçük düzeltme
 
