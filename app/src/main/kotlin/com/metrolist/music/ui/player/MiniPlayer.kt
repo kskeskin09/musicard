@@ -258,6 +258,15 @@ private fun NewMiniPlayer(
                 player.nextMediaItemIndex.takeIf { it != -1 }?.let { player.getMediaItemAt(it).metadata }
             }.getOrNull()
         }
+    // The neighbours' covers are loaded ahead at the size the mini player shows, so when a swipe
+    // lands the new cover is already in memory and doesn't blink while it loads.
+    LaunchedEffect(previousMetadata?.id, nextMetadata?.id) {
+        listOfNotNull(previousMetadata, nextMetadata).forEach { m ->
+            m.thumbnailUrl?.resize(120, 120)?.let { url ->
+                context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).build())
+            }
+        }
+    }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
 
@@ -904,8 +913,11 @@ private fun MiniSwipePreview(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxSize(),
     ) {
+        // Same image (and size) as the mini player's own cover, so the two share one cached copy
+        // and the cover doesn't reload when the swiped-in song becomes the current one.
+        val thumbnailUrl = remember(metadata.thumbnailUrl) { metadata.thumbnailUrl?.resize(120, 120) }
         AsyncImage(
-            model = metadata.thumbnailUrl,
+            model = thumbnailUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier =
