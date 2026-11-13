@@ -277,7 +277,7 @@ fun BottomSheetPlayer(
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val menuState = LocalMenuState.current
-    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
+    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set_duration)
     val copiedTitleStr = stringResource(R.string.copied_title)
     val copiedArtistStr = stringResource(R.string.copied_artist)
     val bottomSheetPageState = LocalBottomSheetPageState.current
@@ -725,6 +725,7 @@ fun BottomSheetPlayer(
 
     val sleepTimerDefault by rememberPreference(SleepTimerDefaultKey, 30f)
     var sleepTimerValue by remember { mutableFloatStateOf(sleepTimerDefault) }
+    val sleepTimerDurationLabel = sleepTimerDurationText(sleepTimerValue.roundToInt())
     val isAtDefault by remember {
         derivedStateOf { sleepTimerValue.roundToInt() == sleepTimerDefault.roundToInt() }
     }
@@ -779,11 +780,7 @@ fun BottomSheetPlayer(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text =
-                            pluralStringResource(
-                                R.plurals.minute,
-                                sleepTimerValue.roundToInt(),
-                                sleepTimerValue.roundToInt(),
-                            ),
+                            sleepTimerDurationLabel,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -792,10 +789,10 @@ fun BottomSheetPlayer(
                     Spacer(Modifier.height(8.dp))
 
                     StyledSlider(
-                        value = sleepTimerValue,
-                        onValueChange = { sleepTimerValue = it },
-                        valueRange = 5f..120f,
-                        steps = (120 - 5) / 5 - 1,
+                        value = sleepTimerStepIndex(sleepTimerValue).toFloat(),
+                        onValueChange = { sleepTimerValue = sleepTimerStepMinutes(it) },
+                        valueRange = 0f..SleepTimerSteps.lastIndex.toFloat(),
+                        steps = SleepTimerSteps.size - 2,
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -811,7 +808,7 @@ fun BottomSheetPlayer(
                         }
                         Toast.makeText(
                             context,
-                            String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
+                            String.format(sleepTimerDefaultSetTemplate, sleepTimerDurationLabel),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }

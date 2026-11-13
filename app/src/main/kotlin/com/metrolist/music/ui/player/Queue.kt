@@ -166,7 +166,7 @@ fun Queue(
     val haptic = LocalHapticFeedback.current
     val clipboardManager = LocalClipboard.current
     val menuState = LocalMenuState.current
-    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
+    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set_duration)
     val bottomSheetPageState = LocalBottomSheetPageState.current
 
     // Listen Together state (reactive)
@@ -231,6 +231,7 @@ fun Queue(
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     val sleepTimerDefault by rememberPreference(SleepTimerDefaultKey, 30f)
     var sleepTimerValue by remember { mutableFloatStateOf(sleepTimerDefault) }
+    val sleepTimerDurationLabel = sleepTimerDurationText(sleepTimerValue.roundToInt())
     val isAtDefault by remember {
         derivedStateOf { sleepTimerValue.roundToInt() == sleepTimerDefault.roundToInt() }
     }
@@ -576,21 +577,17 @@ fun Queue(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text =
-                                    pluralStringResource(
-                                        R.plurals.minute,
-                                        sleepTimerValue.roundToInt(),
-                                        sleepTimerValue.roundToInt(),
-                                    ),
+                                    sleepTimerDurationLabel,
                                 style = MaterialTheme.typography.bodyLarge,
                             )
 
                             Spacer(Modifier.height(16.dp))
 
                             StyledSlider(
-                                value = sleepTimerValue,
-                                onValueChange = { sleepTimerValue = it },
-                                valueRange = 5f..120f,
-                                steps = (120 - 5) / 5 - 1,
+                                value = sleepTimerStepIndex(sleepTimerValue).toFloat(),
+                                onValueChange = { sleepTimerValue = sleepTimerStepMinutes(it) },
+                                valueRange = 0f..SleepTimerSteps.lastIndex.toFloat(),
+                                steps = SleepTimerSteps.size - 2,
                                 modifier = Modifier.fillMaxWidth(),
                             )
 
@@ -610,7 +607,7 @@ fun Queue(
                                             }
                                             Toast.makeText(
                                                 context,
-                                                String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
+                                                String.format(sleepTimerDefaultSetTemplate, sleepTimerDurationLabel),
                                                 Toast.LENGTH_SHORT,
                                             ).show()
                                         },
@@ -631,7 +628,7 @@ fun Queue(
                                             }
                                             Toast.makeText(
                                                 context,
-                                                String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
+                                                String.format(sleepTimerDefaultSetTemplate, sleepTimerDurationLabel),
                                                 Toast.LENGTH_SHORT,
                                             ).show()
                                         },
