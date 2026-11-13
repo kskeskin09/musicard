@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- In-app "Download and update" opens the system installer for the new APK. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
