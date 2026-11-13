@@ -1262,6 +1262,9 @@ interface DatabaseDao {
     @Query("SELECT COUNT(*) FROM song WHERE inLibrary IS NOT NULL AND liked = 0 AND isEpisode = 0 AND isLocal = 0 AND isUploaded = 0 AND id NOT IN (SELECT psm.songId FROM playlist_song_map psm JOIN playlist p ON p.id = psm.playlistId WHERE p.isLocal = 1 OR p.isEditable = 1)")
     suspend fun looseLibrarySongCount(): Int
 
+    @Query("SELECT id FROM song WHERE inLibrary IS NOT NULL AND liked = 0 AND isEpisode = 0 AND isLocal = 0 AND isUploaded = 0 AND id NOT IN (SELECT psm.songId FROM playlist_song_map psm JOIN playlist p ON p.id = psm.playlistId WHERE p.isLocal = 1 OR p.isEditable = 1)")
+    suspend fun looseLibrarySongIds(): List<String>
+
     /** Takes loose songs out of the app's library only; the YouTube Music account is not touched. */
     @Query("UPDATE song SET inLibrary = NULL WHERE inLibrary IS NOT NULL AND liked = 0 AND isEpisode = 0 AND isLocal = 0 AND isUploaded = 0 AND id NOT IN (SELECT psm.songId FROM playlist_song_map psm JOIN playlist p ON p.id = psm.playlistId WHERE p.isLocal = 1 OR p.isEditable = 1)")
     suspend fun removeLooseLibrarySongs(): Int

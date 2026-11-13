@@ -12,7 +12,7 @@
     <string name="clean_up_library_none">Kütüphanendeki her şarkı beğenilmiş ya da bir çalma listende.</string>
     <string name="clean_up_library_done">Kütüphaneden %d şarkı kaldırıldı</string>
     <plurals name="clean_up_library_message">
-        <item quantity="one">%d şarkı ne beğenilmiş ne de bir çalma listende. Kütüphaneden kaldırılsın mı? YouTube Music hesabında durur, kendi indirdiğin şarkılar İndirilenler\'de kalır.</item>
-        <item quantity="other">%d şarkı ne beğenilmiş ne de bir çalma listende. Kütüphaneden kaldırılsın mı? YouTube Music hesabında durur, kendi indirdiğin şarkılar İndirilenler\'de kalır.</item>
+        <item quantity="one">%d şarkı ne beğenilmiş ne de bir çalma listende. Kütüphaneden kaldırılsın mı? Giriş yaptıysan YouTube Music kütüphanenden de kaldırılır. Kendi indirdiğin şarkılar İndirilenler\'de kalır.</item>
+        <item quantity="other">%d şarkı ne beğenilmiş ne de bir çalma listende. Kütüphaneden kaldırılsın mı? Giriş yaptıysan YouTube Music kütüphanenden de kaldırılır. Kendi indirdiğin şarkılar İndirilenler\'de kalır.</item>
     </plurals>
 </resources>
