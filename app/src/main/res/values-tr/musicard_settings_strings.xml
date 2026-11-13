@@ -13,10 +13,11 @@
     <string name="update_up_to_date">En son sürümü kullanıyorsun</string>
     <string name="update_check_failed">Güncellemeler kontrol edilemedi. Bağlantını kontrol et.</string>
     <string name="current_version_label">Yüklü: %1$s</string>
-    <string name="force_bottom_navbar_desc">Yatay ekranda ve tablette sekme çubuğunu yana almak yerine altta tutar</string>
-    <string name="slim_navbar_desc">Daha ince sekme çubuğu: sadece simgeler, yazı yok</string>
+    <string name="force_bottom_navbar_desc">Telefon yan çevrildiğinde veya tablette, Ana sayfa / Arama / Kitaplık çubuğu sola geçmek yerine altta kalır</string>
     <string name="auto_hide_nav">Gezinme çubuğunu otomatik gizle</string>
     <string name="auto_hide_nav_desc">Tam ekran oynatıcıda ve şarkı sözlerinde Android gezinme çubuğunu gizler. Göstermek için alttan yukarı kaydır.</string>
     <string name="auto_hide_nav_off">Kapalı</string>
     <string name="auto_hide_nav_after">%1$d saniye sonra</string>
+    <string name="auto_hide_status">Durum çubuğunu otomatik gizle</string>
+    <string name="auto_hide_status_desc">Tam ekran oynatıcıda ve şarkı sözlerinde üstteki saat ve pil çubuğunu gizler. Göstermek için üstten aşağı kaydır.</string>
 </resources>

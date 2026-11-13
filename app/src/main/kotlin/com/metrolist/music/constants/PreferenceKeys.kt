@@ -78,6 +78,8 @@ val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
 
 // Hide Android's navigation bar on the full-screen player after a short idle delay.
 val AutoHideNavBarKey = stringPreferencesKey("autoHideNavBar")
+// Same for the status bar (clock, battery) at the top.
+val AutoHideStatusBarKey = stringPreferencesKey("autoHideStatusBar")
 
 enum class AutoHideNavBarDelay(val millis: Long) {
     OFF(0L),

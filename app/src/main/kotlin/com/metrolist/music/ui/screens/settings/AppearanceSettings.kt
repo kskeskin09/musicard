@@ -104,7 +104,6 @@ import com.metrolist.music.constants.ShowLikedPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.SliderStyle
 import com.metrolist.music.constants.SliderStyleKey
-import com.metrolist.music.constants.SlimNavBarKey
 import com.metrolist.music.constants.SwipeSensitivityKey
 import com.metrolist.music.constants.SwipeThumbnailKey
 import com.metrolist.music.constants.SwipeToSongKey
@@ -324,11 +323,30 @@ fun AppearanceSettings(
             defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
         )
     var showAutoHideNavBarDialog by rememberSaveable { mutableStateOf(false) }
+    val (autoHideStatusBar, onAutoHideStatusBarChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.AutoHideStatusBarKey,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+        )
+    var showAutoHideStatusBarDialog by rememberSaveable { mutableStateOf(false) }
     val autoHideNavBarText: @Composable (com.metrolist.music.constants.AutoHideNavBarDelay) -> String = {
         when (it) {
             com.metrolist.music.constants.AutoHideNavBarDelay.OFF -> stringResource(R.string.auto_hide_nav_off)
             else -> stringResource(R.string.auto_hide_nav_after, (it.millis / 1000).toInt())
         }
+    }
+    if (showAutoHideStatusBarDialog) {
+        EnumDialog(
+            onDismiss = { showAutoHideStatusBarDialog = false },
+            onSelect = {
+                onAutoHideStatusBarChange(it)
+                showAutoHideStatusBarDialog = false
+            },
+            title = stringResource(R.string.auto_hide_status),
+            current = autoHideStatusBar,
+            values = com.metrolist.music.constants.AutoHideNavBarDelay.entries.toList(),
+            valueText = autoHideNavBarText,
+        )
     }
     if (showAutoHideNavBarDialog) {
         EnumDialog(
@@ -343,12 +361,6 @@ fun AppearanceSettings(
             valueText = autoHideNavBarText,
         )
     }
-    val (slimNav, onSlimNavChange) =
-        rememberPreference(
-            SlimNavBarKey,
-            defaultValue = false,
-        )
-
     val (densityScale, onDensityScaleChange) = rememberPreference(DensityScaleKey, defaultValue = 1f)
     var showDensityScaleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -1569,33 +1581,19 @@ fun AppearanceSettings(
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
-                        title = { Text(stringResource(R.string.slim_navbar)) },
-                        description = { Text(stringResource(R.string.slim_navbar_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = slimNav,
-                                onCheckedChange = onSlimNavChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (slimNav) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onSlimNavChange(!slimNav) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.nav_bar),
                         title = { Text(stringResource(R.string.auto_hide_nav)) },
                         description = {
                             Text(stringResource(R.string.auto_hide_nav_desc) + "\n" + autoHideNavBarText(autoHideNavBar))
                         },
                         onClick = { showAutoHideNavBarDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.nav_bar),
+                        title = { Text(stringResource(R.string.auto_hide_status)) },
+                        description = {
+                            Text(stringResource(R.string.auto_hide_status_desc) + "\n" + autoHideNavBarText(autoHideStatusBar))
+                        },
+                        onClick = { showAutoHideStatusBarDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.group_outlined),
