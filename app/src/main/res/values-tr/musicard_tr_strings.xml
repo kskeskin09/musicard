@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Turkish translations for strings added by Musicard. -->
+<resources>
+    <!-- Player -->
+    <string name="player_buttons_background_color">Arka plan rengi</string>
+    <string name="playing_from">Şuradan çalınıyor</string>
+    <string name="follow_background">Arka planı takip et</string>
+    <string name="up_next">Sıradaki</string>
+    <string name="up_next_empty">Sırada şarkı yok</string>
+    <string name="open_full_queue">Tüm sırayı aç</string>
+    <string name="open_artist">Sanatçıyı aç</string>
+    <string name="music_player_appearance">Müzik oynatıcı</string>
+    <string name="player_background">Oynatıcı arka planı</string>
+    <string name="style_classic">Klasik</string>
+    <string name="style_glass">Cam</string>
+    <string name="style_modern">Modern</string>
+    <string name="like_icon_color">Beğeni simgesi stili</string>
+    <string name="like_icon_color_white">Modern</string>
+    <string name="like_icon_color_red">Klasik</string>
+    <string name="relike_protection">Beğeni koruması</string>
+    <string name="relike_protection_desc">Beğeniyi kaldırmak iki dokunuş ister: ilk dokunuşta kalp çatlar, ikincisinde beğeni kaldırılır</string>
+    <string name="slider_style_classic">Klasik</string>
+    <string name="slider_style_old">Eski</string>
+    <string name="repeat">Tekrarla</string>
+    <string name="seek_back_5">5 saniye geri</string>
+    <string name="seek_forward_5">5 saniye ileri</string>
+
+    <!-- Lyrics -->
+    <string name="lyrics_provider">Söz sağlayıcı</string>
+    <string name="lyrics_provider_desc">Sağlayıcıları aç veya kapat, sürüklemek için birine basılı tut. Üstteki sağlayıcılar önce denenir</string>
+    <string name="lyric_style">Söz stili</string>
+    <string name="lyrics_blur">Söz bulanıklığı</string>
+    <string name="lyrics_blur_keep_neighbors">Yakındaki satırları net tut</string>
+    <string name="lyrics_blur_keep_neighbors_desc">Çalan satırın hemen önündeki ve arkasındaki satırlar bulanıklaştırılmaz</string>
+    <string name="lyrics_blur_strength">Bulanıklık gücü: %%%1$d</string>
+    <string name="lyrics_blur_desc">Satırlar çalan satırdan uzaklaştıkça bulanıklaşır. Android 12 gerektirir</string>
+
+    <!-- Mini player -->
+    <string name="mini_player_edge_effect">Kenar efekti</string>
+    <string name="mini_player_blackout">Karartma</string>
+    <string name="mini_player_blackout_desc">Sayfa, mini oynatıcıya ve sekme çubuğuna doğru kararır</string>
+    <string name="mini_player_blur">Bulanıklık</string>
+    <string name="mini_player_blur_desc">Sayfa, mini oynatıcıya ve sekme çubuğuna doğru bulanıklaşır</string>
+    <string name="mini_player_edge_none">Hiçbiri</string>
+
+    <!-- Home and search -->
+    <string name="home_recents">Son çalınanlar</string>
+    <string name="albums_for_you">Sana özel albümler</string>
+    <string name="explore">Keşfet</string>
+    <string name="explore_coming_soon">Çok yakında</string>
+    <string name="search_settings">Ayarlarda ara</string>
+    <string name="search_hint_everything">Şarkı, sanatçı, albüm ara</string>
+    <string name="search_filter_music">Müzik</string>
+    <string name="search_top_result">En iyi sonuç</string>
+    <string name="search_exact_matches">Tam eşleşmeler</string>
+    <string name="search_kind_song">Şarkı</string>
+    <string name="genre_filter_for_you">Sana özel</string>
+    <string name="genre_filter_popular">Popüler</string>
+    <string name="genre_filter_new">Yeni</string>
+
+    <!-- Library -->
+    <string name="library_sort">Sırala</string>
+    <string name="library_sort_custom">Özel</string>
+    <string name="library_sort_name">Ad (A–Z)</string>
+    <string name="library_sort_added_newest">Eklenme tarihi (en yeni önce)</string>
+    <string name="library_sort_added_oldest">Eklenme tarihi (en eski önce)</string>
+    <string name="library_sort_modified_newest">Değiştirilme tarihi (en yeni önce)</string>
+    <string name="library_sort_modified_oldest">Değiştirilme tarihi (en eski önce)</string>
+    <string name="library_kind_playlist">Çalma listesi</string>
+    <string name="library_kind_artist">Sanatçı</string>
+    <string name="library_kind_album">Albüm</string>
+    <string name="library_pin_limit">En fazla 3 öğe sabitleyebilirsin</string>
+    <string name="library_pinned">Sabitlendi</string>
+
+    <!-- Playlists, export -->
+    <string name="play_list_button">Çal</string>
+    <string name="pause_list_button">Duraklat</string>
+    <string name="playlist_title_label">Çalma listesi adı</string>
+    <string name="playlist_title_hint">Çalma listene bir ad ver</string>
+    <string name="playlist_description_label">Çalma listesi açıklaması</string>
+    <string name="playlist_description_hint">Ne hakkında?</string>
+    <string name="playlist_cover_remove">Kapağı kaldır</string>
+    <string name="playlist_cover_link_title">Kapak görseli bağlantısı</string>
+    <string name="export_playlists_m3u">Çalma listelerini M3U olarak dışa aktar</string>
+    <string name="export_playlists_csv">Çalma listelerini CSV olarak dışa aktar</string>
+    <string name="export_select_all">Tümünü seç</string>
+    <string name="export_select_none">Hiçbirini seçme</string>
+    <string name="export_action">Dışa aktar</string>
+    <string name="export_action_count">Dışa aktar (%d)</string>
+    <plurals name="export_playlists_done">
+        <item quantity="one">%d çalma listesi Documents/Musicard klasörüne kaydedildi</item>
+        <item quantity="other">%d çalma listesi Documents/Musicard klasörüne kaydedildi</item>
+    </plurals>
+
+    <!-- Profile and stats -->
+    <string name="profile_tab">Profil</string>
+    <string name="profile_username">Kullanıcı adı</string>
+    <string name="profile_change_photo">Profili düzenle</string>
+    <string name="profile_picture">Profil fotoğrafı</string>
+    <string name="profile_picture_url_hint">Görsel bağlantısı (https://…)</string>
+    <string name="profile_picture_crop_hint">Yakınlaştırmak için iki parmakla sıkıştır, taşımak için sürükle</string>
+    <string name="profile_picture_choose">Fotoğraf seç</string>
+    <string name="profile_picture_link">Bağlantı kullan</string>
+    <plurals name="streak_days">
+        <item quantity="one">%d gün</item>
+        <item quantity="other">%d gün</item>
+    </plurals>
+    <string name="longest_streak">En uzun seri</string>
+    <string name="listening_since">%s tarihinden beri dinliyorsun</string>
+    <string name="stats_daily">Günlük</string>
+    <string name="stats_weekly">Haftalık</string>
+    <string name="stats_monthly">Aylık</string>
+    <string name="stats_yearly">Yıllık</string>
+    <string name="stats_lifetime">Tüm zamanlar</string>
+    <string name="stats_top_songs">En çok dinlenen şarkılar</string>
+    <string name="stats_top_artists">En çok dinlenen sanatçılar</string>
+    <string name="stats_top_albums">En çok dinlenen albümler</string>
+    <string name="stats_your_listening">Dinleme özetin</string>
+    <string name="stats_minutes_listened">dakika dinlendi</string>
+    <string name="stats_plays">%1$d kez çalındı</string>
+    <string name="stats_peak_hour">En aktif saat</string>
+    <string name="stats_top_day">En aktif gün</string>
+    <string name="stats_minutes">%1$d dk</string>
+    <string name="stats_hours_minutes">%1$d sa %2$d dk</string>
+    <string name="stats_empty">Bu dönemde henüz bir şey çalınmadı</string>
+
+    <!-- Audio output -->
+    <string name="audio_output_auto">Sistem otomatik</string>
+    <string name="audio_output_phone">Telefon (%1$s)</string>
+    <string name="audio_output_phone_default">Telefon</string>
+    <string name="audio_output_show_battery">Pil durumunu göster</string>
+
+    <!-- Notification center -->
+    <string name="notification_center">Bildirim merkezi</string>
+    <string name="notification_center_desc">Oynatma bildirimindeki tuşları seç</string>
+    <string name="notification_buttons_hint">Değiştirmek için bir tuşa dokun. Oynat/duraklat her zaman ortada kalır ve her tuş bir kez kullanılabilir.</string>
+    <string name="notification_choose_button">Bir tuş seç</string>
+    <string name="notification_button_in_use">Kullanımda</string>
+    <string name="notification_restore_defaults">Varsayılan tuşları geri yükle</string>
+    <string name="notification_preview_song">Şarkı adı</string>
+    <string name="notification_preview_artist">Sanatçı adı</string>
+
+    <!-- About -->
+    <string name="about_based_on_metrolist">Metrolist tabanlı</string>
+    <string name="about_based_on_metrolist_desc">Musicard, GPL-3.0 lisansıyla kullanılan bir Metrolist çatalıdır</string>
+</resources>
