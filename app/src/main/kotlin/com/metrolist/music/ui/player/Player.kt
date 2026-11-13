@@ -783,7 +783,10 @@ fun BottomSheetPlayer(
                     SleepTimerRunning(
                         endOfSong = playerConnection.service.sleepTimer?.pauseWhenSongEnd == true,
                         timeLeftMs = sleepTimerTimeLeft,
-                        onCancel = { playerConnection.service.sleepTimer?.clear() },
+                        onCancel = {
+                            playerConnection.service.sleepTimer?.clear()
+                            showSleepTimerDialog = false
+                        },
                     )
                     return@sleepTimerText
                 }
