@@ -78,16 +78,28 @@ fun Material3SettingsGroup(
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
+            // Rows that can be hidden slide open and closed; each row's divider sits above it, so
+            // a hidden row takes its line along.
+            val firstVisible = items.indexOfFirst { it.visible }
             items.forEachIndexed { index, item ->
-                Material3SettingsItemRow(item = item)
-                if (index < items.size - 1) {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.padding(
-                            start = if (item.icon != null || item.leadingContent != null) 64.dp else 20.dp
-                        )
-                    )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = item.visible,
+                    enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut(),
+                ) {
+                    Column {
+                        if (index > firstVisible && firstVisible >= 0) {
+                            val above = items.subList(0, index).lastOrNull { it.visible } ?: item
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.padding(
+                                    start = if (above.icon != null || above.leadingContent != null) 64.dp else 20.dp
+                                )
+                            )
+                        }
+                        Material3SettingsItemRow(item = item)
+                    }
                 }
             }
         }
@@ -223,5 +235,7 @@ data class Material3SettingsItem(
     val showBadge: Boolean = false,
     val isHighlighted: Boolean = false,
     val enabled: Boolean = true,
-    val onClick: (() -> Unit)? = null
+    val onClick: (() -> Unit)? = null,
+    // Hidden rows slide shut instead of disappearing at once.
+    val visible: Boolean = true,
 )

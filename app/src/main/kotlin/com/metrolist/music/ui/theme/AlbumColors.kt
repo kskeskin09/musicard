@@ -269,9 +269,10 @@ fun pageRaisedColor(): Color = LocalPageRaisedColor.current ?: raisedPageColor(M
 @Composable
 fun TintedPageColors(
     tint: Color,
+    glassUrl: String? = null,
     content: @Composable () -> Unit,
 ) {
-    PageFadeColors.Register(tint)
+    PageFadeColors.Register(tint, glassUrl)
     CompositionLocalProvider(LocalPageRaisedColor provides raisedPageColor(tint), content = content)
 }
 
@@ -281,8 +282,11 @@ fun TintedPageColors(
  * are on screen during a page change.
  */
 object PageFadeColors {
-    private class Entry(color: Color) {
+    private class Entry(color: Color, glassUrl: String?) {
         var color by mutableStateOf(color)
+
+        // The cover blurred behind the page when it uses the Glass background.
+        var glassUrl by mutableStateOf(glassUrl)
 
         // Set once the page starts going away (it was shown and is now being left), so the
         // colors switch back right as the page change starts instead of after it ends.
@@ -294,10 +298,20 @@ object PageFadeColors {
     val current: Color?
         get() = entries.lastOrNull { !it.leaving }?.color
 
+    /** The cover behind the page on screen when it uses the Glass background, else null. */
+    val currentGlassUrl: String?
+        get() = entries.lastOrNull { !it.leaving }?.glassUrl
+
     @Composable
-    fun Register(tint: Color) {
-        val entry = remember { Entry(tint) }
-        SideEffect { entry.color = tint }
+    fun Register(
+        tint: Color,
+        glassUrl: String? = null,
+    ) {
+        val entry = remember { Entry(tint, glassUrl) }
+        SideEffect {
+            entry.color = tint
+            entry.glassUrl = glassUrl
+        }
         val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
         DisposableEffect(entry, lifecycle) {
             entries.add(entry)

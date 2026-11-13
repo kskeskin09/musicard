@@ -4,4 +4,5 @@
     <string name="page_background">Page background</string>
     <string name="page_edge_to_edge_cover">Edge-to-edge cover</string>
     <string name="page_edge_to_edge_cover_desc">Album and playlist covers fill the top of the page up to the screen edges</string>
+    <string name="follow_page_background">Follow page background</string>
 </resources>

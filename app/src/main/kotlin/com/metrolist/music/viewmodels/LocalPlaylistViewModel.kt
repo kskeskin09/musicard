@@ -67,38 +67,7 @@ constructor(
                     )
                 }.distinctUntilChanged(),
         ) { songs, (sortType, sortDescending, hideVideoSongs) ->
-            val filteredSongs = if (hideVideoSongs) {
-                songs.filter { !it.song.song.isVideo }
-            } else {
-                songs
-            }
-            when (sortType) {
-                PlaylistSongSortType.CUSTOM -> filteredSongs
-                PlaylistSongSortType.CREATE_DATE -> filteredSongs.sortedBy { it.map.id }
-                PlaylistSongSortType.NAME -> {
-                    val collator = Collator.getInstance(Locale.getDefault())
-                    collator.strength = Collator.PRIMARY
-                    filteredSongs.sortedWith(compareBy(collator) { it.song.song.title })
-                }
-                PlaylistSongSortType.ARTIST -> {
-                    val collator = Collator.getInstance(Locale.getDefault())
-                    collator.strength = Collator.PRIMARY
-                    filteredSongs.sortedWith(
-                        compareBy<PlaylistSong, String>(collator) { song -> song.song.artists.joinToString("") { it.name } }
-                            .thenBy(collator) { it.song.album?.title.orEmpty() },
-                    )
-                }
-
-                PlaylistSongSortType.PLAY_TIME -> filteredSongs.sortedBy { it.song.song.totalPlayTime }
-                // Last change to the song entry (file date, else when it was added to the library),
-                // then the order it was added to the playlist.
-                PlaylistSongSortType.MODIFIED_DATE ->
-                    filteredSongs.sortedWith(
-                        compareBy<PlaylistSong, java.time.LocalDateTime?>(nullsFirst()) {
-                            it.song.song.dateModified ?: it.song.song.inLibrary
-                        }.thenBy { it.map.id },
-                    )
-            }.reversed(sortDescending && sortType != PlaylistSongSortType.CUSTOM)
+            sortPlaylistSongs(songs, sortType, sortDescending, hideVideoSongs)
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
@@ -137,4 +106,48 @@ object PlaylistPreviewCache {
     fun put(playlist: com.metrolist.music.db.entities.Playlist) {
         playlists.put(playlist.id, playlist)
     }
+}
+
+/**
+ * A playlist's songs in the order its page shows them: the chosen sort (and direction), without
+ * videos when those are hidden. Used by the page and by the playlist's cover collage.
+ */
+fun sortPlaylistSongs(
+    songs: List<PlaylistSong>,
+    sortType: PlaylistSongSortType,
+    sortDescending: Boolean,
+    hideVideoSongs: Boolean,
+): List<PlaylistSong> {
+    val filteredSongs = if (hideVideoSongs) {
+        songs.filter { !it.song.song.isVideo }
+    } else {
+        songs
+    }
+    return when (sortType) {
+        PlaylistSongSortType.CUSTOM -> filteredSongs
+        PlaylistSongSortType.CREATE_DATE -> filteredSongs.sortedBy { it.map.id }
+        PlaylistSongSortType.NAME -> {
+            val collator = Collator.getInstance(Locale.getDefault())
+            collator.strength = Collator.PRIMARY
+            filteredSongs.sortedWith(compareBy(collator) { it.song.song.title })
+        }
+        PlaylistSongSortType.ARTIST -> {
+            val collator = Collator.getInstance(Locale.getDefault())
+            collator.strength = Collator.PRIMARY
+            filteredSongs.sortedWith(
+                compareBy<PlaylistSong, String>(collator) { song -> song.song.artists.joinToString("") { it.name } }
+                    .thenBy(collator) { it.song.album?.title.orEmpty() },
+            )
+        }
+
+        PlaylistSongSortType.PLAY_TIME -> filteredSongs.sortedBy { it.song.song.totalPlayTime }
+        // Last change to the song entry (file date, else when it was added to the library),
+        // then the order it was added to the playlist.
+        PlaylistSongSortType.MODIFIED_DATE ->
+            filteredSongs.sortedWith(
+                compareBy<PlaylistSong, java.time.LocalDateTime?>(nullsFirst()) {
+                    it.song.song.dateModified ?: it.song.song.inLibrary
+                }.thenBy { it.map.id },
+            )
+    }.reversed(sortDescending && sortType != PlaylistSongSortType.CUSTOM)
 }

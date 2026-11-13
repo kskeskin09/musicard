@@ -4,7 +4,7 @@
     <!-- Player -->
     <string name="player_buttons_background_color">Arka plan rengi</string>
     <string name="playing_from">Şuradan çalınıyor</string>
-    <string name="follow_background">Arka planı takip et</string>
+    <string name="follow_background">Müzik arka planını takip et</string>
     <string name="up_next">Sıradaki</string>
     <string name="up_next_empty">Sırada şarkı yok</string>
     <string name="open_full_queue">Tüm sırayı aç</string>
