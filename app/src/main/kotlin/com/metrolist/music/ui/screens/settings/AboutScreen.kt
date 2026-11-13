@@ -195,6 +195,60 @@ private fun ContributorAvatar(
     }
 }
 
+private const val MusicardCreatorHandle = "kskeskin09"
+
+/** Card styled like the app header card: GitHub avatar in the icon slot, username in the title slot. */
+@Composable
+private fun CreatorCard(onClick: () -> Unit) {
+    ElevatedCard(
+        onClick = onClick,
+        shape = RoundedCornerShape(32.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+        ) {
+            ContributorAvatar(
+                avatarUrl = "https://github.com/$MusicardCreatorHandle.png",
+                sizeDp = 64,
+                contentDescription = MusicardCreatorHandle,
+            )
+
+            Spacer(Modifier.width(20.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = MusicardCreatorHandle,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = (-0.5).sp,
+                    maxLines = 1,
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    text = stringResource(R.string.about_made_by),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            Icon(
+                painter = painterResource(R.drawable.github),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 @Composable
 private fun DeveloperSocials(
     uriHandler: androidx.compose.ui.platform.UriHandler
@@ -488,9 +542,22 @@ fun AboutScreen(
         Spacer(Modifier.height(32.dp))
         }
 
-        // Community & Info using standard Group
+        // Community & Info: section title, then the Musicard creator card, then the links
+        Text(
+            text = stringResource(R.string.community_and_info),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, bottom = 8.dp, top = 8.dp)
+        )
+
+        CreatorCard(onClick = { uriHandler.openUri("https://github.com/$MusicardCreatorHandle") })
+
+        Spacer(Modifier.height(12.dp))
+
         Material3SettingsGroup(
-            title = stringResource(R.string.community_and_info),
+            title = null,
             items = (if (ShowUpstreamTeam) communityLinks else musicardLinks).map { link ->
                 Material3SettingsItem(
                     icon = painterResource(link.iconRes),
