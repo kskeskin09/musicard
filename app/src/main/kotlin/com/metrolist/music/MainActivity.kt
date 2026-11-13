@@ -598,8 +598,7 @@ class MainActivity : FragmentActivity() {
         val batterySaver = com.metrolist.music.utils.LocalBatterySaver.current
         val dynamicThemePreference by rememberPreference(DynamicThemeKey, defaultValue = true)
         val enableDynamicTheme = dynamicThemePreference && !batterySaver.dynamicColors
-        val highRefreshRatePreference by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
-        val enableHighRefreshRate = highRefreshRatePreference && !batterySaver.highRefreshRate
+        val enableHighRefreshRate by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
 
         LaunchedEffect(enableHighRefreshRate) {
             val window = this@MainActivity.window

@@ -1200,6 +1200,4 @@
     <string name="battery_opt_dynamic_colors_desc">App colors taken from the album cover</string>
     <string name="battery_opt_lyrics_animations">Lyrics animations</string>
     <string name="battery_opt_lyrics_animations_desc">Word animations and glow become plain lyrics</string>
-    <string name="battery_opt_refresh_rate">High refresh rate</string>
-    <string name="battery_opt_refresh_rate_desc">Screen drops to 60 Hz</string>
 </resources>
