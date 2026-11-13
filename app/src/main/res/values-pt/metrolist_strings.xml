@@ -518,7 +518,7 @@
     <string name="auto_radio_queue_desc">Criar uma lista de rádio automaticamente quando uma música e selecionada no menu inicial ou na pesquisa</string>
     <string name="playlist_created_locally">YouTube falhou a Sincronização a Playlist foi criada localmente.</string>
     <string name="lyrics_offset">Delay de Compensação (letras musicais)</string>
-    <string name="update_available_message">Metrolist %s, está preparado para fazer Download.</string>
+    <string name="update_available_message">Musicard %s, está preparado para fazer Download.</string>
     <string name="update_action">Atualizar</string>
     <string name="varispeed">Habilitar velocidade variável</string>
     <string name="varispeed_description">Junta o Tom e velocidade de reprodução, do que resulta num efeito parecido com o Fast forward de um leitor VHS</string>

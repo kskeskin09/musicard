@@ -842,7 +842,7 @@
     <string name="stream_source_visionos">visionOS</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="playlist_created_locally">同步 YouTube 失敗。播放清單已本地建立。</string>
-    <string name="update_available_message">Metrolist%s 已經準備好下載了。</string>
+    <string name="update_available_message">Musicard%s 已經準備好下載了。</string>
     <string name="update_action">更新</string>
     <string name="error_no_internet_connection">沒有網路連結</string>
     <string name="error_offline_playback">你已離線。請連線到網路，或播放已下載的離線曲目。</string>

@@ -762,7 +762,7 @@
     <string name="playlist_position_end_desc">الأغاني المضافة حديثًا تظهر بعد الأغاني الموجودة مسبقًا</string>
     <string name="playlist_unavailable">قائمة التشغيل غير موجودة</string>
     <string name="playlist_created_locally">فشل مزامنة قائمة التشغيل مع تطبيق YouTube. تم إنشاء قائمة تشغيل محليًا على الجهاز.</string>
-    <string name="update_available_message">تطبيق Metrolist %s جاهز للتنزيل</string>
+    <string name="update_available_message">تطبيق Musicard %s جاهز للتنزيل</string>
     <string name="update_action">تحديث</string>
     <string name="kmp_upgrade_warning">ميزة Metrolist KMP لا تزال في فترة التطوير. قد تواجه بعض الاخطاء او الميزات الغير مكتملة</string>
     <string name="kmp_upgrade_action">جرّب KMP</string>

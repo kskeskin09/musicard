@@ -868,7 +868,7 @@
     <string name="enable_zemer_desc">Letras para música judía</string>
     <string name="playlist_created_locally">Sincronización de YouTube se fallido. Se ha creado la lista de reproducción local.</string>
     <string name="ai_provider_inception_help">Visit https://platform.inceptionlabs.ai para claves API</string>
-    <string name="update_available_message">Metrolist %s está listo para descargar.</string>
+    <string name="update_available_message">Musicard %s está listo para descargar.</string>
     <string name="update_action">Actualizar</string>
     <string name="discord_integration">Integración con Discord</string>
     <string name="enable_discord_rpc">Activar Rich Presence</string>

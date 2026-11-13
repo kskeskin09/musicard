@@ -867,7 +867,7 @@
     <string name="enable_zemer">Habilitar Zemer</string>
     <string name="force_bottom_navbar">Forzar la barra de navegación inferior</string>
     <string name="playlist_created_locally">Sincronización con Youtube fallida. La lista de reproducción se ha creado localmente.</string>
-    <string name="update_available_message">Metrolist %s está listo para descargar.</string>
+    <string name="update_available_message">Musicard %s está listo para descargar.</string>
     <string name="update_action">Actualizar</string>
     <string name="ai_provider_inception_help">Visita https://platform.inceptionlabs.ai para las claves de API</string>
     <string name="discord_integration">Integración con Discord</string>

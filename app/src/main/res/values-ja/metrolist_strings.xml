@@ -845,7 +845,7 @@
     <string name="playlist_position_end">プレイリストの最後</string>
     <string name="playlist_position_end_desc">新しく追加された曲は既存の曲の後に表示されます</string>
     <string name="playlist_created_locally">YouTube の同期に失敗しました。プレイリストはローカルに作成されます。</string>
-    <string name="update_available_message">Metrolist %s は既にダウンロードする準備ができています。</string>
+    <string name="update_available_message">Musicard %s は既にダウンロードする準備ができています。</string>
     <string name="update_action">アップデート</string>
     <string name="error_no_internet_connection">インターネットに接続されていません</string>
     <string name="error_offline_playback">オフラインです。インターネットに接続するか、オフライン用にダウンロードした曲を再生してください。</string>

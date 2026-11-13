@@ -867,7 +867,7 @@
     <string name="enable_zemer">Attiva Zemer</string>
     <string name="enable_zemer_desc">Testi per musica in ebraico</string>
     <string name="playlist_created_locally">Sincronizzazione con YouTube fallita. La playlist è stata creata localmente.</string>
-    <string name="update_available_message">Metrolist %s è pronto per essere scaricato.</string>
+    <string name="update_available_message">Musicard %s è pronto per essere scaricato.</string>
     <string name="update_action">Aggiorna</string>
     <string name="ai_provider_inception_help">Visita https://platform.inceptionlabs.ai per ottenere le chiavi API</string>
     <string name="discord_integration">Integrazione Discord</string>

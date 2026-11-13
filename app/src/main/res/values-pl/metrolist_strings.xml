@@ -808,7 +808,7 @@
     <string name="kmp_upgrade_title">Wersja KMP %s Metrolist jest dostępna</string>
     <string name="varispeed">Włącz varispeed</string>
     <string name="audio_track_playback_params">Użyj sprzętowego przetwarzania dźwięku</string>
-    <string name="update_available_message">Metrolist %s jest gotowy do pobrania.</string>
+    <string name="update_available_message">Musicard %s jest gotowy do pobrania.</string>
     <string name="kmp_upgrade_warning">Metrolist KMP jest nadal w fazie rozwoju. Możesz spotkać różne błędy lub niedokończone funkcje.</string>
     <string name="kmp_upgrade_action">Spróbuj KMP</string>
     <string name="lyrics_animation_style_title">Styl animacji słowo po słowie</string>

@@ -860,7 +860,7 @@
     <string name="enable_zemer">Zemer aktivləşdirin</string>
     <string name="enable_zemer_desc">Yəhudi musiqisi üçün sözlər</string>
     <string name="playlist_created_locally">YouTube sinxronizasiyası uğursuz oldu. Pleylist yerli olaraq yaradıldı.</string>
-    <string name="update_available_message">Metrolist %s yükləməyə hazırdır.</string>
+    <string name="update_available_message">Musicard %s yükləməyə hazırdır.</string>
     <string name="update_action">Yeniləmə</string>
     <string name="error_no_internet_connection">İnternet bağlantısı yoxdur</string>
     <string name="error_offline_playback">Oflaynsınız. İnternetə qoşulun və ya oflayn istifadə üçün yüklənmiş treki oxudun.</string>
