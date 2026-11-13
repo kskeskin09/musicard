@@ -26,8 +26,8 @@ object TabStates {
     private val values = HashMap<String, MutableState<Any?>>()
     private val resets = HashMap<String, androidx.compose.runtime.MutableIntState>()
 
-    /** How far each tab's header was scrolled away. */
-    val headerCollapse = HashMap<String, Float>()
+    /** How far each tab's header was scrolled away. Observable, so the header follows changes. */
+    val headerCollapse = androidx.compose.runtime.mutableStateMapOf<String, Float>()
 
     fun list(key: String): LazyListState = lists.getOrPut(key) { LazyListState() }
 
@@ -80,5 +80,28 @@ object TabStates {
         headerCollapse.remove(tab)
         val counter = resets.getOrPut(tab) { mutableIntStateOf(0) }
         counter.intValue += 1
+    }
+}
+
+/**
+ * Keeps a tab's header in step with its list: the header can never be scrolled away further
+ * than the list itself is. When the list is at the top (after a filter change, a jump back to
+ * the top, data that loaded again, or a stray scroll from a page that was leaving), the page
+ * name and search bar come back instead of leaving an empty gap above the list.
+ */
+@androidx.compose.runtime.Composable
+fun HeaderFollowsList(
+    tab: String,
+    state: LazyListState,
+) {
+    androidx.compose.runtime.LaunchedEffect(tab, state) {
+        androidx.compose.runtime
+            .snapshotFlow {
+                val scrolled =
+                    if (state.firstVisibleItemIndex == 0) state.firstVisibleItemScrollOffset.toFloat() else Float.MAX_VALUE
+                scrolled to (TabStates.headerCollapse[tab] ?: 0f)
+            }.collect { (scrolled, collapse) ->
+                if (collapse > scrolled) TabStates.headerCollapse[tab] = scrolled
+            }
     }
 }
