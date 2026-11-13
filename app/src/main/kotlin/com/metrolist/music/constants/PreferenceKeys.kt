@@ -485,6 +485,9 @@ enum class PlayerCardBackground {
     GLASS,
 }
 
+/** Background of album and playlist pages: an even color from the cover, or the blurred cover. */
+val PageBackgroundKey = stringPreferencesKey("pageBackground")
+
 val LyricStyleKey = stringPreferencesKey("lyricStyle")
 val LyricsBlurKey = booleanPreferencesKey("lyricsBlur")
 val LyricsBlurKeepNeighborsKey = booleanPreferencesKey("lyricsBlurKeepNeighbors")

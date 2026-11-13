@@ -202,10 +202,15 @@ fun CachePlaylistScreen(
     // The page takes the color of the first song's cover.
     val tint = rememberCoverPageTint(filteredSongs.firstOrNull()?.thumbnailUrl)
 
+    // "Glass" page background: the blurred cover behind the whole page.
+    val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
+    val pageGlassUrl = filteredSongs.firstOrNull()?.thumbnailUrl
+
     TintedPageColors(tint) {
         Box(
             modifier = Modifier.fillMaxSize().background(tint),
         ) {
+            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl)
             LazyColumn(
                 state = lazyListState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
@@ -368,8 +373,9 @@ fun CachePlaylistScreen(
                 headerItems = 2
             )
 
+            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl, topBarOnly = true)
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = tint, scrolledContainerColor = tint),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint, scrolledContainerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint),
                 title = {
                     when {
                         inSelectMode -> {

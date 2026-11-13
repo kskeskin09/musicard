@@ -505,6 +505,10 @@ fun LocalPlaylistScreen(
             ready = coverColor != null,
         )
 
+    // "Glass" page background: the blurred cover behind the whole page.
+    val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
+    val pageGlassUrl = playlist?.thumbnails?.firstOrNull()
+
     TintedPageColors(tint) {
         Box(
             modifier =
@@ -512,6 +516,7 @@ fun LocalPlaylistScreen(
                     .fillMaxSize()
                     .background(tint),
         ) {
+            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl)
             LazyColumn(
                 state = lazyListState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime).asPaddingValues(),
@@ -827,6 +832,7 @@ fun LocalPlaylistScreen(
                 headerItems = 2,
             )
 
+            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl, topBarOnly = true)
             TopAppBar(
                 title = {
                     if (inSelectMode) {
@@ -923,8 +929,8 @@ fun LocalPlaylistScreen(
                 },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
-                        containerColor = tint,
-                        scrolledContainerColor = tint,
+                        containerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint,
+                        scrolledContainerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint,
                     ),
             )
 

@@ -198,6 +198,10 @@ fun AlbumScreen(
         }
     }
 
+    // "Glass" page background: the blurred cover behind the whole page.
+    val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
+    val pageGlassUrl = albumWithSongs?.album?.thumbnailUrl
+
     // The page takes the color of the album cover.
     val tint = rememberCoverPageTint(albumWithSongs?.album?.thumbnailUrl)
 
@@ -207,6 +211,7 @@ fun AlbumScreen(
                 .fillMaxSize()
                 .background(tint),
     ) {
+        if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl)
     TintedPageColors(tint) {
             val albumListState = androidx.compose.foundation.lazy.rememberLazyListState()
             val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(albumListState)
@@ -545,8 +550,9 @@ fun AlbumScreen(
                 }
             }
 
+            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl, topBarOnly = true)
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = tint, scrolledContainerColor = tint),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint, scrolledContainerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint),
                 title = {
                     if (inSelectMode) {
                         Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
