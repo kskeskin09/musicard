@@ -246,32 +246,36 @@ fun DiscordSettings(
         )
 
         AnimatedVisibility(visible = !infoDismissed) {
+            // Same look as Musicard's settings groups: 24dp rounded surfaceContainer card,
+            // a calm info icon in the accent colour instead of a warning sign.
             Card(
+                shape = RoundedCornerShape(24.dp),
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(start = 20.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.warning),
+                        painter = painterResource(R.drawable.info),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp),
                     )
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.discord_information_warning),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(8.dp))
                         TextButton(
@@ -296,9 +300,11 @@ fun DiscordSettings(
 
         if (!lastErrorText.isNullOrBlank()) {
             Card(
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                 ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
@@ -340,11 +346,12 @@ fun DiscordSettings(
         }
 
         Card(
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(24.dp),
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier =
                 Modifier
                     .fillMaxWidth()

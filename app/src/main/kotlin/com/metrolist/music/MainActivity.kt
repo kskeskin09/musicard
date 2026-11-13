@@ -1722,6 +1722,9 @@ class MainActivity : FragmentActivity() {
                             }
                             AlertDialog(
                                 onDismissRequest = dismissUpdate,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape = RoundedCornerShape(28.dp),
+                                icon = { Icon(painterResource(R.drawable.update), contentDescription = null) },
                                 title = { Text(stringResource(R.string.update_available_title)) },
                                 text = {
                                     Column(
@@ -1751,18 +1754,26 @@ class MainActivity : FragmentActivity() {
                                             )
                                         }
                                         Text(
-                                            text = stringResource(R.string.changelog),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+                                            text = stringResource(R.string.release_notes),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp),
                                         )
-                                        Text(
-                                            text = update.release.description.ifBlank { stringResource(R.string.changelog_empty) },
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
+                                        androidx.compose.material3.Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(20.dp),
+                                            colors = androidx.compose.material3.CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                            ),
+                                        ) {
+                                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                                                com.metrolist.music.ui.screens.settings.MarkdownText(update.release.description)
+                                            }
+                                        }
                                     }
                                 },
                                 confirmButton = {
-                                    TextButton(
+                                    androidx.compose.material3.Button(
                                         onClick = {
                                             dismissUpdate()
                                             startActivity(Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri()))
