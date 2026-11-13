@@ -3368,11 +3368,42 @@ private fun EdgeArtImage(
                     layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
                 },
     ) {
+        // A song's art address changes once it becomes the current song (the player swaps in its
+        // own, sharper cover). The art already on screen stays underneath until the new one has
+        // loaded, instead of disappearing and coming back.
+        var settledUrl by remember { mutableStateOf(url) }
+        val layers = if (settledUrl == url) listOf(url) else listOf(settledUrl, url)
+        for (layerUrl in layers) {
+            androidx.compose.runtime.key(layerUrl) {
+                EdgeArtLayer(
+                    url = layerUrl,
+                    blur = blur,
+                    blurStartPx = blurStartPx,
+                    overhangPx = overhangPx,
+                    expandProvider = expandProvider,
+                    onLoaded = { if (layerUrl == url) settledUrl = url },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EdgeArtLayer(
+    url: String?,
+    blur: Boolean,
+    blurStartPx: Float,
+    overhangPx: Int,
+    expandProvider: () -> Float,
+    onLoaded: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
             model = url,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopCenter,
+            onSuccess = { onLoaded() },
             modifier = Modifier.fillMaxSize(),
         )
         if (blur) {
