@@ -176,7 +176,8 @@ private fun AudioOutputSheet(
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(12.dp)
                         .clip(RoundedCornerShape(32.dp))
-                        .background(MaterialTheme.colorScheme.surface)
+                        // A step lighter than black, so the sheet stands out over a dark lock screen.
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
                         // Taps on the sheet itself don't close it.
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                         .padding(horizontal = 20.dp, vertical = 20.dp),
