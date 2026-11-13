@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="sleep_timer_hours">
+        <item quantity="one">1 saat</item>
+        <item quantity="other">%d saat</item>
+    </plurals>
+    <string name="sleep_timer_default_set_duration">Uyku zamanlayıcısı varsayılanı %s olarak ayarlandı</string>
+    <string name="sleep_timer_time_left">%s kaldı</string>
+    <string name="cancel_sleep_timer">Zamanlayıcıyı iptal et</string>
+</resources>

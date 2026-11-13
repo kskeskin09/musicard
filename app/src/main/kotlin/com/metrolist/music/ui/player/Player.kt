@@ -277,7 +277,7 @@ fun BottomSheetPlayer(
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val menuState = LocalMenuState.current
-    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
+    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set_duration)
     val copiedTitleStr = stringResource(R.string.copied_title)
     val copiedArtistStr = stringResource(R.string.copied_artist)
     val bottomSheetPageState = LocalBottomSheetPageState.current
@@ -725,6 +725,7 @@ fun BottomSheetPlayer(
 
     val sleepTimerDefault by rememberPreference(SleepTimerDefaultKey, 30f)
     var sleepTimerValue by remember { mutableFloatStateOf(sleepTimerDefault) }
+    val sleepTimerDurationLabel = sleepTimerDurationText(sleepTimerValue.roundToInt())
     val isAtDefault by remember {
         derivedStateOf { sleepTimerValue.roundToInt() == sleepTimerDefault.roundToInt() }
     }
@@ -758,11 +759,13 @@ fun BottomSheetPlayer(
                 TextButton(
                     onClick = {
                         showSleepTimerDialog = false
-                        playerConnection.service.sleepTimer?.start(
-                            minute = sleepTimerValue.roundToInt(),
-                            stopAfterCurrentSong = sleepTimerStopAfterCurrentSong,
-                            fadeOut = sleepTimerFadeOut,
-                        )
+                        if (!sleepTimerEnabled) {
+                            playerConnection.service.sleepTimer?.start(
+                                minute = sleepTimerValue.roundToInt(),
+                                stopAfterCurrentSong = sleepTimerStopAfterCurrentSong,
+                                fadeOut = sleepTimerFadeOut,
+                            )
+                        }
                     },
                 ) {
                     Text(stringResource(android.R.string.ok))
@@ -775,15 +778,22 @@ fun BottomSheetPlayer(
                     Text(stringResource(android.R.string.cancel))
                 }
             },
-            text = {
+            text = sleepTimerText@{
+                if (sleepTimerEnabled) {
+                    SleepTimerRunning(
+                        endOfSong = playerConnection.service.sleepTimer?.pauseWhenSongEnd == true,
+                        timeLeftMs = sleepTimerTimeLeft,
+                        onCancel = {
+                            playerConnection.service.sleepTimer?.clear()
+                            showSleepTimerDialog = false
+                        },
+                    )
+                    return@sleepTimerText
+                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text =
-                            pluralStringResource(
-                                R.plurals.minute,
-                                sleepTimerValue.roundToInt(),
-                                sleepTimerValue.roundToInt(),
-                            ),
+                            sleepTimerDurationLabel,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -792,10 +802,10 @@ fun BottomSheetPlayer(
                     Spacer(Modifier.height(8.dp))
 
                     StyledSlider(
-                        value = sleepTimerValue,
-                        onValueChange = { sleepTimerValue = it },
-                        valueRange = 5f..120f,
-                        steps = (120 - 5) / 5 - 1,
+                        value = sleepTimerStepIndex(sleepTimerValue).toFloat(),
+                        onValueChange = { sleepTimerValue = sleepTimerStepMinutes(it) },
+                        valueRange = 0f..SleepTimerSteps.lastIndex.toFloat(),
+                        steps = SleepTimerSteps.size - 2,
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -811,7 +821,7 @@ fun BottomSheetPlayer(
                         }
                         Toast.makeText(
                             context,
-                            String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
+                            String.format(sleepTimerDefaultSetTemplate, sleepTimerDurationLabel),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -2593,13 +2603,9 @@ fun BottomSheetPlayer(
                             contentColor = TextBackgroundColor,
                             isListenTogetherGuest = isListenTogetherGuest,
                             sleepTimerEnabled = sleepTimerEnabled,
-                            onSleepTimerClick = {
-                                if (sleepTimerEnabled) {
-                                    playerConnection.service.sleepTimer?.clear()
-                                } else {
-                                    showSleepTimerDialog = true
-                                }
-                            },
+                            // A running timer isn't cancelled by the tap: the dialog shows the time
+                            // left and a Cancel timer box instead.
+                            onSleepTimerClick = { showSleepTimerDialog = true },
                             onLyricsMenuClick = lyricsMenu@{
                                 val metadata = mediaMetadata ?: return@lyricsMenu
                                 menuState.show {
@@ -3763,6 +3769,42 @@ private fun BufferingSweep(
 }
 
 /** A rounded box button in the sleep timer: Set as default, or End of song. */
+/** The sleep timer dialog while a timer runs: the time left and a box to cancel it. */
+@Composable
+private fun SleepTimerRunning(
+    endOfSong: Boolean,
+    timeLeftMs: Long,
+    onCancel: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        val minutesLeft = ((timeLeftMs.coerceAtLeast(0L) + 59_999L) / 60_000L).toInt().coerceAtLeast(1)
+        Text(
+            text =
+                if (endOfSong) {
+                    stringResource(R.string.end_of_song)
+                } else {
+                    stringResource(R.string.sleep_timer_time_left, sleepTimerDurationText(minutesLeft))
+                },
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        SleepTimerChoiceBox(
+            onClick = onCancel,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringResource(R.string.cancel_sleep_timer),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
 @Composable
 private fun SleepTimerChoiceBox(
     onClick: () -> Unit,

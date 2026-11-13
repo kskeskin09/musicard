@@ -1,3 +1,47 @@
+---v13.11.0
+# Musicard 13.11.0
+
+## Highlights
+- Album and playlist pages: Classic or Glass background tinted from the cover, an edge-to-edge cover option, and playlist covers made from the first four songs (also in Library)
+- Mini player can follow the page's background as well as the player's
+- Library: separate Downloaded, Cached and Library lists, automatic downloads of your library (Wi-Fi only by default)
+- Shuffle keeps the songs you already played, so going back always works; Up next shows the last 10
+- Home rows such as Keep listening restyled to match the rest of the app
+
+## New features
+- "Audio output" button in the notification, opening the app's own sheet with a volume slider
+- System logo theme that follows the phone's dark mode
+- Lyrics of the next songs in the queue load ahead of time
+- Search prefers songs over videos
+- The playlist sort row on the app's own lists
+- Battery optimization detects Xiaomi's own battery saver
+- Sleep timer goes up to 5 hours (5 min to 300 min), longer times shown as "1 hour 30 minutes"
+- Tapping the sleep timer while it runs shows the time left and a Cancel timer button instead of cancelling straight away
+
+## Fixes and improvements
+- Up next: taps under the playback controls no longer start hidden songs
+- No cover blink when swiping the mini player or sliding the edge-to-edge art
+- Main lyrics line no longer stays dim next to a background vocal line
+- Library header no longer goes missing
+- Solid outline on the unliked heart on album pages
+- Settings rows that depend on another option slide in instead of popping up
+- "Pin to speed dial" removed from menus; leftover Metrolist branding removed
+- The update prompt names Musicard
+
+## Türkçe özet
+- Albüm ve çalma listesi sayfalarında kapağa uyan Klasik veya Cam arka plan, kenardan kenara kapak ve dört şarkılık kolaj kapaklar
+- Mini oynatıcı artık sayfanın arka planına da uyabiliyor
+- Kütüphanede ayrı İndirilenler, Önbellek ve Kütüphane listeleri, kütüphanenin otomatik indirilmesi (varsayılan olarak sadece Wi-Fi)
+- Karıştırmada önceki şarkılar kaybolmuyor, geri gitmek her zaman çalışıyor
+- Bildirimde ses düzeyi kaydırıcılı ses çıkışı paneli, telefonun karanlık moduna uyan Sistem logo teması
+- Uyku zamanlayıcısı 5 saate kadar çıkıyor, uzun süreler "1 saat 30 dakika" şeklinde yazıyor; çalışırken basınca kalan süreyi ve iptal butonunu gösteriyor
+- Ana sayfadaki eski görünümlü satırlar yeni temaya uyarlandı, birçok küçük düzeltme
+
+## Which APK should I download?
+- **Musicard.apk**: the standard build, with casting to Chromecast, Google TV and Nest speakers (needs Google Play Services)
+- **Musicard-without-Google-Cast.apk**: works on every phone, no Google components
+- **Musicard-izzy.apk**: build for the IzzyOnDroid repository
+
 ---v13.10.0
 # Musicard 13.10.0
 
