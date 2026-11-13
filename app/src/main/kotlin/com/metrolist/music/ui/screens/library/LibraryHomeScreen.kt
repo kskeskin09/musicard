@@ -224,6 +224,7 @@ fun LibraryHomeScreen(
     val shownRest = if (sortOption == LibrarySortOption.CUSTOM) dragList else restItems
 
     val lazyListState = com.metrolist.music.ui.utils.TabStates.list("library/list")
+    com.metrolist.music.ui.utils.HeaderFollowsList(tab = "library", state = lazyListState)
     val reorderState =
         rememberReorderableLazyListState(lazyListState = lazyListState) { from, to ->
             val fromIndex = dragList.indexOfFirst { it.id == from.key }

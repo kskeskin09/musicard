@@ -966,8 +966,16 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                 // Each tab's header comes back as far scrolled away as its page was.
+                // It also follows changes a page makes itself, such as bringing the header back
+                // when its list is at the top (see HeaderFollowsList).
                 LaunchedEffect(currentRoute) {
-                    headerCollapsePx = currentRoute?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] } ?: 0f
+                    val route = currentRoute
+                    if (route == null) {
+                        headerCollapsePx = 0f
+                    } else {
+                        androidx.compose.runtime.snapshotFlow { com.metrolist.music.ui.utils.TabStates.headerCollapse[route] ?: 0f }
+                            .collect { headerCollapsePx = it }
+                    }
                 }
                 val playerAwareWindowInsets =
                     remember(
