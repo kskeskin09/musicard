@@ -104,6 +104,9 @@ import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import com.metrolist.music.ui.component.Icon as MIcon
 import androidx.compose.ui.draw.blur
 import com.metrolist.music.constants.MiniPlayerBackgroundStyle
@@ -347,7 +350,7 @@ private fun NewMiniPlayer(
             else -> albumColor
         }
     // Both player backgrounds are mid-dark, so the text and buttons on them are white.
-    val forceLightColors = (followBackground || pageGlassUrl != null) && !useDarkTheme
+    val forceLightColors = followBackground && !useDarkTheme
 
     val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
     val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
@@ -477,7 +480,7 @@ private fun NewMiniPlayer(
                     },
         ) {
             if (pageGlassUrl != null) {
-                MiniGlassBackground(pageGlassUrl)
+                PageAlignedGlass(pageGlassUrl)
             }
             if (followBackground) {
                 if (playerCardBackground == PlayerCardBackground.GLASS) {
@@ -871,6 +874,41 @@ private fun ArtistButton(
             contentDescription = stringResource(R.string.open_artist),
             tint = onSurfaceColor.copy(alpha = 0.8f),
             modifier = Modifier.size(26.dp),
+        )
+    }
+}
+
+/**
+ * The page's glass background, lined up with the page behind the mini player: the same blurred
+ * cover drawn at screen size and shifted so the pill shows exactly the part of the page it covers
+ * (the colors around it), instead of the whole cover squeezed into the pill.
+ */
+@Composable
+private fun PageAlignedGlass(url: String) {
+    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    // The page's glass fills the window, so the window size is the size it is drawn at.
+    val rootView = androidx.compose.ui.platform.LocalView.current.rootView
+    Box(
+        Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { origin = it.positionInWindow() }
+            .clipToBounds(),
+    ) {
+        com.metrolist.music.ui.component.PageGlassBackground(
+            url = url,
+            modifier =
+                Modifier.layout { measurable, constraints ->
+                    val placeable =
+                        measurable.measure(
+                            androidx.compose.ui.unit.Constraints.fixed(
+                                rootView.width.coerceAtLeast(1),
+                                rootView.height.coerceAtLeast(1),
+                            ),
+                        )
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        placeable.place(-origin.x.roundToInt(), -origin.y.roundToInt())
+                    }
+                },
         )
     }
 }
