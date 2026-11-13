@@ -36,11 +36,14 @@ fun AutoHideNavigationBar(
     val controller = WindowCompat.getInsetsController(window, view)
 
     AutoHideBar(controller, WindowInsetsCompat.Type.navigationBars(), active, delayOption)
-    AutoHideBar(controller, WindowInsetsCompat.Type.statusBars(), active, statusDelayOption)
+    AutoHideBar(controller, WindowInsetsCompat.Type.statusBars(), active, statusDelayOption) { hidden ->
+        window.drawBehindCutout(hidden)
+    }
 
     DisposableEffect(Unit) {
         onDispose {
             controller.show(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.statusBars())
+            window.drawBehindCutout(false)
         }
     }
 }
@@ -51,6 +54,7 @@ private fun AutoHideBar(
     type: Int,
     active: Boolean,
     delayOption: AutoHideNavBarDelay,
+    onHiddenChange: (Boolean) -> Unit = {},
 ) {
     val enabled = active && delayOption != AutoHideNavBarDelay.OFF
     // Only show the bar again if this setting hid it, so another screen's own choice is left alone.
@@ -59,11 +63,27 @@ private fun AutoHideBar(
         if (enabled) {
             delay(delayOption.millis)
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            onHiddenChange(true)
             controller.hide(type)
             hidden = true
         } else if (hidden) {
             controller.show(type)
+            onHiddenChange(false)
             hidden = false
         }
+    }
+}
+
+/**
+ * Lets the app draw into the camera cutout. While the status bar is hidden, Android otherwise
+ * leaves that strip black instead of showing the player's background behind it.
+ */
+fun android.view.Window.drawBehindCutout(on: Boolean) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.P) return
+    val mode =
+        if (on) android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        else android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+    if (attributes.layoutInDisplayCutoutMode != mode) {
+        attributes = attributes.apply { layoutInDisplayCutoutMode = mode }
     }
 }

@@ -55,13 +55,17 @@ fun albumBackgroundColor(
  * buttons and a deep shade of it for their icons. Light enough to stand out on the album
  * background, the glass cover and the light theme alike.
  */
-fun playerButtonAccent(base: Color): Pair<Color, Color> {
+fun playerButtonAccent(
+    base: Color,
+    darkPlayer: Boolean = true,
+): Pair<Color, Color> {
     val hsl = FloatArray(3)
     ColorUtils.colorToHSL(base.toArgb(), hsl)
     val saturation = (hsl[1] * 0.9f).coerceIn(0.25f, 0.6f)
-    val light = Color(ColorUtils.HSLToColor(floatArrayOf(hsl[0], saturation, 0.8f)))
-    val deep = Color(ColorUtils.HSLToColor(floatArrayOf(hsl[0], saturation, 0.16f)))
-    return light to deep
+    fun shade(lightness: Float) = Color(ColorUtils.HSLToColor(floatArrayOf(hsl[0], saturation, lightness)))
+    // Dark player: a brightened shade for the buttons, a deep one for their icons. Light player:
+    // a darkened (still colorful) shade for the buttons, a very light one for their icons.
+    return if (darkPlayer) shade(0.8f) to shade(0.16f) else shade(0.32f) to shade(0.94f)
 }
 
 /** Colors already read from covers, so a page opened again (or prefetched) starts in its color. */

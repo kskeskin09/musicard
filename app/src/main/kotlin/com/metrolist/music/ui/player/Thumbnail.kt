@@ -218,6 +218,7 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
 class ThumbnailCarousel {
     var gridState by mutableStateOf<androidx.compose.foundation.lazy.grid.LazyGridState?>(null)
     var artworks by mutableStateOf<List<String?>>(emptyList())
+    var keys by mutableStateOf<List<String>>(emptyList())
 
     /** Where the carousel is, in items (2.5 = halfway between the third and fourth art). */
     fun position(): Float {
@@ -312,6 +313,7 @@ fun Thumbnail(
         SideEffect {
             carousel.gridState = thumbnailLazyGridState
             carousel.artworks = artworks
+            carousel.keys = mediaItems.map { it.mediaId }
         }
     }
     // Loads the neighbouring songs' art ahead of time, so a song change shows the new art at

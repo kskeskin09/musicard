@@ -201,6 +201,7 @@ import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
+import com.metrolist.music.ui.utils.drawBehindCutout
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
@@ -554,10 +555,27 @@ fun BottomSheetPlayer(
 
     // "Background color" buttons take the song's color (the old Primary / Tertiary choices count
     // as this one). Until the color is read, they look like Default.
-    val accentButtons = playerButtonsStyle != PlayerButtonsStyle.DEFAULT && gradientColors.isNotEmpty()
-    val accentPair = remember(gradientColors) { gradientColors.firstOrNull()?.let { com.metrolist.music.ui.theme.playerButtonAccent(it) } }
-    val accentLight by animateColorAsState(accentPair?.first ?: Color.White, tween(600), label = "buttonAccentLight")
-    val accentDeep by animateColorAsState(accentPair?.second ?: Color.Black, tween(600), label = "buttonAccentDeep")
+    // The song's color comes from the gradient background when that is used, otherwise straight
+    // from the cover, so the buttons follow the song with every background style.
+    val coverButtonColor = com.metrolist.music.ui.theme.rememberCoverColor(mediaMetadata?.thumbnailUrl)
+    val accentBase = gradientColors.firstOrNull() ?: coverButtonColor
+    val accentButtons = playerButtonsStyle != PlayerButtonsStyle.DEFAULT && accentBase != null
+    val accentPair =
+        remember(accentBase, shouldUseDarkButtonColors) {
+            accentBase?.let { com.metrolist.music.ui.theme.playerButtonAccent(it, shouldUseDarkButtonColors) }
+        }
+    // On a dark player the buttons are a light shade of the song's color, on a light player a
+    // dark shade, so they always stand out from the background.
+    val accentLight by animateColorAsState(
+        accentPair?.first ?: Color.White,
+        tween(600),
+        label = "buttonAccentLight",
+    )
+    val accentDeep by animateColorAsState(
+        accentPair?.second ?: Color.Black,
+        tween(600),
+        label = "buttonAccentDeep",
+    )
 
     val (textButtonColor, iconButtonColor) =
         if (accentButtons) {
@@ -1051,11 +1069,16 @@ fun BottomSheetPlayer(
         val window = (context as? android.app.Activity)?.window
         val insetsController = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
         if (hideStatusBar) {
+            // Keeps the camera cutout strip showing the player instead of turning black.
+            window?.drawBehindCutout(true)
             insetsController?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             insetsController?.hide(WindowInsetsCompat.Type.statusBars())
         }
         onDispose {
-            if (hideStatusBar) insetsController?.show(WindowInsetsCompat.Type.statusBars())
+            if (hideStatusBar) {
+                insetsController?.show(WindowInsetsCompat.Type.statusBars())
+                window?.drawBehindCutout(false)
+            }
         }
     }
 
@@ -1839,6 +1862,9 @@ fun BottomSheetPlayer(
             ) {
                 Column {
                     if (useCardLayout) {
+                        // "Background color" buttons: the song's color, brightened on a dark player
+                        // and darkened on a light one.
+                        val cardControlColor = if (accentButtons) accentLight else TextBackgroundColor
                         Row(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically,
@@ -1851,7 +1877,7 @@ fun BottomSheetPlayer(
                                 icon = R.drawable.player_backward,
                                 contentDescription = null,
                                 enabled = canSkipPrevious && !isListenTogetherGuest,
-                                color = TextBackgroundColor,
+                                color = cardControlColor,
                                 iconSize = 52.dp,
                                 onClick = playerConnection::seekToPrevious,
                                 modifier = Modifier.size(72.dp),
@@ -1873,7 +1899,7 @@ fun BottomSheetPlayer(
                                         if (effectiveIsPlaying) stringResource(R.string.player_pause) else stringResource(R.string.play)
                                     },
                                 enabled = true,
-                                color = TextBackgroundColor,
+                                color = cardControlColor,
                                 iconSize = 60.dp,
                                 onClick = onPlayPauseClick,
                                 modifier =
@@ -1886,7 +1912,7 @@ fun BottomSheetPlayer(
                                 icon = R.drawable.player_forward,
                                 contentDescription = null,
                                 enabled = canSkipNext && !isListenTogetherGuest,
-                                color = TextBackgroundColor,
+                                color = cardControlColor,
                                 iconSize = 52.dp,
                                 onClick = playerConnection::seekToNext,
                                 modifier = Modifier.size(72.dp),
@@ -2295,6 +2321,7 @@ fun BottomSheetPlayer(
                 // lyrics (bottom panel). Measured only while the card is closed.
                 var boxBottomPx by remember { mutableFloatStateOf(0f) }
                 var boxTopPx by remember { mutableFloatStateOf(0f) }
+                var cardTopPx by remember { mutableFloatStateOf(0f) }
                 val thumbnailCarousel = remember { ThumbnailCarousel() }
                 var playbackTopPx by remember { mutableFloatStateOf(0f) }
                 var playbackHeightPx by remember { mutableFloatStateOf(0f) }
@@ -2351,6 +2378,9 @@ fun BottomSheetPlayer(
                         val titleTopInBox by remember {
                             derivedStateOf { (titleRowPos.y - boxTopPx).roundToInt() }
                         }
+                        val cardTopInBox by remember {
+                            derivedStateOf { (cardTopPx - boxTopPx).roundToInt() }
+                        }
                         val controlsBottomInBox by remember {
                             derivedStateOf { (playbackTopPx + playbackHeightPx - boxTopPx).roundToInt() }
                         }
@@ -2360,11 +2390,14 @@ fun BottomSheetPlayer(
                         // Blackout keeps its height and fade. Nothing and Blur reach down behind
                         // the play controls and stop just above the lyrics / up next card, with a
                         // short fade at the very end so the art never runs into the card.
+                        val nothing = edgeToEdgeArtEdge == com.metrolist.music.constants.MiniPlayerEdgeEffect.NONE
                         val edgeArtHeightPx =
-                            if (blackout || playbackHeightPx == 0f) {
-                                fallbackHeightPx
-                            } else {
-                                controlsBottomInBox.toFloat()
+                            when {
+                                blackout || playbackHeightPx == 0f -> fallbackHeightPx
+                                // Nothing: sharp all the way down to the lyrics / up next card,
+                                // and cut off exactly where the card starts.
+                                nothing && cardTopPx > 0f -> cardTopInBox.toFloat()
+                                else -> controlsBottomInBox.toFloat()
                             }
                         val blurStartPx =
                             if (titleRowPos.y == 0f) edgeArtHeightPx * 0.6f else titleTopInBox.toFloat()
@@ -2375,7 +2408,7 @@ fun BottomSheetPlayer(
                             isPlaying = effectiveIsPlaying,
                             edge = edgeToEdgeArtEdge,
                             heightPx = edgeArtHeightPx,
-                            tailPx = tailPx,
+                            tailPx = if (nothing) 0f else tailPx,
                             blurStartPx = blurStartPx,
                             expandProvider = { cardExpand },
                             headerLeftPx = marginPx,
@@ -2543,7 +2576,14 @@ fun BottomSheetPlayer(
                             mediaMetadata?.let { playbackControlsContent(it) }
                         }
 
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(
+                            Modifier
+                                .height(16.dp)
+                                .onGloballyPositioned {
+                                    // Where the lyrics / up next card starts (it follows this gap).
+                                    if (cardExpand == 0f) cardTopPx = it.positionInRoot().y + it.size.height
+                                },
+                        )
 
                         PlayerBottomCard(
                             mediaMetadata = mediaMetadata,
@@ -3249,6 +3289,7 @@ private fun EdgeToEdgeAlbumArt(
                             } else {
                                 // Nothing and Blur: no darkening, only a short fade at the very
                                 // end, just above the lyrics / up next card.
+                                if (tailPx <= 0f) return@drawWithContent
                                 val tailStart = (1f - tailPx / size.height).coerceIn(0f, 1f)
                                 Brush.verticalGradient(
                                     0f to Color.Black,
@@ -3268,7 +3309,9 @@ private fun EdgeToEdgeAlbumArt(
             }
             for (index in listOf(base, base + 1)) {
                 val url = carousel.artworks.getOrNull(index) ?: continue
-                androidx.compose.runtime.key(index) {
+                // Keyed by song, not position: when the queue around the new song is rebuilt the
+                // positions shift, and the art already on screen must stay instead of reloading.
+                androidx.compose.runtime.key(carousel.keys.getOrNull(index) ?: index) {
                     EdgeArtImage(
                         url = url,
                         blur = blur,
