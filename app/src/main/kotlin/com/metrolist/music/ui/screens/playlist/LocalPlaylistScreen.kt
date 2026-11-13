@@ -96,6 +96,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
@@ -156,7 +157,6 @@ import com.metrolist.music.ui.component.EmptyPlaceholder
 import com.metrolist.music.ui.component.ExpandableText
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
-import com.metrolist.music.ui.component.OverlayEditButton
 import com.metrolist.music.ui.component.SongListItem
 import com.metrolist.music.ui.component.SortHeader
 import com.metrolist.music.ui.component.TextFieldDialog
@@ -496,7 +496,10 @@ fun LocalPlaylistScreen(
     // The page is tinted with the cover's color, fading into the normal background further down.
     val pageBackground = MaterialTheme.colorScheme.background
     val darkTheme = pageBackground.luminance() < 0.5f
-    val coverColor = rememberPageCoverColor(playlist?.thumbnails?.firstOrNull())
+    // The playlist's own cover if it has one, otherwise the top song in the current order (it
+    // follows sorting and dragging).
+    val pageCoverUrl = playlist?.coverUrl ?: (mutableSongs.firstOrNull() ?: songs.firstOrNull())?.song?.song?.thumbnailUrl
+    val coverColor = rememberPageCoverColor(pageCoverUrl)
     // One even color over the whole page, taken from the cover (darker in dark mode, a light
     // wash in light mode so the dark text stays readable).
     val tint =
@@ -505,6 +508,10 @@ fun LocalPlaylistScreen(
             ready = coverColor != null,
         )
 
+    // "Glass" page background: the blurred cover behind the whole page.
+    val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
+    val pageGlassUrl = pageCoverUrl
+
     TintedPageColors(tint) {
         Box(
             modifier =
@@ -512,6 +519,7 @@ fun LocalPlaylistScreen(
                     .fillMaxSize()
                     .background(tint),
         ) {
+            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl)
             LazyColumn(
                 state = lazyListState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime).asPaddingValues(),
@@ -532,6 +540,7 @@ fun LocalPlaylistScreen(
                                 LocalPlaylistHeader(
                                     playlist = playlist,
                                     songs = songs,
+                                    coverThumbnails = mutableSongs.take(4).map { it.song.song.thumbnailUrl },
                                     onlinePlaylist = onlinePlaylist,
                                     onShowEditDialog = { showEditDialog = true },
                                     onShowRemoveDownloadDialog = { showRemoveDownloadDialog = true },
@@ -827,6 +836,16 @@ fun LocalPlaylistScreen(
                 headerItems = 2,
             )
 
+            // An edge-to-edge cover shows through the top bar until the title scrolls under it.
+            val pageOverCover = com.metrolist.music.ui.component.rememberPageEdgeToEdgeCover() && !titleState.titleHidden
+            val pageTopBarGlassAlpha = com.metrolist.music.ui.component.pageTopBarGlassAlpha(pageOverCover)
+            if (pageGlass) {
+                com.metrolist.music.ui.component.PageGlassBackground(
+                    pageGlassUrl,
+                    modifier = Modifier.graphicsLayer { alpha = pageTopBarGlassAlpha },
+                    topBarOnly = true,
+                )
+            }
             TopAppBar(
                 title = {
                     if (inSelectMode) {
@@ -923,8 +942,8 @@ fun LocalPlaylistScreen(
                 },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
-                        containerColor = tint,
-                        scrolledContainerColor = tint,
+                        containerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover),
+                        scrolledContainerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover),
                     ),
             )
 
@@ -943,6 +962,7 @@ fun LocalPlaylistScreen(
 fun LocalPlaylistHeader(
     playlist: Playlist,
     songs: List<PlaylistSong>,
+    coverThumbnails: List<String?>,
     onlinePlaylist: PlaylistItem?,
     onShowEditDialog: () -> Unit,
     onShowRemoveDownloadDialog: () -> Unit,
@@ -1132,18 +1152,16 @@ fun LocalPlaylistHeader(
         Box(
             modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
         ) {
-            when (playlist.thumbnails.size) {
-                0 -> {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .size(PlaylistCoverSize)
-                                .shadow(
-                                    elevation = 16.dp,
-                                    shape = RoundedCornerShape(16.dp),
-                                ),
-                        shape = RoundedCornerShape(16.dp),
+            // The playlist's own cover, or a collage of the first four songs in the current order
+            // (empty squares stay black). The cover is changed from "Edit playlist" in the menu.
+            val ownCover = overrideThumbnail.value ?: playlist.coverUrl
+            when {
+                ownCover == null && coverThumbnails.isEmpty() -> {
+                    com.metrolist.music.ui.component.PageCoverFrame(
+                        size = PlaylistCoverSize,
+                        shadow = 16.dp,
                         color = MaterialTheme.colorScheme.surfaceVariant,
+                        pullUp = 16.dp,
                     ) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -1159,86 +1177,26 @@ fun LocalPlaylistHeader(
                     }
                 }
 
-                1 -> {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .size(PlaylistCoverSize)
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(16.dp),
-                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                ),
-                        shape = RoundedCornerShape(16.dp),
+                ownCover != null -> {
+                    com.metrolist.music.ui.component.PageCoverFrame(
+                        size = PlaylistCoverSize,
+                        color = MaterialTheme.colorScheme.surface,
+                        pullUp = 16.dp,
                     ) {
                         AsyncImage(
-                            model = overrideThumbnail.value ?: playlist.thumbnails[0],
+                            model = ownCover,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    if (editable) {
-                        OverlayEditButton(
-                            visible = true,
-                            alignment = Alignment.BottomEnd,
-                            onClick = {
-                                if (isCustomThumbnail) {
-                                    menuState.show(
-                                        {
-                                            CustomThumbnailMenu(
-                                                onEdit = {
-                                                    pickLauncher.launch(
-                                                        PickVisualMediaRequest(
-                                                            mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly,
-                                                        ),
-                                                    )
-                                                },
-                                                onRemove = {
-                                                    when {
-                                                        playlist.playlist.browseId == null -> {
-                                                            overrideThumbnail.value = null
-                                                            database.query {
-                                                                update(playlist.playlist.copy(thumbnailUrl = null))
-                                                            }
-                                                        }
-
-                                                        else -> {
-                                                            scope.launch(Dispatchers.IO) {
-                                                                YouTube.removeThumbnailPlaylist(playlist.playlist.browseId).onSuccess { newThumbnailUrl ->
-                                                                    overrideThumbnail.value = newThumbnailUrl
-                                                                    database.query {
-                                                                        update(playlist.playlist.copy(thumbnailUrl = newThumbnailUrl))
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    isCustomThumbnail = false
-                                                },
-                                                onDismiss = menuState::dismiss,
-                                            )
-                                        },
-                                    )
-                                } else {
-                                    showEditNoteDialog = true
-                                }
-                            },
-                        )
-                    }
                 }
 
                 else -> {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .size(PlaylistCoverSize)
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(16.dp),
-                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                ),
-                        shape = RoundedCornerShape(16.dp),
+                    com.metrolist.music.ui.component.PageCoverFrame(
+                        size = PlaylistCoverSize,
+                        color = androidx.compose.ui.graphics.Color.Black,
+                        pullUp = 16.dp,
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             listOf(
@@ -1247,65 +1205,20 @@ fun LocalPlaylistHeader(
                                 Alignment.BottomStart,
                                 Alignment.BottomEnd,
                             ).fastForEachIndexed { index, alignment ->
-                                AsyncImage(
-                                    model = playlist.thumbnails.getOrNull(index),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier =
-                                        Modifier
-                                            .align(alignment)
-                                            .size(PlaylistCoverSize / 2),
-                                )
+                                val thumbnail = coverThumbnails.getOrNull(index)
+                                if (thumbnail != null) {
+                                    AsyncImage(
+                                        model = thumbnail,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier =
+                                            Modifier
+                                                .align(alignment)
+                                                .fillMaxSize(0.5f),
+                                    )
+                                }
                             }
                         }
-                    }
-                    if (editable) {
-                        OverlayEditButton(
-                            visible = true,
-                            alignment = Alignment.BottomEnd,
-                            onClick = {
-                                if (isCustomThumbnail) {
-                                    menuState.show(
-                                        {
-                                            CustomThumbnailMenu(
-                                                onEdit = {
-                                                    pickLauncher.launch(
-                                                        PickVisualMediaRequest(
-                                                            mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly,
-                                                        ),
-                                                    )
-                                                },
-                                                onRemove = {
-                                                    when {
-                                                        playlist.playlist.browseId == null -> {
-                                                            overrideThumbnail.value = null
-                                                            database.query {
-                                                                update(playlist.playlist.copy(thumbnailUrl = null))
-                                                            }
-                                                        }
-
-                                                        else -> {
-                                                            scope.launch(Dispatchers.IO) {
-                                                                YouTube.removeThumbnailPlaylist(playlist.playlist.browseId).onSuccess { newThumbnailUrl ->
-                                                                    overrideThumbnail.value = newThumbnailUrl
-                                                                    database.query {
-                                                                        update(playlist.playlist.copy(thumbnailUrl = newThumbnailUrl))
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    isCustomThumbnail = false
-                                                },
-                                                onDismiss = menuState::dismiss,
-                                            )
-                                        },
-                                    )
-                                } else {
-                                    showEditNoteDialog = true
-                                }
-                            },
-                        )
                     }
                 }
             }

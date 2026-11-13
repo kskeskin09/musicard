@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="page_appearance">Sayfa</string>
+    <string name="page_background">Sayfa arka planı</string>
+    <string name="page_edge_to_edge_cover">Kenardan kenara kapak</string>
+    <string name="page_edge_to_edge_cover_desc">Albüm ve çalma listesi kapakları sayfanın üst kısmını ekran kenarlarına kadar doldurur</string>
+</resources>

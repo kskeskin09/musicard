@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="page_appearance">Page</string>
+    <string name="page_background">Page background</string>
+    <string name="page_edge_to_edge_cover">Edge-to-edge cover</string>
+    <string name="page_edge_to_edge_cover_desc">Album and playlist covers fill the top of the page up to the screen edges</string>
+</resources>

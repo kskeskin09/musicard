@@ -59,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -202,10 +203,15 @@ fun CachePlaylistScreen(
     // The page takes the color of the first song's cover.
     val tint = rememberCoverPageTint(filteredSongs.firstOrNull()?.thumbnailUrl)
 
+    // "Glass" page background: the blurred cover behind the whole page.
+    val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
+    val pageGlassUrl = filteredSongs.firstOrNull()?.thumbnailUrl
+
     TintedPageColors(tint) {
         Box(
             modifier = Modifier.fillMaxSize().background(tint),
         ) {
+            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl)
             LazyColumn(
                 state = lazyListState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
@@ -368,8 +374,18 @@ fun CachePlaylistScreen(
                 headerItems = 2
             )
 
+            // An edge-to-edge cover shows through the top bar until the title scrolls under it.
+            val pageOverCover = com.metrolist.music.ui.component.rememberPageEdgeToEdgeCover() && !titleState.titleHidden
+            val pageTopBarGlassAlpha = com.metrolist.music.ui.component.pageTopBarGlassAlpha(pageOverCover)
+            if (pageGlass) {
+                com.metrolist.music.ui.component.PageGlassBackground(
+                    pageGlassUrl,
+                    modifier = Modifier.graphicsLayer { alpha = pageTopBarGlassAlpha },
+                    topBarOnly = true,
+                )
+            }
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = tint, scrolledContainerColor = tint),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover), scrolledContainerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover)),
                 title = {
                     when {
                         inSelectMode -> {
