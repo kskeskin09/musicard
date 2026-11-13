@@ -56,7 +56,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
+import com.metrolist.music.ui.component.RefreshIndicator
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -690,7 +690,7 @@ fun AutoPlaylistScreen(
             )
 
             if (canRefresh) {
-                Indicator(
+                RefreshIndicator(
                     isRefreshing = isRefreshing,
                     state = pullRefreshState,
                     modifier =
