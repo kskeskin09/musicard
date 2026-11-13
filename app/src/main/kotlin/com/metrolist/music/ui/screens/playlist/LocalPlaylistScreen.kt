@@ -96,6 +96,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
@@ -835,7 +836,16 @@ fun LocalPlaylistScreen(
                 headerItems = 2,
             )
 
-            if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl, topBarOnly = true)
+            // An edge-to-edge cover shows through the top bar until the title scrolls under it.
+            val pageOverCover = com.metrolist.music.ui.component.rememberPageEdgeToEdgeCover() && !titleState.titleHidden
+            val pageTopBarGlassAlpha = com.metrolist.music.ui.component.pageTopBarGlassAlpha(pageOverCover)
+            if (pageGlass) {
+                com.metrolist.music.ui.component.PageGlassBackground(
+                    pageGlassUrl,
+                    modifier = Modifier.graphicsLayer { alpha = pageTopBarGlassAlpha },
+                    topBarOnly = true,
+                )
+            }
             TopAppBar(
                 title = {
                     if (inSelectMode) {
@@ -932,8 +942,8 @@ fun LocalPlaylistScreen(
                 },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint,
-                        scrolledContainerColor = if (pageGlass) androidx.compose.ui.graphics.Color.Transparent else tint,
+                        containerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover),
+                        scrolledContainerColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover),
                     ),
             )
 
@@ -1147,16 +1157,11 @@ fun LocalPlaylistHeader(
             val ownCover = overrideThumbnail.value ?: playlist.coverUrl
             when {
                 ownCover == null && coverThumbnails.isEmpty() -> {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .size(PlaylistCoverSize)
-                                .shadow(
-                                    elevation = 16.dp,
-                                    shape = RoundedCornerShape(16.dp),
-                                ),
-                        shape = RoundedCornerShape(16.dp),
+                    com.metrolist.music.ui.component.PageCoverFrame(
+                        size = PlaylistCoverSize,
+                        shadow = 16.dp,
                         color = MaterialTheme.colorScheme.surfaceVariant,
+                        pullUp = 16.dp,
                     ) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -1173,16 +1178,10 @@ fun LocalPlaylistHeader(
                 }
 
                 ownCover != null -> {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .size(PlaylistCoverSize)
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(16.dp),
-                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                ),
-                        shape = RoundedCornerShape(16.dp),
+                    com.metrolist.music.ui.component.PageCoverFrame(
+                        size = PlaylistCoverSize,
+                        color = MaterialTheme.colorScheme.surface,
+                        pullUp = 16.dp,
                     ) {
                         AsyncImage(
                             model = ownCover,
@@ -1194,17 +1193,10 @@ fun LocalPlaylistHeader(
                 }
 
                 else -> {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .size(PlaylistCoverSize)
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(16.dp),
-                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                ),
-                        shape = RoundedCornerShape(16.dp),
+                    com.metrolist.music.ui.component.PageCoverFrame(
+                        size = PlaylistCoverSize,
                         color = androidx.compose.ui.graphics.Color.Black,
+                        pullUp = 16.dp,
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             listOf(
@@ -1222,7 +1214,7 @@ fun LocalPlaylistHeader(
                                         modifier =
                                             Modifier
                                                 .align(alignment)
-                                                .size(PlaylistCoverSize / 2),
+                                                .fillMaxSize(0.5f),
                                     )
                                 }
                             }

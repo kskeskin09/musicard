@@ -239,6 +239,8 @@ fun AppearanceSettings(
     val (pageBackground, onPageBackgroundChange) =
         rememberEnumPreference(com.metrolist.music.constants.PageBackgroundKey, defaultValue = PlayerCardBackground.CLASSIC)
     var showPageBackgroundDialog by rememberSaveable { mutableStateOf(false) }
+    val (pageEdgeToEdgeCover, onPageEdgeToEdgeCoverChange) =
+        rememberPreference(com.metrolist.music.constants.PageEdgeToEdgeCoverKey, defaultValue = false)
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -1182,6 +1184,28 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { showPageBackgroundDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.fullscreen),
+                        title = { Text(stringResource(R.string.page_edge_to_edge_cover)) },
+                        description = { Text(stringResource(R.string.page_edge_to_edge_cover_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = pageEdgeToEdgeCover,
+                                onCheckedChange = onPageEdgeToEdgeCoverChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (pageEdgeToEdgeCover) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onPageEdgeToEdgeCoverChange(!pageEdgeToEdgeCover) },
                     ),
                 ),
         )

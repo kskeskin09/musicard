@@ -27,10 +27,14 @@ fun FourCoverArt(
     size: Dp = 280.dp,
     corner: Dp = 16.dp,
 ) {
-    Surface(
-        modifier = modifier.size(size),
-        shape = RoundedCornerShape(corner),
+    // Fills the top of the page edge to edge when that setting is on.
+    PageCoverFrame(
+        modifier = modifier,
+        size = size,
+        corner = corner,
+        shadow = 0.dp,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        pullUp = 16.dp,
     ) {
         if (covers.size >= 4) {
             Column(Modifier.fillMaxSize()) {
