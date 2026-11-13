@@ -54,7 +54,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,9 +77,6 @@ class ImportFromServicesViewModel @Inject constructor(
     val manager: ServiceImportManager,
 ) : ViewModel()
 
-private val SpotifyGreen = Color(0xFF1DB954)
-private val AppleRed = Color(0xFFFA2D48)
-private val YouTubeRed = Color(0xFFFF0033)
 private val GoodColor = Color(0xFF7FDC9E)
 private val UnsureColor = Color(0xFFE8C96A)
 private val BadColor = Color(0xFFF28B82)
@@ -162,7 +158,7 @@ fun ImportFromServicesScreen(
                 }
 
                 SourceCard(
-                    badge = { BrandBadge("S", SpotifyGreen, Color.Black) },
+                    badge = { BrandBadge(R.drawable.brand_spotify) },
                     title = "Spotify",
                     description = stringResource(R.string.import_spotify_desc),
                     chips = listOf(
@@ -192,7 +188,7 @@ fun ImportFromServicesScreen(
                 }
 
                 SourceCard(
-                    badge = { BrandBadge("♪", AppleRed, Color.White) },
+                    badge = { BrandBadge(R.drawable.brand_apple_music) },
                     title = "Apple Music",
                     description = stringResource(R.string.import_apple_desc),
                     chips = listOf(
@@ -219,7 +215,7 @@ fun ImportFromServicesScreen(
                 }
 
                 SourceCard(
-                    badge = { BrandBadge("▶", YouTubeRed, Color.White) },
+                    badge = { BrandBadge(R.drawable.brand_youtube_music) },
                     title = "YouTube Music",
                     description = stringResource(R.string.import_ytm_desc),
                     chips = listOf(stringResource(R.string.import_ytm_badge)),
@@ -265,13 +261,13 @@ fun ImportFromServicesScreen(
 }
 
 @Composable
-private fun BrandBadge(letter: String, background: Color, foreground: Color) {
-    Box(
-        Modifier.size(42.dp).clip(CircleShape).background(background),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(letter, color = foreground, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-    }
+private fun BrandBadge(@androidx.annotation.DrawableRes logo: Int) {
+    // The service's own logo, drawn at its real colors.
+    androidx.compose.foundation.Image(
+        painter = painterResource(logo),
+        contentDescription = null,
+        modifier = Modifier.size(42.dp),
+    )
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)

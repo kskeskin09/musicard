@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_quality_auto_desc">Low on cellular, high on Wi-Fi</string>
+    <string name="download_quality">Download quality</string>
+    <string name="download_quality_same">Same as playing quality (%1$s)</string>
+    <string name="download_and_update">Download and update</string>
+    <string name="download_and_update_desc">Downloads %1$s and opens the installer</string>
+    <string name="update_notes">Update notes</string>
+    <string name="update_notes_loading">Loading update notes…</string>
+    <string name="update_notes_empty">This release has no notes.</string>
+    <string name="update_downloading">Downloading… %1$d%%</string>
+    <string name="update_download_failed">Download failed. Opening the release page instead.</string>
+    <string name="update_up_to_date">You are on the latest version</string>
+    <string name="update_check_failed">Could not check for updates. Check your connection.</string>
+    <string name="current_version_label">Installed: %1$s</string>
+</resources>

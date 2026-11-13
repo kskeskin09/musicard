@@ -54,9 +54,10 @@ fun <T> EnumDialog(
                     Text(
                         text = valueText(value),
                     )
-                    if (valueDescription != null) {
+                    val description = valueDescription?.invoke(value)
+                    if (!description.isNullOrBlank()) {
                         Text(
-                            text = valueDescription(value),
+                            text = description,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

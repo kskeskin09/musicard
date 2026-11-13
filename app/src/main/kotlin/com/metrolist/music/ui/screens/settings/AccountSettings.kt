@@ -81,33 +81,6 @@ fun AccountSettings(
     // On the Profile tab: no title row, no own scrolling and no card background.
     embedded: Boolean = false,
 ) {
-    val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
-
-    val (accountNamePref, onAccountNameChange) = rememberPreference(AccountNameKey, "")
-    val (accountEmail, onAccountEmailChange) = rememberPreference(AccountEmailKey, "")
-    val (accountChannelHandle, onAccountChannelHandleChange) = rememberPreference(AccountChannelHandleKey, "")
-    val (innerTubeCookie, onInnerTubeCookieChange) = rememberPreference(InnerTubeCookieKey, "")
-    val (visitorData, onVisitorDataChange) = rememberPreference(VisitorDataKey, "")
-    val (dataSyncId, onDataSyncIdChange) = rememberPreference(DataSyncIdKey, "")
-    val (authUser, onAuthUserChange) = rememberPreference(InnerTubeAuthUserKey, "0")
-
-    val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
-    }
-    val (useLoginForBrowse, onUseLoginForBrowseChange) = rememberPreference(UseLoginForBrowse, true)
-    val (ytmSync, onYtmSyncChange) = rememberPreference(YtmSyncKey, true)
-
-    val homeViewModel: HomeViewModel = hiltViewModel()
-    val accountSettingsViewModel: AccountSettingsViewModel = hiltViewModel()
-    val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
-    val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
-
-    var showToken by remember { mutableStateOf(false) }
-    var showTokenEditor by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
     Column(
         modifier =
             if (embedded) {
@@ -136,8 +109,99 @@ fun AccountSettings(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(if (embedded) 8.dp else 12.dp))
 
+        Material3SettingsGroup(
+            items = buildList {
+                // Sign-in, token and sync now live on the "Login or Backup" page.
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.backup_restore)) },
+                        icon = painterResource(R.drawable.login),
+                        onClick = {
+                            onClose()
+                            navController.navigate("settings/backup_restore")
+                        }
+                    )
+                )
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.integrations)) },
+                        icon = painterResource(R.drawable.integration),
+                        onClick = {
+                            onClose()
+                            navController.navigate("settings/integrations")
+                        }
+                    )
+                )
+                add(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.settings)) },
+                        icon = painterResource(R.drawable.settings),
+                        showBadge = BuildConfig.UPDATER_AVAILABLE &&
+                            latestVersionName != BuildConfig.BASE_VERSION_NAME,
+                        onClick = {
+                            onClose()
+                            navController.navigate("settings")
+                        }
+                    )
+                )
+
+                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+                    add(
+                        Material3SettingsItem(
+                            title = { Text(stringResource(R.string.new_version_available)) },
+                            description = { Text(latestVersionName) },
+                            icon = painterResource(R.drawable.update),
+                            showBadge = true,
+                            onClick = {
+                                onClose()
+                                navController.navigate("settings/update_available")
+                            }
+                        )
+                    )
+                }
+            },
+        )
+    }
+}
+
+/**
+ * Sign-in, sign-out, token login and the account sync switches.
+ * Shown at the top of the "Login or Backup" page.
+ */
+@Composable
+fun AccountLoginSettings(
+    navController: NavController,
+) {
+    val onClose: () -> Unit = {}
+    val context = LocalContext.current
+
+    val (accountNamePref, onAccountNameChange) = rememberPreference(AccountNameKey, "")
+    val (accountEmail, onAccountEmailChange) = rememberPreference(AccountEmailKey, "")
+    val (accountChannelHandle, onAccountChannelHandleChange) = rememberPreference(AccountChannelHandleKey, "")
+    val (innerTubeCookie, onInnerTubeCookieChange) = rememberPreference(InnerTubeCookieKey, "")
+    val (visitorData, onVisitorDataChange) = rememberPreference(VisitorDataKey, "")
+    val (dataSyncId, onDataSyncIdChange) = rememberPreference(DataSyncIdKey, "")
+    val (authUser, onAuthUserChange) = rememberPreference(InnerTubeAuthUserKey, "0")
+
+    val isLoggedIn = remember(innerTubeCookie) {
+        "SAPISID" in parseCookieString(innerTubeCookie)
+    }
+    val (useLoginForBrowse, onUseLoginForBrowseChange) = rememberPreference(UseLoginForBrowse, true)
+    val (ytmSync, onYtmSyncChange) = rememberPreference(YtmSyncKey, true)
+
+    val homeViewModel: HomeViewModel = hiltViewModel()
+    val accountSettingsViewModel: AccountSettingsViewModel = hiltViewModel()
+    val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
+    val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
+
+    var showToken by remember { mutableStateOf(false) }
+    var showTokenEditor by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    Column {
         // Logout confirmation dialog
         if (showLogoutDialog) {
             DefaultDialog(
@@ -391,49 +455,5 @@ fun AccountSettings(
             ),
         )
 
-        Spacer(Modifier.height(12.dp))
-
-        Material3SettingsGroup(
-            items = buildList {
-                add(
-                    Material3SettingsItem(
-                        title = { Text(stringResource(R.string.integrations)) },
-                        icon = painterResource(R.drawable.integration),
-                        onClick = {
-                            onClose()
-                            navController.navigate("settings/integrations")
-                        }
-                    )
-                )
-                add(
-                    Material3SettingsItem(
-                        title = { Text(stringResource(R.string.settings)) },
-                        icon = painterResource(R.drawable.settings),
-                        showBadge = BuildConfig.UPDATER_AVAILABLE &&
-                            latestVersionName != BuildConfig.BASE_VERSION_NAME,
-                        onClick = {
-                            onClose()
-                            navController.navigate("settings")
-                        }
-                    )
-                )
-
-                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
-                    val releaseInfo = Updater.getCachedLatestRelease()
-                    val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
-                    if (downloadUrl != null) {
-                        add(
-                            Material3SettingsItem(
-                                title = { Text(stringResource(R.string.new_version_available)) },
-                                description = { Text(latestVersionName) },
-                                icon = painterResource(R.drawable.update),
-                                showBadge = true,
-                                onClick = { uriHandler.openUri(downloadUrl) }
-                            )
-                        )
-                    }
-                }
-            },
-        )
     }
 }

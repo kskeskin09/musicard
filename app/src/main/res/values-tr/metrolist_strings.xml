@@ -95,7 +95,7 @@
     <string name="new_player_design">Yeni oynatıcı tasarımı</string>
     <string name="lyrics_auto_scroll">Şarkı sözlerini otomatik kaydır</string>
     <string name="yt_sync">Hesapla otomatik eşitle</string>
-    <string name="more_content">Daha fazla içerik</string>
+    <string name="more_content">Kişiselleştirilmiş içerik</string>
     <string name="import_online">Bir M3U listesi içe aktar</string>
     <string name="import_csv">Bir CSV listesi içe aktar</string>
     <string name="playlist_add_local_to_synced_note">NOT: Yerel şarkıların eşitlenmiş veya uzak listelere eklenmesi desteklenmez. Diğer tüm kombinasyonlar geçerlidir</string>

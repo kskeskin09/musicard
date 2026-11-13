@@ -67,6 +67,13 @@ object Updater {
         return 0
     }
 
+    /** "v13.8.0" -> "13.8.0" (also drops a "Musicard " style prefix if a tag ever has one). */
+    internal fun versionFromTag(tag: String): String =
+        tag.trim().substringAfterLast(' ').removePrefix("v").removePrefix("V")
+
+    /** Page of the latest release on GitHub, used when the APK can't be downloaded in the app. */
+    const val LATEST_RELEASE_PAGE = "https://github.com/kskeskin09/musicard/releases/latest"
+
     /**
      * Checks if the latest version is newer than the current version.
      * Returns true if an update is available (latestVersion > currentVersion)
@@ -142,8 +149,10 @@ object Updater {
                 
                 val releaseInfo = ReleaseInfo(
                     tagName = json.getString("tag_name"),
-                    versionName = json.getString("name"),
-                    description = json.getString("body"),
+                    // The release title is "Musicard 13.8.0"; the tag "v13.8.0" holds the bare version
+                    // that compareVersions() and BuildConfig.BASE_VERSION_NAME understand.
+                    versionName = versionFromTag(json.getString("tag_name")),
+                    description = json.optString("body").takeUnless { json.isNull("body") }.orEmpty(),
                     releaseDate = json.getString("published_at"),
                     assets = parseAssets(json.getJSONArray("assets"))
                 )
@@ -182,8 +191,8 @@ object Updater {
                         val releaseObj = json.getJSONObject(i)
                         releases.add(ReleaseInfo(
                             tagName = releaseObj.getString("tag_name"),
-                            versionName = releaseObj.getString("name"),
-                            description = releaseObj.getString("body"),
+                            versionName = versionFromTag(releaseObj.getString("tag_name")),
+                            description = releaseObj.optString("body").takeUnless { releaseObj.isNull("body") }.orEmpty(),
                             releaseDate = releaseObj.getString("published_at"),
                             assets = parseAssets(releaseObj.getJSONArray("assets"))
                         ))

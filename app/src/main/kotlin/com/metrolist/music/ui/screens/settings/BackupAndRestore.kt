@@ -181,6 +181,10 @@ fun BackupAndRestore(
             ),
         )
 
+        // Sign-in, token login and account sync (moved here from the Profile tab).
+        AccountLoginSettings(navController = navController)
+        Spacer(Modifier.height(16.dp))
+
         val appName = stringResource(R.string.app_name)
         Material3SettingsGroup(
             items =
