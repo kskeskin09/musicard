@@ -190,6 +190,7 @@ fun RomanizationSettings(
             title = stringResource(R.string.content_language),
             items = checkboxesList
         )
+        Spacer(Modifier.height(16.dp))
     }
 
     TopAppBar(

@@ -99,6 +99,7 @@ import com.metrolist.music.constants.PlayerButtonsStyleKey
 import com.metrolist.music.constants.RespectAgentPositioningKey
 import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.constants.ShowCachedPlaylistKey
+import com.metrolist.music.constants.ShowLibraryPlaylistKey
 import com.metrolist.music.constants.ShowDownloadedPlaylistKey
 import com.metrolist.music.constants.ShowLikedPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
@@ -418,6 +419,11 @@ fun AppearanceSettings(
     val (showCachedPlaylist, onShowCachedPlaylistChange) =
         rememberPreference(
             ShowCachedPlaylistKey,
+            defaultValue = true,
+        )
+    val (showLibraryPlaylist, onShowLibraryPlaylistChange) =
+        rememberPreference(
+            ShowLibraryPlaylistKey,
             defaultValue = true,
         )
 
@@ -1829,6 +1835,27 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onShowCachedPlaylistChange(!showCachedPlaylist) },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.library_music),
+                        title = { Text(stringResource(R.string.show_library_playlist)) },
+                        trailingContent = {
+                            Switch(
+                                checked = showLibraryPlaylist,
+                                onCheckedChange = onShowLibraryPlaylistChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (showLibraryPlaylist) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onShowLibraryPlaylistChange(!showLibraryPlaylist) },
                     ),
                 ),
         )

@@ -97,6 +97,7 @@ import com.metrolist.music.constants.LibrarySortKey
 import com.metrolist.music.constants.LibrarySortOption
 import com.metrolist.music.constants.ShowCachedPlaylistKey
 import com.metrolist.music.constants.ShowDownloadedPlaylistKey
+import com.metrolist.music.constants.ShowLibraryPlaylistKey
 import com.metrolist.music.constants.ShowLikedPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.YtmSyncKey
@@ -157,6 +158,7 @@ fun LibraryHomeScreen(
     val (showDownloaded) = rememberPreference(ShowDownloadedPlaylistKey, true)
     val (showTop) = rememberPreference(ShowTopPlaylistKey, true)
     val (showCached) = rememberPreference(ShowCachedPlaylistKey, true)
+    val (showLibrary) = rememberPreference(ShowLibraryPlaylistKey, true)
     val topSize by viewModel.topValue.collectAsStateWithLifecycle(initialValue = "50")
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
@@ -285,7 +287,7 @@ fun LibraryHomeScreen(
         }
     }
 
-    // The app's own lists (Liked, My Top, Downloaded, Cached) only show in the unfiltered view.
+    // The app's own lists (Liked, My Top, Downloaded, Cached, Library) only show in the unfiltered view.
     val showAutoPlaylists = kind == null
     val autoPlaylists =
         buildList {
@@ -293,6 +295,7 @@ fun LibraryHomeScreen(
             if (showTop) add(AutoPlaylist("auto_top", stringResource(R.string.my_top) + " $topSize", R.drawable.trending_up, "top_playlist/$topSize"))
             if (showDownloaded) add(AutoPlaylist("auto_downloaded", stringResource(R.string.offline), R.drawable.offline, "auto_playlist/downloaded"))
             if (showCached) add(AutoPlaylist("auto_cached", stringResource(R.string.cached_playlist), R.drawable.cached, "cache_playlist/cached"))
+            if (showLibrary) add(AutoPlaylist("auto_library", stringResource(R.string.library_playlist), R.drawable.library_music, "auto_playlist/library"))
         }
 
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()

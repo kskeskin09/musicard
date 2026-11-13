@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_playlist">Kütüphane</string>
+    <string name="show_library_playlist">Kütüphane listesini göster</string>
+    <string name="downloads_group">İndirmeler</string>
+    <string name="auto_download_library">Kütüphaneyi otomatik indir</string>
+    <string name="auto_download_library_desc">Beğendiğin şarkıları ve çalma listelerindeki şarkıları indirir. Pil optimizasyonu açıkken bekler.</string>
+    <string name="auto_download_cellular">Mobil veriyi de kullan</string>
+    <string name="auto_download_cellular_desc">Kapalıyken sadece Wi-Fi\'da indirir</string>
+</resources>
