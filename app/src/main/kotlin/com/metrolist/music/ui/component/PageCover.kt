@@ -23,7 +23,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlendMode
@@ -36,18 +35,36 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.constants.MiniPlayerEdgeEffect
-import com.metrolist.music.constants.PageEdgeToEdgeCoverEdgeKey
 import com.metrolist.music.constants.PageEdgeToEdgeCoverKey
-import com.metrolist.music.utils.rememberEnumPreference
-import com.metrolist.music.utils.rememberPreference
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.metrolist.music.utils.dataStore
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 /** Whether album and playlist covers fill the top of their page up to the screen edges. */
 @Composable
 fun rememberPageEdgeToEdgeCover(): Boolean {
-    val edgeToEdge by rememberPreference(PageEdgeToEdgeCoverKey, defaultValue = false)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Known on the very first frame (the last value seen, or read once from the settings), so a
+    // page never starts with the square cover and then jumps to edge-to-edge.
+    val initial =
+        androidx.compose.runtime.remember {
+            lastEdgeToEdgeCover ?: kotlinx.coroutines.runBlocking {
+                context.dataStore.data.first()[PageEdgeToEdgeCoverKey] ?: false
+            }.also { lastEdgeToEdgeCover = it }
+        }
+    val edgeToEdge by androidx.compose.runtime.remember {
+        context.dataStore.data
+            .map { it[PageEdgeToEdgeCoverKey] ?: false }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initial)
+    androidx.compose.runtime.SideEffect { lastEdgeToEdgeCover = edgeToEdge }
     return edgeToEdge
 }
+
+@Volatile
+private var lastEdgeToEdgeCover: Boolean? = null
 
 /**
  * The frame of the big cover at the top of an album or playlist page.
@@ -60,6 +77,9 @@ fun rememberPageEdgeToEdgeCover(): Boolean {
 @Composable
 fun PageCoverFrame(
     modifier: Modifier = Modifier,
+    // Only for the card-sized cover: an edge-to-edge cover doesn't grow out of the card it was
+    // opened from (it would show square first, then jump to full width), it simply fades in.
+    sharedElement: Modifier = Modifier,
     size: Dp = 280.dp,
     corner: Dp = 16.dp,
     shadow: Dp = 24.dp,
@@ -72,6 +92,7 @@ fun PageCoverFrame(
         Surface(
             modifier =
                 modifier
+                    .then(sharedElement)
                     .size(size)
                     .then(if (shadow > 0.dp) Modifier.shadow(elevation = shadow, shape = shape) else Modifier),
             shape = shape,
@@ -82,8 +103,6 @@ fun PageCoverFrame(
         return
     }
     val pull = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateTopPadding() + pullUp
-    val edge by rememberEnumPreference(PageEdgeToEdgeCoverEdgeKey, defaultValue = MiniPlayerEdgeEffect.BLACKOUT)
-    val blur = edge == MiniPlayerEdgeEffect.BLUR && !com.metrolist.music.utils.LocalBatterySaver.current.blur
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     // A light veil behind the top bar so its buttons stay visible on any cover.
     val veil = if (dark) Color.Black.copy(alpha = 0.4f) else MaterialTheme.colorScheme.background.copy(alpha = 0.55f)
@@ -103,46 +122,13 @@ fun PageCoverFrame(
                 .drawWithContent {
                     drawContent()
                     drawRect(
-                        brush =
-                            if (edge == MiniPlayerEdgeEffect.BLACKOUT) {
-                                // Blackout: fades out over the lower part, into the page.
-                                Brush.verticalGradient(0f to Color.Black, 0.6f to Color.Black, 1f to Color.Transparent)
-                            } else {
-                                // Nothing and Blur: only a short fade at the very end.
-                                Brush.verticalGradient(0f to Color.Black, 0.86f to Color.Black, 1f to Color.Transparent)
-                            },
+                        // Fades out over the lower part, into the page.
+                        brush = Brush.verticalGradient(0f to Color.Black, 0.6f to Color.Black, 1f to Color.Transparent),
                         blendMode = BlendMode.DstIn,
                     )
                 },
     ) {
         Box(Modifier.fillMaxSize().background(color), content = content)
-        if (blur) {
-            // Blur: a blurred copy laid over the cover, faded in toward the bottom, so the
-            // blur grows as the cover meets the page.
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(
-                            brush = Brush.verticalGradient(0f to Color.Transparent, 0.5f to Color.Transparent, 0.85f to Color.Black),
-                            blendMode = BlendMode.DstIn,
-                        )
-                    },
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = 1.08f
-                            scaleY = 1.08f
-                        }.blur(28.dp)
-                        .background(color),
-                    content = content,
-                )
-            }
-        }
         Box(
             Modifier
                 .fillMaxWidth()

@@ -242,9 +242,6 @@ fun AppearanceSettings(
     var showPageBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     val (pageEdgeToEdgeCover, onPageEdgeToEdgeCoverChange) =
         rememberPreference(com.metrolist.music.constants.PageEdgeToEdgeCoverKey, defaultValue = false)
-    val (pageCoverEdge, onPageCoverEdgeChange) =
-        rememberEnumPreference(com.metrolist.music.constants.PageEdgeToEdgeCoverEdgeKey, defaultValue = MiniPlayerEdgeEffect.BLACKOUT)
-    var showPageCoverEdgeDialog by rememberSaveable { mutableStateOf(false) }
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -717,20 +714,6 @@ fun AppearanceSettings(
             },
             title = stringResource(R.string.edge_to_edge_art_edge),
             current = edgeToEdgeArtEdge,
-            values = listOf(MiniPlayerEdgeEffect.NONE, MiniPlayerEdgeEffect.BLACKOUT, MiniPlayerEdgeEffect.BLUR),
-            valueText = { miniPlayerEdgeEffectText(it) },
-        )
-    }
-
-    if (showPageCoverEdgeDialog) {
-        EnumDialog(
-            onDismiss = { showPageCoverEdgeDialog = false },
-            onSelect = {
-                onPageCoverEdgeChange(it)
-                showPageCoverEdgeDialog = false
-            },
-            title = stringResource(R.string.edge_to_edge_art_edge),
-            current = pageCoverEdge,
             values = listOf(MiniPlayerEdgeEffect.NONE, MiniPlayerEdgeEffect.BLACKOUT, MiniPlayerEdgeEffect.BLUR),
             valueText = { miniPlayerEdgeEffectText(it) },
         )
@@ -1223,13 +1206,6 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onPageEdgeToEdgeCoverChange(!pageEdgeToEdgeCover) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(if (pageCoverEdge == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
-                        title = { Text(stringResource(R.string.edge_to_edge_art_edge)) },
-                        description = { Text(miniPlayerEdgeEffectText(pageCoverEdge)) },
-                        onClick = { showPageCoverEdgeDialog = true },
-                        visible = pageEdgeToEdgeCover,
                     ),
                 ),
         )

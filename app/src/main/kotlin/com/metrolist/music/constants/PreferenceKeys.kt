@@ -505,9 +505,6 @@ val PageBackgroundKey = stringPreferencesKey("pageBackground")
 /** Album and playlist covers fill the top of their page up to the screen edges. */
 val PageEdgeToEdgeCoverKey = booleanPreferencesKey("pageEdgeToEdgeCover")
 
-/** How an edge-to-edge page cover meets the page: Blackout, Blur or Nothing (MiniPlayerEdgeEffect). */
-val PageEdgeToEdgeCoverEdgeKey = stringPreferencesKey("pageEdgeToEdgeCoverEdge")
-
 val LyricStyleKey = stringPreferencesKey("lyricStyle")
 val LyricsBlurKey = booleanPreferencesKey("lyricsBlur")
 val LyricsBlurKeepNeighborsKey = booleanPreferencesKey("lyricsBlurKeepNeighbors")

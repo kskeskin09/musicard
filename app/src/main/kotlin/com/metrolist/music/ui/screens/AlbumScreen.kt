@@ -232,7 +232,7 @@ fun AlbumScreen(
                         ) {
                             // Album cover, as large as a playlist's cover
                             com.metrolist.music.ui.component.PageCoverFrame(
-                                modifier = Modifier.albumCoverSharedElement(viewModel.albumId),
+                                sharedElement = Modifier.albumCoverSharedElement(viewModel.albumId),
                                 color = MaterialTheme.colorScheme.surface,
                             ) {
                                 // The small cover (already loaded) under the sharp one while it loads.
@@ -516,7 +516,7 @@ fun AlbumScreen(
                                         .padding(top = 8.dp, bottom = 20.dp),
                             ) {
                                 com.metrolist.music.ui.component.PageCoverFrame(
-                                    modifier = Modifier.albumCoverSharedElement(viewModel.albumId),
+                                    sharedElement = Modifier.albumCoverSharedElement(viewModel.albumId),
                                     color = MaterialTheme.colorScheme.surface,
                                 ) {
                                     AsyncImage(

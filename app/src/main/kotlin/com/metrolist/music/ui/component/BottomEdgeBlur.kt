@@ -62,8 +62,11 @@ private fun Modifier.bottomEdgeBlurImpl(
         }
         try {
             sharp.record { this@drawWithContent.drawContent() }
-            drawLayer(sharp)
             val top = size.height - region
+            // The sharp content only above the blurred area. Drawn underneath it as well, it
+            // showed through wherever the page itself is see-through (text outside the cards,
+            // like section titles), so that text stayed sharp under its blurred copy.
+            clipRect(bottom = top) { this@drawWithContent.drawLayer(sharp) }
             val maxRadius = 18.dp.toPx()
             // Soft start: over the first part of the region the blur radius grows step by step
             // (a light blur at the top, the full blur at the bottom of the ramp), instead of a
