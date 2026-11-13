@@ -6,8 +6,19 @@ object DiscordDefaults {
     const val BUTTON1_LABEL = "Listen on YouTube Music"
     const val BUTTON1_URL_TEMPLATE = "https://music.youtube.com/watch?v={song.id}"
 
-    const val BUTTON2_LABEL = "Visit Metrolist"
-    const val BUTTON2_URL = "https://github.com/MetrolistGroup/Metrolist"
+    const val BUTTON2_LABEL = "Get Musicard"
+    const val BUTTON2_URL = "https://kskeskin09.github.io/musicard"
+
+    // Button values saved by builds that still used Metrolist's defaults. They are treated
+    // as "default" so existing users get the Musicard button without resetting anything.
+    private const val LEGACY_BUTTON2_LABEL = "Visit Metrolist"
+    private const val LEGACY_BUTTON2_URL = "https://github.com/MetrolistGroup/Metrolist"
+
+    fun button2Label(saved: String): String =
+        if (saved.isBlank() || saved == LEGACY_BUTTON2_LABEL) BUTTON2_LABEL else saved
+
+    fun button2Url(saved: String): String =
+        if (saved.isBlank() || saved == LEGACY_BUTTON2_URL) BUTTON2_URL else saved
 
     const val STATE_TEMPLATE = "{artist.name}"
     const val DETAILS_TEMPLATE = "{song.name}"

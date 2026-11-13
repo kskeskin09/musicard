@@ -61,7 +61,12 @@ android {
         buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
         buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
         buildConfigField("String", "ARCHITECTURE", "\"universal\"")
-        buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
+        // Discord application used for sign-in and Rich Presence. Defaults to the upstream
+        // (Metrolist) app so Discord keeps working; set DISCORD_APP_ID (GitHub secret or
+        // local.properties) to a Musicard-owned Discord app to show Musicard's own name/icon.
+        val discordAppId = (localProperties.getProperty("DISCORD_APP_ID") ?: System.getenv("DISCORD_APP_ID"))
+            ?.trim()?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) } ?: "1447278780795064401"
+        buildConfigField("Long", "DISCORD_APP_ID", "${discordAppId}L")
     }
 
     flavorDimensions += listOf("variant")

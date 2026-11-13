@@ -659,14 +659,14 @@ fun DiscordSettings(
                                 add(
                                     Material3SettingsItem(
                                         title = { Text("${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_label)}") },
-                                        description = { Text(btn2Label) },
+                                        description = { Text(DiscordDefaults.button2Label(btn2Label)) },
                                         onClick = { showBtn2LabelDialog = true },
                                     ),
                                 )
                                 add(
                                     Material3SettingsItem(
                                         title = { Text("${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_url)}") },
-                                        description = { Text(btn2Url) },
+                                        description = { Text(DiscordDefaults.button2Url(btn2Url)) },
                                         onClick = { showBtn2UrlDialog = true },
                                     ),
                                 )
@@ -822,7 +822,7 @@ fun DiscordSettings(
     if (showBtn2LabelDialog) {
         TemplateFieldDialog(
             title = "${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_label)}",
-            value = btn2Label,
+            value = DiscordDefaults.button2Label(btn2Label),
             onDone = {
                 onBtn2LabelChange(it)
                 coroutineScope.launch(Dispatchers.IO) {
@@ -837,7 +837,7 @@ fun DiscordSettings(
     if (showBtn2UrlDialog) {
         TemplateFieldDialog(
             title = "${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_url)}",
-            value = btn2Url,
+            value = DiscordDefaults.button2Url(btn2Url),
             onDone = {
                 onBtn2UrlChange(it)
                 coroutineScope.launch(Dispatchers.IO) {
@@ -977,7 +977,7 @@ fun RichPresence(
         DiscordDefaults.BUTTON1_LABEL
     }
     val renderedBtn2Label = if (advancedMode) {
-        DiscordTemplateRenderer.render(btn2Label.ifEmpty { DiscordDefaults.BUTTON2_LABEL }, previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
+        DiscordTemplateRenderer.render(DiscordDefaults.button2Label(btn2Label), previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
     } else {
         DiscordDefaults.BUTTON2_LABEL
     }
@@ -987,7 +987,7 @@ fun RichPresence(
         "${DiscordDefaults.YOUTUBE_WATCH_URL}${song?.song?.id.orEmpty()}"
     }
     val renderedBtn2Url = if (advancedMode) {
-        DiscordTemplateRenderer.render(btn2Url.ifEmpty { DiscordDefaults.BUTTON2_URL }, previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
+        DiscordTemplateRenderer.render(DiscordDefaults.button2Url(btn2Url), previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
     } else {
         DiscordDefaults.BUTTON2_URL
     }
