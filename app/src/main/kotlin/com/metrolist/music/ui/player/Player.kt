@@ -2295,6 +2295,7 @@ fun BottomSheetPlayer(
                 // lyrics (bottom panel). Measured only while the card is closed.
                 var boxBottomPx by remember { mutableFloatStateOf(0f) }
                 var boxTopPx by remember { mutableFloatStateOf(0f) }
+                var cardTopPx by remember { mutableFloatStateOf(0f) }
                 val thumbnailCarousel = remember { ThumbnailCarousel() }
                 var playbackTopPx by remember { mutableFloatStateOf(0f) }
                 var playbackHeightPx by remember { mutableFloatStateOf(0f) }
@@ -2351,6 +2352,9 @@ fun BottomSheetPlayer(
                         val titleTopInBox by remember {
                             derivedStateOf { (titleRowPos.y - boxTopPx).roundToInt() }
                         }
+                        val cardTopInBox by remember {
+                            derivedStateOf { (cardTopPx - boxTopPx).roundToInt() }
+                        }
                         val controlsBottomInBox by remember {
                             derivedStateOf { (playbackTopPx + playbackHeightPx - boxTopPx).roundToInt() }
                         }
@@ -2360,11 +2364,14 @@ fun BottomSheetPlayer(
                         // Blackout keeps its height and fade. Nothing and Blur reach down behind
                         // the play controls and stop just above the lyrics / up next card, with a
                         // short fade at the very end so the art never runs into the card.
+                        val nothing = edgeToEdgeArtEdge == com.metrolist.music.constants.MiniPlayerEdgeEffect.NONE
                         val edgeArtHeightPx =
-                            if (blackout || playbackHeightPx == 0f) {
-                                fallbackHeightPx
-                            } else {
-                                controlsBottomInBox.toFloat()
+                            when {
+                                blackout || playbackHeightPx == 0f -> fallbackHeightPx
+                                // Nothing: sharp all the way down to the lyrics / up next card,
+                                // and cut off exactly where the card starts.
+                                nothing && cardTopPx > 0f -> cardTopInBox.toFloat()
+                                else -> controlsBottomInBox.toFloat()
                             }
                         val blurStartPx =
                             if (titleRowPos.y == 0f) edgeArtHeightPx * 0.6f else titleTopInBox.toFloat()
@@ -2375,7 +2382,7 @@ fun BottomSheetPlayer(
                             isPlaying = effectiveIsPlaying,
                             edge = edgeToEdgeArtEdge,
                             heightPx = edgeArtHeightPx,
-                            tailPx = tailPx,
+                            tailPx = if (nothing) 0f else tailPx,
                             blurStartPx = blurStartPx,
                             expandProvider = { cardExpand },
                             headerLeftPx = marginPx,
@@ -2543,7 +2550,14 @@ fun BottomSheetPlayer(
                             mediaMetadata?.let { playbackControlsContent(it) }
                         }
 
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(
+                            Modifier
+                                .height(16.dp)
+                                .onGloballyPositioned {
+                                    // Where the lyrics / up next card starts (it follows this gap).
+                                    if (cardExpand == 0f) cardTopPx = it.positionInRoot().y + it.size.height
+                                },
+                        )
 
                         PlayerBottomCard(
                             mediaMetadata = mediaMetadata,
@@ -3249,6 +3263,7 @@ private fun EdgeToEdgeAlbumArt(
                             } else {
                                 // Nothing and Blur: no darkening, only a short fade at the very
                                 // end, just above the lyrics / up next card.
+                                if (tailPx <= 0f) return@drawWithContent
                                 val tailStart = (1f - tailPx / size.height).coerceIn(0f, 1f)
                                 Brush.verticalGradient(
                                     0f to Color.Black,
@@ -3268,7 +3283,9 @@ private fun EdgeToEdgeAlbumArt(
             }
             for (index in listOf(base, base + 1)) {
                 val url = carousel.artworks.getOrNull(index) ?: continue
-                androidx.compose.runtime.key(index) {
+                // Keyed by song, not position: when the queue around the new song is rebuilt the
+                // positions shift, and the art already on screen must stay instead of reloading.
+                androidx.compose.runtime.key(carousel.keys.getOrNull(index) ?: index) {
                     EdgeArtImage(
                         url = url,
                         blur = blur,
