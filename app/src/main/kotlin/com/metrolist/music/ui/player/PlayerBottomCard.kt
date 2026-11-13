@@ -929,7 +929,9 @@ fun CompactLyrics(
             if (endingGap != null) {
                 (endingGap.afterLine + 1).coerceAtMost(lines.lastIndex)
             } else {
-                LyricsUtils.findCurrentLineIndex(lines, position)
+                // A background line shares its main line's start, so the main line stays the
+                // current one and keeps its word-by-word sweep.
+                LyricsUtils.findCurrentMainLineIndex(lines, position)
             }
         }
     }
@@ -1117,7 +1119,10 @@ fun CompactLyrics(
                 is CompactItem.Line -> {
                     val index = item.index
                     val line = lines[index]
-                    val active = synced && index == currentIndex && activeGap == null
+                    // Background vocals light up together with the line they belong to.
+                    val active =
+                        synced && activeGap == null &&
+                            (index == currentIndex || (line.isBackground && LyricsUtils.isPairedBackground(lines, index, currentIndex)))
                     val agent = line.agent.takeIf { respectAgentPositioning }
                     val compactBias =
                         when {

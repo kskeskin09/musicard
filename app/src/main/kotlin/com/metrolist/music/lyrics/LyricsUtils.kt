@@ -815,6 +815,37 @@ object LyricsUtils {
     }
 
     /**
+     * Like [findCurrentLineIndex], but the current line is always a sung (main) line.
+     *
+     * A background line usually carries the same timestamp as the line it accompanies and
+     * comes right after it, so [findCurrentLineIndex] picked the background line and the
+     * main line was left dim, without its word-by-word sweep. Here a background line hands
+     * the turn back to the main line it belongs to; [isPairedBackground] tells which
+     * background lines light up together with it.
+     */
+    fun findCurrentMainLineIndex(
+        lines: List<LyricsEntry>,
+        position: Long,
+    ): Int {
+        var index = findCurrentLineIndex(lines, position)
+        while (index > 0 && lines[index].isBackground) index--
+        return index
+    }
+
+    /**
+     * True when [index] is a background line that belongs to the main line at [mainIndex],
+     * i.e. it follows that line with only other background lines in between.
+     */
+    fun isPairedBackground(
+        lines: List<LyricsEntry>,
+        index: Int,
+        mainIndex: Int,
+    ): Boolean {
+        if (mainIndex < 0 || index <= mainIndex || index > lines.lastIndex) return false
+        return (mainIndex + 1..index).all { lines[it].isBackground }
+    }
+
+    /**
      * Returns the set of line indices that are currently active (being sung).
      * A line is active if playback position >= line.time AND position < line end time.
      * Line end time = the last word's endTime if word timings exist, otherwise the next line's start time.
