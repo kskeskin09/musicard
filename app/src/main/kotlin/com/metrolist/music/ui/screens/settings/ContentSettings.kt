@@ -594,7 +594,7 @@ fun ContentSettings(
                             when (addToPlaylistPosition) {
                                 AddToPlaylistPosition.BEGINNING -> stringResource(R.string.playlist_position_beginning)
                                 AddToPlaylistPosition.END -> stringResource(R.string.playlist_position_end)
-                            }
+                            } + "\n" + stringResource(R.string.playlist_position_custom_only)
                         )
                     },
                     onClick = { showAddToPlaylistPositionDialog = true },

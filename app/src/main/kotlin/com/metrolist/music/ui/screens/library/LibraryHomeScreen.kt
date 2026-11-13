@@ -327,9 +327,11 @@ fun LibraryHomeScreen(
                         onSelect = { kind = if (kind == it) null else it },
                         modifier = Modifier.weight(1f),
                     )
-                    // In the Custom order the lock sits left of the sort button.
+                    Spacer(Modifier.width(10.dp))
+                    LibrarySortButton(selected = sortOption, onSelect = { sortOption = it })
+                    // In the Custom order the lock sits at the right end, after the sort button.
                     if (sortOption == LibrarySortOption.CUSTOM) {
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(8.dp))
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier =
@@ -347,8 +349,6 @@ fun LibraryHomeScreen(
                             )
                         }
                     }
-                    Spacer(Modifier.width(if (sortOption == LibrarySortOption.CUSTOM) 8.dp else 10.dp))
-                    LibrarySortButton(selected = sortOption, onSelect = { sortOption = it })
                 }
             }
 
