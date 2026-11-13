@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lyrics_search_best_synced">Always find the best-synced lyrics</string>
+    <string name="lyrics_search_best_synced_desc">Asks every source at once and takes word-by-word over line-by-line over unsynced lyrics. If two are equal, the one higher in the list wins</string>
+
+    <string name="lyrics_src_desc_betterlyrics">Apple Music lyrics, word by word. Best for English and other Western pop</string>
+    <string name="lyrics_src_desc_paxsenix">Apple Music\'s own lyrics, word by word. Huge Western catalog</string>
+    <string name="lyrics_src_desc_musixmatch">The largest lyrics catalog, often word by word. Almost every language</string>
+    <string name="lyrics_src_desc_lyricsplus">Community word-by-word lyrics (YouLy+, BiniLyrics). Mostly popular songs</string>
+    <string name="lyrics_src_desc_lrcred">Apple-style word-by-word archive, matched by recording code. Popular songs</string>
+    <string name="lyrics_src_desc_unison">From the BetterLyrics developer, gathers lyrics from several sources</string>
+    <string name="lyrics_src_desc_spotify">Spotify\'s lyrics, line by line. Wide coverage of current music</string>
+    <string name="lyrics_src_desc_lrclib">Free open database, line by line. Good for English and indie songs</string>
+    <string name="lyrics_src_desc_simpmusic">Community lyrics matched to the exact YouTube video. Finds what others miss</string>
+    <string name="lyrics_src_desc_netease">Often word by word. Best for Chinese, Japanese and Korean songs</string>
+    <string name="lyrics_src_desc_portato">BetterLyrics\' QQ Music route, word by word. Good for Asian songs</string>
+    <string name="lyrics_src_desc_kugou">Line by line. Good for Chinese and other Asian songs</string>
+    <string name="lyrics_src_desc_qqmusic">Line by line. Strong for C-pop, J-pop and K-pop</string>
+    <string name="lyrics_src_desc_zemer">Hebrew and Jewish music</string>
+    <string name="lyrics_src_desc_youtube">The lyrics YouTube Music shows. Usually not synced</string>
+    <string name="lyrics_src_desc_youtube_subtitle">The video\'s subtitles, line by line</string>
+    <string name="lyrics_src_desc_youtube_auto">Speech-recognition captions. Often wrong, a last resort. Off by default</string>
+</resources>

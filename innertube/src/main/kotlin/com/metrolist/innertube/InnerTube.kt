@@ -20,6 +20,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.Url
 import io.ktor.http.contentType
@@ -403,6 +404,16 @@ class InnerTube(
             throw InnerTubeHttpException(operation, status)
         }
         return this
+    }
+
+    /** Plain GET of a YouTube-owned URL (for example a caption track), as text. */
+    suspend fun getText(url: String): String? {
+        val response = httpClient.get(url)
+        if (!response.status.isSuccess()) {
+            response.bodyAsChannel().cancel(null)
+            return null
+        }
+        return response.bodyAsText()
     }
 
     private suspend fun returnYouTubeDislike(videoId: String) =

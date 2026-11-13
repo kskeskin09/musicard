@@ -7,7 +7,8 @@ package com.metrolist.music.lyrics
 
 import android.content.Context
 import android.util.LruCache
-import com.metrolist.music.constants.LyricsProviderOrderKey
+import com.metrolist.music.constants.LyricsProviderOrderV2Key
+import com.metrolist.music.constants.SearchBestSyncedLyricsKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.utils.NetworkConnectivityObserver
@@ -18,6 +19,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -70,6 +74,11 @@ constructor(
         val result = withTimeoutOrNull(MAX_LYRICS_FETCH_MS) {
             val cleanedTitle = LyricsUtils.cleanTitleForSearch(mediaMetadata.title)
             val enabledProviders = orderedProviders.filter { it.isEnabled(context) }
+
+            val searchBestSynced = context.dataStore.data.first()[SearchBestSyncedLyricsKey] ?: true
+            if (searchBestSynced && enabledProviders.size > 1) {
+                return@withTimeoutOrNull fetchBestSynced(enabledProviders, mediaMetadata, cleanedTitle)
+            }
 
             Timber.tag("LyricsHelper").d("Starting sequential fetch for: $cleanedTitle by ${mediaMetadata.artists.joinToString { it.name }}")
             Timber.tag("LyricsHelper").d("Enabled providers in order: ${enabledProviders.joinToString { it.name }}")
@@ -194,8 +203,76 @@ constructor(
         currentLyricsJob?.join()
     }
 
+    /**
+     * Asks every enabled source at once and keeps the best-timed answer: word-by-word beats
+     * line-by-line, which beats untimed text. Between equally timed answers the source higher in
+     * the user's order wins. Stops early once the highest source that can still win has answered
+     * word-by-word.
+     */
+    private suspend fun fetchBestSynced(
+        providers: List<LyricsProvider>,
+        mediaMetadata: MediaMetadata,
+        cleanedTitle: String,
+    ): LyricsWithProvider = coroutineScope {
+        val artists = mediaMetadata.artists.joinToString { it.name }
+        Timber.tag("LyricsHelper").d("Best-synced fetch for: $cleanedTitle by $artists from ${providers.size} sources")
+        val jobs = providers.map { provider ->
+            async {
+                val text = try {
+                    withTimeoutOrNull(PER_PROVIDER_TIMEOUT_MS) {
+                        provider.getLyrics(
+                            context,
+                            mediaMetadata.id,
+                            cleanedTitle,
+                            artists,
+                            mediaMetadata.duration,
+                            mediaMetadata.album?.title,
+                        )
+                    }?.getOrNull()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.tag("LyricsHelper").w("${provider.name} threw: ${e.message}")
+                    null
+                }
+                text?.takeIf { it.isNotBlank() }?.let { LyricsUtils.filterLyricsCreditLines(it) }
+            }
+        }
+        // null = still running, "" = nothing from this source.
+        val answers = arrayOfNulls<String>(providers.size)
+        val pending = jobs.indices.toMutableSet()
+        var chosen: Int? = null
+        while (pending.isNotEmpty() && chosen == null) {
+            val (index, text) = select {
+                pending.forEach { i -> jobs[i].onAwait { i to it } }
+            }
+            pending.remove(index)
+            answers[index] = text ?: ""
+            // The first source in order that hasn't answered yet could still win a tie, so a
+            // word-timed answer is only final when every source above it has answered.
+            for (i in providers.indices) {
+                val answer = answers[i] ?: break
+                if (answer.isNotEmpty() && lyricsSyncLevel(answer) == LyricsSyncLevel.WORD) {
+                    chosen = i
+                    break
+                }
+            }
+        }
+        jobs.forEach { it.cancel() }
+        val pick = chosen ?: answers.indices
+            .filter { !answers[it].isNullOrEmpty() }
+            .maxWithOrNull(compareBy<Int> { lyricsSyncLevel(answers[it]!!).ordinal }.thenByDescending { it })
+        if (pick == null) {
+            Timber.tag("LyricsHelper").w("No lyrics found after checking all providers")
+            LyricsWithProvider(LYRICS_NOT_FOUND, PROVIDER_NONE)
+        } else {
+            Timber.tag("LyricsHelper").i("Best-synced pick: ${providers[pick].name} (${lyricsSyncLevel(answers[pick]!!)})")
+            LyricsWithProvider(answers[pick]!!, providers[pick].name)
+        }
+    }
+
     private fun resolveLyricsProviders(preferences: androidx.datastore.preferences.core.Preferences): List<LyricsProvider> {
-        val providerOrder = preferences[LyricsProviderOrderKey].orEmpty()
+        val providerOrder = preferences[LyricsProviderOrderV2Key].orEmpty()
         if (providerOrder.isNotBlank()) {
             return LyricsProviderRegistry.getOrderedProviders(providerOrder)
         }

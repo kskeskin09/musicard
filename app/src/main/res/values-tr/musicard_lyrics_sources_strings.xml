@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lyrics_search_best_synced">Her zaman en iyi senkronlu sözü bul</string>
+    <string name="lyrics_search_best_synced_desc">Tüm kaynaklara aynı anda sorar; kelime senkronlu sözü satır senkronluya, onu da senkronsuza tercih eder. İkisi eşitse listede üstte olan seçilir</string>
+
+    <string name="lyrics_src_desc_betterlyrics">Apple Music sözleri, kelime kelime. İngilizce ve Batı pop müziğinde en iyisi</string>
+    <string name="lyrics_src_desc_paxsenix">Apple Music\'in kendi sözleri, kelime kelime. Çok geniş Batı müziği arşivi</string>
+    <string name="lyrics_src_desc_musixmatch">En büyük söz arşivi, çoğu zaman kelime kelime. Neredeyse her dilde</string>
+    <string name="lyrics_src_desc_lyricsplus">Topluluğun kelime kelime sözleri (YouLy+, BiniLyrics). Çoğunlukla popüler şarkılar</string>
+    <string name="lyrics_src_desc_lrcred">Apple tarzı kelime senkronlu arşiv, kayıt koduyla eşleşir. Popüler şarkılar</string>
+    <string name="lyrics_src_desc_unison">BetterLyrics geliştiricisinden, sözleri birkaç kaynaktan toplar</string>
+    <string name="lyrics_src_desc_spotify">Spotify\'ın sözleri, satır satır. Güncel müzikte geniş arşiv</string>
+    <string name="lyrics_src_desc_lrclib">Ücretsiz açık veritabanı, satır satır. İngilizce ve bağımsız şarkılarda iyi</string>
+    <string name="lyrics_src_desc_simpmusic">Tam o YouTube videosuna eşlenmiş topluluk sözleri. Diğerlerinin bulamadığını bulur</string>
+    <string name="lyrics_src_desc_netease">Çoğu zaman kelime kelime. Çince, Japonca ve Korece şarkılarda en iyisi</string>
+    <string name="lyrics_src_desc_portato">BetterLyrics\'in QQ Music yolu, kelime kelime. Asya şarkılarında iyi</string>
+    <string name="lyrics_src_desc_kugou">Satır satır. Çince ve diğer Asya şarkılarında iyi</string>
+    <string name="lyrics_src_desc_qqmusic">Satır satır. C-pop, J-pop ve K-pop\'ta güçlü</string>
+    <string name="lyrics_src_desc_zemer">İbranice ve Yahudi müziği</string>
+    <string name="lyrics_src_desc_youtube">YouTube Music\'in gösterdiği sözler. Genellikle senkronlu değil</string>
+    <string name="lyrics_src_desc_youtube_subtitle">Videonun altyazıları, satır satır</string>
+    <string name="lyrics_src_desc_youtube_auto">Konuşma tanıma altyazıları. Sık hata yapar, son çare. Varsayılan olarak kapalı</string>
+</resources>

@@ -17,3 +17,13 @@ fun lyricsTextLooksSynced(lyrics: String?): Boolean {
     if (t.startsWith('[')) return true
     return LRC_TIMESTAMP_HINT.containsMatchIn(t.take(4096))
 }
+
+/** How finely lyrics are timed, from worst to best. */
+enum class LyricsSyncLevel { NONE, LINE, WORD }
+
+fun lyricsSyncLevel(lyrics: String?): LyricsSyncLevel {
+    if (!lyricsTextLooksSynced(lyrics)) return LyricsSyncLevel.NONE
+    val entries = runCatching { LyricsUtils.parseLyrics(lyrics!!) }.getOrNull().orEmpty()
+    if (entries.isEmpty()) return LyricsSyncLevel.NONE
+    return if (entries.any { !it.words.isNullOrEmpty() }) LyricsSyncLevel.WORD else LyricsSyncLevel.LINE
+}

@@ -56,6 +56,8 @@ data class ReorderableToggleItem(
     val title: String,
     val icon: Painter? = null,
     val enabled: Boolean? = null,
+    /** A short line under the title; rows grow to fit two lines of it. */
+    val subtitle: String? = null,
 )
 
 private val RowHeight = 60.dp
@@ -74,6 +76,7 @@ fun ReorderableToggleList(
     modifier: Modifier = Modifier,
     maxHeight: Dp? = null,
     rowColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    rowHeight: Dp = RowHeight,
 ) {
     val haptic = LocalHapticFeedback.current
     val rows = remember { mutableStateListOf<ReorderableToggleItem>() }
@@ -100,7 +103,7 @@ fun ReorderableToggleList(
         }
     }
 
-    val fullHeight = RowHeight * rows.size + RowGap * (rows.size - 1).coerceAtLeast(0)
+    val fullHeight = rowHeight * rows.size + RowGap * (rows.size - 1).coerceAtLeast(0)
     val height = maxHeight?.let { minOf(it, fullHeight) } ?: fullHeight
     LazyColumn(
         state = listState,
@@ -120,7 +123,7 @@ fun ReorderableToggleList(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(RowHeight)
+                            .height(rowHeight)
                             .clip(RoundedCornerShape(16.dp))
                             .background(background)
                             .longPressDraggableHandle(
@@ -138,14 +141,24 @@ fun ReorderableToggleList(
                         )
                         Spacer(Modifier.width(16.dp))
                     }
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        item.subtitle?.let { subtitle ->
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                     if (isDragging) {
                         // Small arrows toward where the row can still go.
                         Column(
