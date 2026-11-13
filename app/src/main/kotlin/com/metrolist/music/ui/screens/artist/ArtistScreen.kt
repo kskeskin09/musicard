@@ -180,7 +180,7 @@ fun ArtistScreen(
                 if (librarySongs.isNotEmpty()) {
                     playerConnection.playQueue(
                         ListQueue(
-                            title = displayArtistName ?: "Unknown Artist",
+                            title = displayArtistName ?: context.getString(R.string.unknown),
                             items = librarySongs.map { it.toMediaItem() },
                         ),
                     )
@@ -656,7 +656,7 @@ fun ArtistScreen(
                                                     } else {
                                                         playerConnection.playQueue(
                                                             ListQueue(
-                                                                title = displayArtistName ?: "Unknown Artist",
+                                                                title = displayArtistName ?: context.getString(R.string.unknown),
                                                                 items = librarySongs.map { it.toMediaItem() },
                                                                 startIndex = index,
                                                             ),
