@@ -66,7 +66,6 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.db.entities.Song
-import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.playback.queues.YouTubeAlbumRadio
@@ -97,7 +96,6 @@ fun YouTubeAlbumMenu(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
     val album by database.albumWithSongs(albumItem.id).collectAsStateWithLifecycle(initialValue = null)
-    val isPinned by database.speedDialDao.isPinned(albumItem.id).collectAsStateWithLifecycle(initialValue = false)
     val artistNameAliases = LocalArtistNameAliases.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -400,29 +398,6 @@ fun YouTubeAlbumMenu(
                             },
                             onClick = {
                                 showChoosePlaylistDialog = true
-                            },
-                        ),
-                        Material3MenuItemData(
-                            title = {
-                                Text(
-                                    text = if (isPinned) stringResource(R.string.unpin_from_speed_dial) else stringResource(R.string.pin_to_speed_dial),
-                                )
-                            },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
-                                    contentDescription = null,
-                                )
-                            },
-                            onClick = {
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    if (isPinned) {
-                                        database.speedDialDao.delete(albumItem.id)
-                                    } else {
-                                        database.speedDialDao.insert(SpeedDialItem.fromYTItem(albumItem))
-                                    }
-                                }
-                                onDismiss()
                             },
                         ),
                     ),

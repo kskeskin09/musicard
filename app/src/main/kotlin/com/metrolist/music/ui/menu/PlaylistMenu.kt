@@ -52,7 +52,6 @@ import com.metrolist.music.R
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.PlaylistSong
 import com.metrolist.music.db.entities.Song
-import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.playback.queues.ListQueue
@@ -112,7 +111,6 @@ fun PlaylistMenu(
 
     val editable: Boolean = playlist.playlist.isEditable == true
 
-    val isPinned by database.speedDialDao.isPinned(playlist.id).collectAsStateWithLifecycle(initialValue = false)
 
     var showExportDialog by remember { mutableStateOf(false) }
 
@@ -492,40 +490,6 @@ fun PlaylistMenu(
                                 ),
                             )
                         }
-                        add(
-                            Material3MenuItemData(
-                                title = {
-                                    Text(
-                                        text = if (isPinned) stringResource(R.string.unpin_from_speed_dial) else stringResource(R.string.pin_to_speed_dial),
-                                    )
-                                },
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        if (isPinned) {
-                                            database.speedDialDao.delete(playlist.id)
-                                        } else {
-                                            database.speedDialDao.insert(
-                                                SpeedDialItem(
-                                                    id = playlist.id,
-                                                    title = playlist.playlist.name,
-                                                    subtitle = null,
-                                                    subtitleIds = null,
-                                                    thumbnailUrl = playlist.thumbnails.firstOrNull(),
-                                                    type = "LOCAL_PLAYLIST",
-                                                ),
-                                            )
-                                        }
-                                    }
-                                    onDismiss()
-                                },
-                            ),
-                        )
                         if (downloadPlaylist != true) {
                             add(
                                 when (downloadState) {

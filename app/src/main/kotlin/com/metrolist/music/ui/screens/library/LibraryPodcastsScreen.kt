@@ -76,7 +76,6 @@ import com.metrolist.music.constants.SongSortTypeKey
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.PodcastEntity
-import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.ui.component.ChipsRow
@@ -644,7 +643,6 @@ private fun PodcastEpisodePlaylistMenu(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val syncUtils = LocalSyncUtils.current
-    val isPinned by database.speedDialDao.isPinned(podcast.id).collectAsStateWithLifecycle(initialValue = false)
 
     val playlistId = podcast.id.removePrefix("MPSP")
     val shareUrl = "https://music.youtube.com/playlist?list=$playlistId"
@@ -689,47 +687,6 @@ private fun PodcastEpisodePlaylistMenu(
                                 putExtra(Intent.EXTRA_TEXT, shareUrl)
                             }
                         context.startActivity(Intent.createChooser(intent, null))
-                        onDismiss()
-                    },
-                ),
-                Material3MenuItemData(
-                    title = {
-                        Text(
-                            text =
-                                stringResource(
-                                    if (isPinned) {
-                                        R.string.unpin_from_speed_dial
-                                    } else {
-                                        R.string.pin_to_speed_dial
-                                    },
-                                ),
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            painter =
-                                painterResource(
-                                    if (isPinned) R.drawable.remove else R.drawable.add,
-                                ),
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            if (isPinned) {
-                                database.speedDialDao.delete(podcast.id)
-                            } else {
-                                database.speedDialDao.insert(
-                                    SpeedDialItem(
-                                        id = podcast.id,
-                                        title = podcast.title,
-                                        subtitle = podcast.author,
-                                        thumbnailUrl = podcast.thumbnailUrl,
-                                        type = "PLAYLIST",
-                                    ),
-                                )
-                            }
-                        }
                         onDismiss()
                     },
                 ),
