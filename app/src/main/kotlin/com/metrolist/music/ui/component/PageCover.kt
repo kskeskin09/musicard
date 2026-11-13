@@ -36,14 +36,35 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.constants.PageEdgeToEdgeCoverKey
-import com.metrolist.music.utils.rememberPreference
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.metrolist.music.utils.dataStore
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 /** Whether album and playlist covers fill the top of their page up to the screen edges. */
 @Composable
 fun rememberPageEdgeToEdgeCover(): Boolean {
-    val edgeToEdge by rememberPreference(PageEdgeToEdgeCoverKey, defaultValue = false)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Known on the very first frame (the last value seen, or read once from the settings), so a
+    // page never starts with the square cover and then jumps to edge-to-edge.
+    val initial =
+        androidx.compose.runtime.remember {
+            lastEdgeToEdgeCover ?: kotlinx.coroutines.runBlocking {
+                context.dataStore.data.first()[PageEdgeToEdgeCoverKey] ?: false
+            }.also { lastEdgeToEdgeCover = it }
+        }
+    val edgeToEdge by androidx.compose.runtime.remember {
+        context.dataStore.data
+            .map { it[PageEdgeToEdgeCoverKey] ?: false }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initial)
+    androidx.compose.runtime.SideEffect { lastEdgeToEdgeCover = edgeToEdge }
     return edgeToEdge
 }
+
+@Volatile
+private var lastEdgeToEdgeCover: Boolean? = null
 
 /**
  * The frame of the big cover at the top of an album or playlist page.
@@ -56,6 +77,9 @@ fun rememberPageEdgeToEdgeCover(): Boolean {
 @Composable
 fun PageCoverFrame(
     modifier: Modifier = Modifier,
+    // Only for the card-sized cover: an edge-to-edge cover doesn't grow out of the card it was
+    // opened from (it would show square first, then jump to full width), it simply fades in.
+    sharedElement: Modifier = Modifier,
     size: Dp = 280.dp,
     corner: Dp = 16.dp,
     shadow: Dp = 24.dp,
@@ -68,6 +92,7 @@ fun PageCoverFrame(
         Surface(
             modifier =
                 modifier
+                    .then(sharedElement)
                     .size(size)
                     .then(if (shadow > 0.dp) Modifier.shadow(elevation = shadow, shape = shape) else Modifier),
             shape = shape,
