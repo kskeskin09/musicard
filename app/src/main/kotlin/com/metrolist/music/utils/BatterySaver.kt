@@ -9,8 +9,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
 import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -21,6 +25,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 
@@ -64,8 +71,23 @@ private fun Intent?.toBatteryStatus(context: Context): BatteryStatus {
     val percent = if (level >= 0 && scale > 0) level * 100 / scale else 100
     val status = this?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
     val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-    val powerSave = (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true
-    return BatteryStatus(percent, charging, powerSave)
+    return BatteryStatus(percent, charging, isSystemPowerSave(context))
+}
+
+// Where phones keep their battery saver switch. Android's own one is in PowerManager and in
+// Settings.Global "low_power"; Xiaomi (MIUI / HyperOS) keeps its own battery saver and ultra
+// battery saver in Settings.System and does not always turn Android's one on.
+private val PowerSaveGlobalKeys = listOf("low_power")
+private val PowerSaveSystemKeys = listOf("POWER_SAVE_MODE_OPEN", "power_supersave_mode_open")
+
+private fun settingOn(read: () -> Int): Boolean = runCatching { read() == 1 }.getOrDefault(false)
+
+/** True when the phone's own battery saver is on, also on phones that keep it in their own setting. */
+fun isSystemPowerSave(context: Context): Boolean {
+    if ((context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true) return true
+    val resolver = context.contentResolver
+    if (PowerSaveGlobalKeys.any { key -> settingOn { Settings.Global.getInt(resolver, key, 0) } }) return true
+    return PowerSaveSystemKeys.any { key -> settingOn { Settings.System.getInt(resolver, key, 0) } }
 }
 
 /** Follows the battery level and charging state while the composition is alive. */
@@ -81,9 +103,7 @@ fun rememberBatteryStatus(): BatteryStatus {
                         if (intent.action == Intent.ACTION_BATTERY_CHANGED) {
                             intent.toBatteryStatus(ctx)
                         } else {
-                            status.copy(
-                                systemPowerSave = (ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true,
-                            )
+                            status.copy(systemPowerSave = isSystemPowerSave(ctx))
                         }
                 }
             }
@@ -98,7 +118,37 @@ fun rememberBatteryStatus(): BatteryStatus {
                 ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
             }.getOrNull()
         status = sticky.toBatteryStatus(context)
-        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+
+        // Some phones (Xiaomi) don't send the power save broadcast for their own battery saver,
+        // so also watch the settings it is stored in.
+        val observer =
+            object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    status = status.copy(systemPowerSave = isSystemPowerSave(context))
+                }
+            }
+        val resolver = context.contentResolver
+        val uris =
+            PowerSaveGlobalKeys.map { Settings.Global.getUriFor(it) } +
+                PowerSaveSystemKeys.map { Settings.System.getUriFor(it) }
+        uris.forEach { uri -> runCatching { resolver.registerContentObserver(uri, false, observer) } }
+
+        onDispose {
+            runCatching { context.unregisterReceiver(receiver) }
+            runCatching { resolver.unregisterContentObserver(observer) }
+        }
+    }
+    // Check again whenever the app comes back to the front, in case a change was missed.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val lifecycleObserver =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    status = status.copy(systemPowerSave = isSystemPowerSave(context))
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(lifecycleObserver) }
     }
     return status
 }
