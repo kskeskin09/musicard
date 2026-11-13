@@ -72,6 +72,7 @@ import com.metrolist.music.constants.EnableLyricsPlus
 import com.metrolist.music.constants.EnableZemerKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
+import com.metrolist.music.constants.PreferOfficialSongsKey
 import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.constants.LanguageCodeToName
 import com.metrolist.music.constants.LyricsProviderOrderKey
@@ -133,6 +134,7 @@ fun ContentSettings(
     val (reLikeProtection, onReLikeProtectionChange) =
         rememberPreference(key = com.metrolist.music.constants.ReLikeProtectionKey, defaultValue = true)
     val (hideVideoSongs, onHideVideoSongsChange) = rememberPreference(key = HideVideoSongsKey, defaultValue = false)
+    val (preferOfficialSongs, onPreferOfficialSongsChange) = rememberPreference(key = PreferOfficialSongsKey, defaultValue = true)
     val (hideYoutubeShorts, onHideYoutubeShortsChange) = rememberPreference(key = HideYoutubeShortsKey, defaultValue = false)
     val (showArtistDescription, onShowArtistDescriptionChange) = rememberPreference(key = ShowArtistDescriptionKey, defaultValue = true)
     val (showArtistSubscriberCount, onShowArtistSubscriberCountChange) = rememberPreference(key = ShowArtistSubscriberCountKey, defaultValue = true)
@@ -494,6 +496,27 @@ fun ContentSettings(
                         )
                     },
                     onClick = { onReLikeProtectionChange(!reLikeProtection) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.music_note),
+                    title = { Text(stringResource(R.string.prefer_official_songs)) },
+                    description = { Text(stringResource(R.string.prefer_official_songs_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = preferOfficialSongs,
+                            onCheckedChange = onPreferOfficialSongsChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (preferOfficialSongs) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onPreferOfficialSongsChange(!preferOfficialSongs) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.explicit),

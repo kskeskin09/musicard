@@ -11,6 +11,8 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
 import com.metrolist.innertube.models.filterYoutubeShorts
+import com.metrolist.innertube.models.OfficialSongMatcher
+import com.metrolist.innertube.models.preferOfficialSongs
 import com.metrolist.innertube.models.splitBySeparator
 import com.metrolist.innertube.utils.parseTime
 
@@ -72,6 +74,40 @@ data class SearchSummaryPage(
         } else {
             this
         }
+
+    /**
+     * When the top result is a video and the official release of the same song is listed further
+     * down (usually under "Songs"), the two swap places. Each section is also reordered so official
+     * releases come before video versions of the same song.
+     */
+    fun preferOfficialSongs(enabled: Boolean = true): SearchSummaryPage {
+        if (!enabled || summaries.isEmpty()) return this
+        val sections = summaries.map { it.items.toMutableList() }.toMutableList()
+        val top = sections[0].firstOrNull() as? SongItem
+        if (top != null && top.isVideoSong) {
+            var found: Pair<Int, Int>? = null
+            outer@ for (s in sections.indices) {
+                for (i in sections[s].indices) {
+                    if (s == 0 && i == 0) continue
+                    val candidate = sections[s][i] as? SongItem ?: continue
+                    if (!candidate.isVideoSong && OfficialSongMatcher.isSameSong(top, candidate)) {
+                        found = s to i
+                        break@outer
+                    }
+                }
+            }
+            found?.let { (s, i) ->
+                val official = sections[s][i]
+                sections[s][i] = top
+                sections[0][0] = official
+            }
+        }
+        return SearchSummaryPage(
+            summaries.mapIndexed { index, summary ->
+                summary.copy(items = sections[index].distinctBy { it.id }.preferOfficialSongs())
+            },
+        )
+    }
 
     companion object {
         fun fromMusicCardShelfRenderer(renderer: MusicCardShelfRenderer): YTItem? {

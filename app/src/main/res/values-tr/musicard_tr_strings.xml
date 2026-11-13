@@ -146,4 +146,6 @@
     <string name="about_based_on_metrolist">Metrolist tabanlı</string>
     <string name="about_based_on_metrolist_desc">Musicard, GPL-3.0 lisansıyla kullanılan bir Metrolist çatalıdır</string>
     <string name="about_made_by">Yapımcı</string>
+    <string name="prefer_official_songs">Videolar yerine şarkıları tercih et</string>
+    <string name="prefer_official_songs_desc">En iyi sonuç bir video olduğunda, şarkının resmi sürümünü göster</string>
 </resources>

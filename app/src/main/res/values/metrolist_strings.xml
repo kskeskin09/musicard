@@ -441,6 +441,8 @@
     <string name="scrobble_delay_minutes">Scrobble delay (minutes)</string>
     <string name="hide_video_songs">Hide video songs</string>
     <string name="hide_youtube_shorts">Hide YouTube Shorts</string>
+    <string name="prefer_official_songs">Prefer songs over videos</string>
+    <string name="prefer_official_songs_desc">When the top search result is a video, show the official song version instead</string>
 
     <string name="details_desc">View the song\'s details</string>
     <string name="edit_desc">Edit the title or artist</string>
