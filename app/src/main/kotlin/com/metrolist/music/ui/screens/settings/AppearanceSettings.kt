@@ -196,7 +196,7 @@ fun AppearanceSettings(
     val (cropAlbumArt, onCropAlbumArtChange) =
         rememberPreference(
             CropAlbumArtKey,
-            defaultValue = false,
+            defaultValue = true,
         )
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
@@ -318,6 +318,31 @@ fun AppearanceSettings(
             ForceBottomNavBarKey,
             defaultValue = false,
         )
+    val (autoHideNavBar, onAutoHideNavBarChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.AutoHideNavBarKey,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+        )
+    var showAutoHideNavBarDialog by rememberSaveable { mutableStateOf(false) }
+    val autoHideNavBarText: @Composable (com.metrolist.music.constants.AutoHideNavBarDelay) -> String = {
+        when (it) {
+            com.metrolist.music.constants.AutoHideNavBarDelay.OFF -> stringResource(R.string.auto_hide_nav_off)
+            else -> stringResource(R.string.auto_hide_nav_after, (it.millis / 1000).toInt())
+        }
+    }
+    if (showAutoHideNavBarDialog) {
+        EnumDialog(
+            onDismiss = { showAutoHideNavBarDialog = false },
+            onSelect = {
+                onAutoHideNavBarChange(it)
+                showAutoHideNavBarDialog = false
+            },
+            title = stringResource(R.string.auto_hide_nav),
+            current = autoHideNavBar,
+            values = com.metrolist.music.constants.AutoHideNavBarDelay.entries.toList(),
+            valueText = autoHideNavBarText,
+        )
+    }
     val (slimNav, onSlimNavChange) =
         rememberPreference(
             SlimNavBarKey,
@@ -1523,6 +1548,7 @@ fun AppearanceSettings(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
                         title = { Text(stringResource(R.string.force_bottom_navbar)) },
+                        description = { Text(stringResource(R.string.force_bottom_navbar_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = forceBottomNav,
@@ -1544,6 +1570,7 @@ fun AppearanceSettings(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
                         title = { Text(stringResource(R.string.slim_navbar)) },
+                        description = { Text(stringResource(R.string.slim_navbar_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = slimNav,
@@ -1561,6 +1588,14 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onSlimNavChange(!slimNav) },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.nav_bar),
+                        title = { Text(stringResource(R.string.auto_hide_nav)) },
+                        description = {
+                            Text(stringResource(R.string.auto_hide_nav_desc) + "\n" + autoHideNavBarText(autoHideNavBar))
+                        },
+                        onClick = { showAutoHideNavBarDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.group_outlined),

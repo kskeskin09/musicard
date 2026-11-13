@@ -905,6 +905,15 @@ class MainActivity : FragmentActivity() {
                         expandedBound = maxHeight,
                     )
 
+                val autoHideNavBar by rememberEnumPreference(
+                    com.metrolist.music.constants.AutoHideNavBarKey,
+                    defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+                )
+                com.metrolist.music.ui.utils.AutoHideNavigationBar(
+                    active = playerBottomSheetState.isExpanded,
+                    delayOption = autoHideNavBar,
+                )
+
                 val playerReadyState =
                     playerConnection?.service?.isPlayerReady?.collectAsStateWithLifecycle()
                         ?: remember { mutableStateOf(false) }

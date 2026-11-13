@@ -54,6 +54,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.swipe_song_to_add, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.force_bottom_navbar, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.slim_navbar, R.string.appearance, "settings/appearance"),
+    SettingsSearchEntry(R.string.auto_hide_nav, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.listen_together_in_top_bar, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.display_density, R.string.appearance, "settings/appearance"),
     SettingsSearchEntry(R.string.show_liked_playlist, R.string.appearance, "settings/appearance"),
