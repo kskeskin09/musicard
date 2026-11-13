@@ -96,6 +96,7 @@ class AudioOutputActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        collapseNotificationShade()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) setShowWhenLocked(true)
         bound = bindService(Intent(this, MusicService::class.java), connection, 0)
         if (!bound) {
@@ -118,6 +119,30 @@ class AudioOutputActivity : ComponentActivity() {
         isShowing = true
         // The sheet is open: the "tap to choose" prompt is no longer needed.
         androidx.core.app.NotificationManagerCompat.from(this).cancel(MusicService.AUDIO_OUTPUT_NOTIFICATION_ID)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Opened from the notification's button, the pulled-down notification panel stays open
+        // over the sheet. Fold it away once the sheet is on screen, so the sheet is all you see.
+        if (hasFocus && !shadeCollapsed) {
+            shadeCollapsed = true
+            collapseNotificationShade()
+        }
+    }
+
+    private var shadeCollapsed = false
+
+    @Suppress("DEPRECATION")
+    @android.annotation.SuppressLint("WrongConstant", "MissingPermission")
+    private fun collapseNotificationShade() {
+        // Allowed while the app's own window is the one on top of the panel.
+        runCatching { sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)) }
+        // Some phones (older Android, several vendor systems) only fold it this way.
+        runCatching {
+            val statusBar = getSystemService("statusbar") ?: return@runCatching
+            statusBar.javaClass.getMethod("collapsePanels").invoke(statusBar)
+        }
     }
 
     override fun onPause() {
