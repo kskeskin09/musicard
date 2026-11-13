@@ -1,3 +1,37 @@
+---v13.10.0
+# Musicard 13.10.0
+
+## Highlights
+- Edge-to-edge album art reworked: Nothing stays sharp all the way down to the lyrics card, Blur gets stronger toward the bottom, and the art shrinks smoothly into the header when the card opens
+- Player buttons follow the song's colour with "Background colour", brightened on dark themes and darkened on light ones
+- Cast from the player menu, with an optional cast button in the corner of the album art
+- AI lyrics translation can follow the system language
+- Smoother single-note app icon
+
+## New features
+- Song change animation setting (slide or instant), also reduced by Battery optimization
+- Double-tap the left or right third of the album art to seek, can be turned off
+- "Made by" card in About → Community & Info
+
+## Fixes and improvements
+- Album art no longer flashes or reloads when sliding to the next song with edge-to-edge art
+- No black strip at the top when the status bar is hidden
+- Lyrics blur is at full strength right as the card opens
+- The "+5 s" text no longer appears when seeking
+
+## Türkçe özet
+- Kenardan kenara albüm kapağı yenilendi: Nothing modunda kapak kararmadan sözler kartına kadar net iniyor, Blur aşağı doğru güçleniyor
+- "Arka plan rengi" seçiliyken oynatıcı butonları şarkının rengini alıyor
+- Oynatıcı menüsünden yayınlama (Cast) ve albüm kapağının köşesinde isteğe bağlı Cast butonu
+- Şarkı değiştirme animasyonu ayarı, çift dokunarak ileri/geri sarma ayarı
+- Durum çubuğu gizlenince üstteki siyah şerit düzeldi, şarkı geçişinde kapak artık yanıp sönmüyor
+- Daha yumuşak tek nota uygulama simgesi
+
+## Which APK should I download?
+- **Musicard.apk**: the standard build, with casting to Chromecast, Google TV and Nest speakers (needs Google Play Services)
+- **Musicard-without-Google-Cast.apk**: works on every phone, no Google components
+- **Musicard-izzy.apk**: build for the IzzyOnDroid repository
+
 ---v13.9.0
 # Musicard 13.9.0
 
