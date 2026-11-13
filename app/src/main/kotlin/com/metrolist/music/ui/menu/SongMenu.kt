@@ -79,7 +79,6 @@ import com.metrolist.music.db.entities.Event
 import com.metrolist.music.db.entities.PlaylistSong
 import com.metrolist.music.db.entities.PodcastEntity
 import com.metrolist.music.db.entities.Song
-import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
@@ -136,7 +135,6 @@ fun SongMenu(
         label = "",
     )
 
-    val isPinned by database.speedDialDao.isPinned(song.id).collectAsStateWithLifecycle(initialValue = false)
 
     // Podcast subscription state for episodes
     val podcastEntity by produceState<PodcastEntity?>(initialValue = null, song) {
@@ -660,43 +658,6 @@ fun SongMenu(
             Material3MenuGroup(
                 items =
                     buildList {
-                        add(
-                            Material3MenuItemData(
-                                title = {
-                                    Text(
-                                        text = if (isPinned) stringResource(R.string.unpin_from_speed_dial) else stringResource(R.string.pin_to_speed_dial),
-                                    )
-                                },
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        if (isPinned) {
-                                            database.speedDialDao.delete(song.id)
-                                        } else {
-                                            database.speedDialDao.insert(
-                                                SpeedDialItem(
-                                                    id = song.id,
-                                                    title = song.song.title,
-                                                    subtitle = song.artists.joinToString(", ") { it.name },
-                                                    subtitleIds = song.artists.joinToString(", ") { it.id },
-                                                    thumbnailUrl = song.song.thumbnailUrl,
-                                                    type = "SONG",
-                                                    explicit = song.song.explicit,
-                                                    albumId = song.album?.id,
-                                                    albumName = song.album?.title
-                                                ),
-                                            )
-                                        }
-                                    }
-                                    onDismiss()
-                                },
-                            ),
-                        )
                         // For episodes, use "Save for later" / "Remove from saved" (Episodes for Later playlist)
                         // For regular songs, use "Add to library"
                         if (song.song.isEpisode) {

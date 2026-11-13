@@ -34,7 +34,6 @@ import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.ArtistSongSortType
-import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.db.entities.Artist
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.queues.ListQueue
@@ -62,7 +61,6 @@ fun ArtistMenu(
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
     val artistState = database.artist(originalArtist.id).collectAsStateWithLifecycle(initialValue = originalArtist)
     val artist = artistState.value ?: originalArtist
-    val isPinned by database.speedDialDao.isPinned(artist.id).collectAsStateWithLifecycle(initialValue = false)
 
     ArtistListItem(
         artist = artist,
@@ -154,38 +152,6 @@ fun ArtistMenu(
                             )
                         }
                     }
-
-                    add(
-                        NewAction(
-                            icon = {
-                                Icon(
-                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            },
-                            text = if (isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin),
-                            onClick = {
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    if (isPinned) {
-                                        database.speedDialDao.delete(artist.id)
-                                    } else {
-                                        database.speedDialDao.insert(
-                                            SpeedDialItem(
-                                                id = artist.id,
-                                                title = artist.artist.name,
-                                                subtitle = null,
-                                                thumbnailUrl = artist.artist.thumbnailUrl,
-                                                type = "ARTIST"
-                                            )
-                                        )
-                                    }
-                                }
-                                onDismiss()
-                            }
-                        )
-                    )
 
                     if (artist.artist.isYouTubeArtist) {
                         add(

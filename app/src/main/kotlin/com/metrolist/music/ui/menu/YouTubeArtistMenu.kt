@@ -35,7 +35,6 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.Material3MenuGroup
@@ -61,7 +60,6 @@ fun YouTubeArtistMenu(
     val libraryArtist by database.artist(artist.id).collectAsStateWithLifecycle(initialValue = null)
     val listenTogetherManager = LocalListenTogetherManager.current
     val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
-    val isPinned by database.speedDialDao.isPinned(artist.id).collectAsStateWithLifecycle(initialValue = false)
     val coroutineScope = rememberCoroutineScope()
 
     YouTubeListItem(
@@ -108,30 +106,6 @@ fun YouTubeArtistMenu(
                             )
                         }
                     }
-
-                    add(
-                        NewAction(
-                            icon = {
-                                Icon(
-                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            },
-                            text = if (isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin),
-                            onClick = {
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    if (isPinned) {
-                                        database.speedDialDao.delete(artist.id)
-                                    } else {
-                                        database.speedDialDao.insert(SpeedDialItem.fromYTItem(artist))
-                                    }
-                                }
-                                onDismiss()
-                            }
-                        )
-                    )
 
                     add(
                         NewAction(

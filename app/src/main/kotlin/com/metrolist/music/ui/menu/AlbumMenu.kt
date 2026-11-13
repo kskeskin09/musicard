@@ -74,7 +74,6 @@ import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.Song
-import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.playback.queues.ListQueue
@@ -152,7 +151,6 @@ fun AlbumMenu(
         label = "",
     )
 
-    val isPinned by database.speedDialDao.isPinned(album.id).collectAsStateWithLifecycle(initialValue = false)
 
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
@@ -427,40 +425,6 @@ fun AlbumMenu(
                             },
                             onClick = {
                                 showChoosePlaylistDialog = true
-                            },
-                        ),
-                        Material3MenuItemData(
-                            title = {
-                                Text(
-                                    text = if (isPinned) stringResource(R.string.unpin_from_speed_dial) else stringResource(R.string.pin_to_speed_dial),
-                                )
-                            },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(if (isPinned) R.drawable.remove else R.drawable.add),
-                                    contentDescription = null,
-                                )
-                            },
-                            onClick = {
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    if (isPinned) {
-                                        database.speedDialDao.delete(album.id)
-                                    } else {
-                                        database.speedDialDao.insert(
-                                            SpeedDialItem(
-                                                id = album.id,
-                                                secondaryId = album.album.playlistId,
-                                                title = album.album.title,
-                                                subtitle = album.artists.joinToString(", ") { it.name },
-                                                subtitleIds = album.artists.joinToString(", ") { it.id },
-                                                thumbnailUrl = album.album.thumbnailUrl,
-                                                type = "ALBUM",
-                                                explicit = album.album.explicit,
-                                            ),
-                                        )
-                                    }
-                                }
-                                onDismiss()
                             },
                         ),
                     ),
