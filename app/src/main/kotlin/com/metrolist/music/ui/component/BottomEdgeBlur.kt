@@ -12,8 +12,6 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlurEffect
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
@@ -23,9 +21,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 
 /**
- * Blurs the bottom of the content behind the tab bar and the mini player. The blur fades in from
+ * Blurs the bottom of the content behind the tab bar and the mini player. The blur grows in from
  * [startFromBottomPx] (measured up from the bottom edge, the same point where the darkening
- * starts) over a short distance and is full below that. Needs Android 12 for the blur itself;
+ * starts): light at first, getting stronger over 40 dp, then full. Needs Android 12 for the blur itself;
  * older versions draw the content unchanged.
  */
 fun Modifier.bottomEdgeBlur(
@@ -44,13 +42,17 @@ fun Modifier.bottomEdgeBlur(
 @Volatile
 private var blurBroken = false
 
+// Steps of the soft start at the top of the blurred area.
+private const val BlurSteps = 5
+
 @Composable
 private fun Modifier.bottomEdgeBlurImpl(
     enabled: Boolean,
     startFromBottomPx: () -> Float,
 ): Modifier {
     val sharp = rememberGraphicsLayer()
-    val blurred = rememberGraphicsLayer()
+    // One layer per step of the soft start, plus the full blur below it.
+    val steps = List(BlurSteps + 1) { rememberGraphicsLayer() }
     val batterySaverOff = com.metrolist.music.utils.LocalBatterySaver.current.blur
     return drawWithContent {
         val region = startFromBottomPx().coerceIn(0f, size.height)
@@ -62,35 +64,32 @@ private fun Modifier.bottomEdgeBlurImpl(
             sharp.record { this@drawWithContent.drawContent() }
             drawLayer(sharp)
             val top = size.height - region
-            val regionSize = IntSize(size.width.toInt(), region.toInt().coerceAtLeast(1))
-            val radius = 18.dp.toPx()
-            blurred.renderEffect = BlurEffect(radius, radius, TileMode.Clamp)
-            blurred.record(regionSize) {
-                translate(top = -top) { drawLayer(sharp) }
-            }
-            // Soft start: the blur grows in over the first 24 dp in thin bands, then is full.
-            val ramp = 24.dp.toPx().coerceAtMost(region)
-            val bands = 8
-            val bandHeight = ramp / bands
-            translate(top = top) {
-                for (i in 0 until bands) {
-                    val bandTop = i * bandHeight
-                    val bandBottom = (i + 1) * bandHeight
-                    clipRect(top = bandTop, bottom = bandBottom) {
-                        // The layer's own alpha is read when the frame is drawn, not here, so each
-                        // band gets its strength from a save layer instead.
-                        drawIntoCanvas { canvas ->
-                            canvas.saveLayer(
-                                Rect(0f, bandTop, size.width, bandBottom),
-                                Paint().apply { alpha = (i + 1f) / (bands + 1f) },
-                            )
-                            drawLayer(blurred)
-                            canvas.restore()
-                        }
-                    }
+            val maxRadius = 18.dp.toPx()
+            // Soft start: over the first part of the region the blur radius grows step by step
+            // (a light blur at the top, the full blur at the bottom of the ramp), instead of a
+            // full blur fading in, which looked sharp and then suddenly strong.
+            val ramp = 40.dp.toPx().coerceAtMost(region)
+            val stepHeight = ramp / BlurSteps
+            // Draws [from]..[to] (inside the region) blurred by [radius]. Each layer only holds
+            // that band plus a margin, so the blur reads the content around it.
+            fun blurBand(layer: androidx.compose.ui.graphics.layer.GraphicsLayer, from: Float, to: Float, radius: Float) {
+                if (to - from < 0.5f) return
+                val margin = (radius * 2f).coerceAtMost(top + from)
+                val layerTop = top + from - margin
+                val layerHeight = (to - from + margin + radius * 2f).coerceAtMost(size.height - layerTop)
+                layer.renderEffect = BlurEffect(radius, radius, TileMode.Clamp)
+                layer.record(IntSize(size.width.toInt(), layerHeight.toInt().coerceAtLeast(1))) {
+                    translate(top = -layerTop) { drawLayer(sharp) }
                 }
-                clipRect(top = ramp, bottom = region) { drawLayer(blurred) }
+                translate(top = layerTop) {
+                    clipRect(top = margin, bottom = margin + (to - from)) { drawLayer(layer) }
+                }
             }
+            for (i in 0 until BlurSteps) {
+                val radius = maxRadius * (i + 1f) / (BlurSteps + 1f)
+                blurBand(steps[i], i * stepHeight, (i + 1) * stepHeight, radius)
+            }
+            blurBand(steps[BlurSteps], ramp, region, maxRadius)
         } catch (e: Exception) {
             blurBroken = true
             timber.log.Timber.e(e, "Bottom blur failed; drawing without it")

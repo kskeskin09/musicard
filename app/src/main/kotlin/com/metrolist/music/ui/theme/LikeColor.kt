@@ -10,10 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-/** The color of filled (liked) hearts, picked in Appearance settings. */
+/** The style of filled (liked) hearts, picked in Appearance settings: Classic (red) or Modern (white). */
 enum class LikeIconColor {
-    WHITE,
     RED,
+    WHITE,
 }
 
 /** True when liked hearts are red instead of the text color. */

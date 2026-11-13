@@ -50,6 +50,20 @@ fun albumBackgroundColor(
     return Color(ColorUtils.HSLToColor(hsl))
 }
 
+/**
+ * Player buttons in "Background color" mode: a light tint of the song's color for the filled
+ * buttons and a deep shade of it for their icons. Light enough to stand out on the album
+ * background, the glass cover and the light theme alike.
+ */
+fun playerButtonAccent(base: Color): Pair<Color, Color> {
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(base.toArgb(), hsl)
+    val saturation = (hsl[1] * 0.9f).coerceIn(0.25f, 0.6f)
+    val light = Color(ColorUtils.HSLToColor(floatArrayOf(hsl[0], saturation, 0.8f)))
+    val deep = Color(ColorUtils.HSLToColor(floatArrayOf(hsl[0], saturation, 0.16f)))
+    return light to deep
+}
+
 /** Colors already read from covers, so a page opened again (or prefetched) starts in its color. */
 private val coverColorCache = android.util.LruCache<String, Color>(200)
 

@@ -197,6 +197,22 @@ fun AppearanceSettings(
             CropAlbumArtKey,
             defaultValue = true,
         )
+    val (edgeToEdgeArt, onEdgeToEdgeArtChange) =
+        rememberPreference(
+            com.metrolist.music.constants.EdgeToEdgeAlbumArtKey,
+            defaultValue = false,
+        )
+    val (edgeToEdgeArtEdge, onEdgeToEdgeArtEdgeChange) =
+        rememberEnumPreference(
+            com.metrolist.music.constants.EdgeToEdgeArtEdgeKey,
+            defaultValue = MiniPlayerEdgeEffect.BLACKOUT,
+        )
+    var showEdgeToEdgeArtEdgeDialog by rememberSaveable { mutableStateOf(false) }
+    val (showPlayingFrom, onShowPlayingFromChange) =
+        rememberPreference(
+            com.metrolist.music.constants.ShowPlayingFromKey,
+            defaultValue = true,
+        )
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
             PlayerBackgroundStyleKey,
@@ -212,6 +228,9 @@ fun AppearanceSettings(
         rememberPreference(com.metrolist.music.constants.LyricsBlurKeepNeighborsKey, defaultValue = true)
     val (lyricsBlurStrength, onLyricsBlurStrengthChange) =
         rememberPreference(com.metrolist.music.constants.LyricsBlurStrengthKey, defaultValue = 1f)
+    // The slider's value while dragging: the percentage follows the finger, the blur itself is
+    // saved (and redrawn) only when the finger lifts.
+    var tempLyricsBlurStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -595,13 +614,14 @@ fun AppearanceSettings(
                 showPlayerButtonsStyleDialog = false
             },
             title = stringResource(R.string.player_buttons_style),
-            current = playerButtonsStyle,
-            values = PlayerButtonsStyle.values().toList(),
+            // Two choices: Default, or Background color (the song's color). The old Tertiary
+            // choice counts as Background color.
+            current = if (playerButtonsStyle == PlayerButtonsStyle.DEFAULT) PlayerButtonsStyle.DEFAULT else PlayerButtonsStyle.PRIMARY,
+            values = listOf(PlayerButtonsStyle.DEFAULT, PlayerButtonsStyle.PRIMARY),
             valueText = {
                 when (it) {
                     PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
-                    PlayerButtonsStyle.PRIMARY -> stringResource(R.string.primary_color_style)
-                    PlayerButtonsStyle.TERTIARY -> stringResource(R.string.tertiary_color_style)
+                    else -> stringResource(R.string.player_buttons_background_color)
                 }
             },
         )
@@ -646,6 +666,20 @@ fun AppearanceSettings(
             title = stringResource(R.string.mini_player_edge_effect),
             current = miniPlayerEdgeEffect,
             values = MiniPlayerEdgeEffect.values().toList(),
+            valueText = { miniPlayerEdgeEffectText(it) },
+        )
+    }
+
+    if (showEdgeToEdgeArtEdgeDialog) {
+        EnumDialog(
+            onDismiss = { showEdgeToEdgeArtEdgeDialog = false },
+            onSelect = {
+                onEdgeToEdgeArtEdgeChange(it)
+                showEdgeToEdgeArtEdgeDialog = false
+            },
+            title = stringResource(R.string.edge_to_edge_art_edge),
+            current = edgeToEdgeArtEdge,
+            values = listOf(MiniPlayerEdgeEffect.NONE, MiniPlayerEdgeEffect.BLACKOUT, MiniPlayerEdgeEffect.BLUR),
             valueText = { miniPlayerEdgeEffectText(it) },
         )
     }
@@ -855,7 +889,7 @@ fun AppearanceSettings(
                                 )
                             },
                             trailingContent = {
-                                // White or red, as a small two-part switch.
+                                // Classic (red) or Modern (white), as a small two-part switch.
                                 Row(
                                     modifier =
                                         Modifier
@@ -1187,17 +1221,15 @@ fun AppearanceSettings(
                                     Text(
                                         stringResource(
                                             R.string.lyrics_blur_strength,
-                                            (lyricsBlurStrength * 100).roundToInt(),
+                                            (tempLyricsBlurStrength * 100).roundToInt(),
                                         ),
                                     )
                                 },
                                 description = {
-                                    // The new value is saved when the finger lifts.
-                                    var tempStrength by remember(lyricsBlurStrength) { mutableStateOf(lyricsBlurStrength) }
                                     StyledSlider(
-                                        value = tempStrength,
-                                        onValueChange = { tempStrength = it },
-                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempStrength) },
+                                        value = tempLyricsBlurStrength,
+                                        onValueChange = { tempLyricsBlurStrength = it },
+                                        onValueChangeFinished = { onLyricsBlurStrengthChange(tempLyricsBlurStrength) },
                                         valueRange = 0.5f..2f,
                                         steps = 5,
                                         modifier = Modifier.fillMaxWidth(),
@@ -1260,7 +1292,7 @@ fun AppearanceSettings(
         Material3SettingsGroup(
             title = stringResource(R.string.player),
             items =
-                listOf(
+                listOfNotNull(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.hide_image),
                         title = { Text(stringResource(R.string.hide_player_thumbnail)) },
@@ -1306,14 +1338,67 @@ fun AppearanceSettings(
                         onClick = { onCropAlbumArtChange(!cropAlbumArt) },
                     ),
                     Material3SettingsItem(
+                        icon = painterResource(R.drawable.fullscreen),
+                        title = { Text(stringResource(R.string.edge_to_edge_album_art)) },
+                        description = { Text(stringResource(R.string.edge_to_edge_album_art_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = edgeToEdgeArt,
+                                onCheckedChange = onEdgeToEdgeArtChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (edgeToEdgeArt) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onEdgeToEdgeArtChange(!edgeToEdgeArt) },
+                    ),
+                    if (edgeToEdgeArt) {
+                        Material3SettingsItem(
+                            icon = painterResource(if (edgeToEdgeArtEdge == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
+                            title = { Text(stringResource(R.string.edge_to_edge_art_edge)) },
+                            description = { Text(miniPlayerEdgeEffectText(edgeToEdgeArtEdge)) },
+                            onClick = { showEdgeToEdgeArtEdgeDialog = true },
+                        )
+                    } else {
+                        null
+                    },
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.queue_music),
+                        title = { Text(stringResource(R.string.show_playing_location)) },
+                        description = { Text(stringResource(R.string.show_playing_location_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = showPlayingFrom,
+                                onCheckedChange = onShowPlayingFromChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (showPlayingFrom) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onShowPlayingFromChange(!showPlayingFrom) },
+                    ),
+                    Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),
                         title = { Text(stringResource(R.string.player_buttons_style)) },
                         description = {
                             Text(
                                 when (playerButtonsStyle) {
                                     PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
-                                    PlayerButtonsStyle.PRIMARY -> stringResource(R.string.primary_color_style)
-                                    PlayerButtonsStyle.TERTIARY -> stringResource(R.string.tertiary_color_style)
+                                    else -> stringResource(R.string.player_buttons_background_color)
                                 },
                             )
                         },
@@ -1492,8 +1577,8 @@ fun AppearanceSettings(
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.lyrics),
-                            title = { Text(stringResource(R.string.hide_status_bar_fullscreen)) },
-                            description = { Text(stringResource(R.string.hide_status_bar_fullscreen_desc)) },
+                            title = { Text(stringResource(R.string.hide_status_bar_lyrics)) },
+                            description = { Text(stringResource(R.string.hide_status_bar_lyrics_desc)) },
                             trailingContent = {
                                 Switch(
                                     checked = hideStatusBarOnFullscreen,

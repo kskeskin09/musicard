@@ -2429,6 +2429,27 @@ class MusicService :
         }
     }
 
+    /** Loudness of songs loaded ahead of the current one, by media id. */
+    private val upcomingLoudness = java.util.concurrent.ConcurrentHashMap<String, Pair<Double?, Double?>>()
+
+    /** Sets the new song's gain at once when it starts, if its loudness is already known. */
+    private fun applyUpcomingNormalizationNow(mediaId: String?) {
+        if (mediaId == null || isCrossfading || !::player.isInitialized) return
+        val (loudnessDb, perceptualLoudnessDb) = upcomingLoudness.remove(mediaId) ?: return
+        val processor = playerNormalizationProcessors[player] ?: return
+        try {
+            applyAudioNormalization(
+                processor = processor,
+                mediaId = mediaId,
+                loudnessDb = loudnessDb,
+                perceptualLoudnessDb = perceptualLoudnessDb,
+                updateCache = true,
+            )
+        } catch (e: Exception) {
+            reportException(e)
+        }
+    }
+
     private fun applyAudioNormalizationBeforePlayback(
         processor: VolumeNormalizationAudioProcessor,
         playerProvider: () -> ExoPlayer?,
@@ -2438,9 +2459,13 @@ class MusicService :
         preserveCachedIfMissing: Boolean = false,
     ) = runBlocking(Dispatchers.Main.immediate) {
         val targetPlayer = playerProvider() ?: return@runBlocking
-        if (playerNormalizationProcessors[targetPlayer] !== processor ||
-            targetPlayer.currentMediaItem?.mediaId != mediaId
-        ) {
+        if (playerNormalizationProcessors[targetPlayer] !== processor) return@runBlocking
+        if (targetPlayer.currentMediaItem?.mediaId != mediaId) {
+            // The next song is loaded ahead of time: keep its loudness so its gain can be set the
+            // moment it starts, instead of after a database read a few seconds in.
+            if (loudnessDb != null || perceptualLoudnessDb != null) {
+                upcomingLoudness[mediaId] = loudnessDb to perceptualLoudnessDb
+            }
             return@runBlocking
         }
 
@@ -2620,6 +2645,8 @@ class MusicService :
         mediaItem: MediaItem?,
         reason: Int,
     ) {
+        // The new song's volume level first, before anything else here.
+        applyUpcomingNormalizationNow(mediaItem?.mediaId)
         // Only natural completion transitions mark the previous track as fully cached,
         // never a manual skip or seek. Read lastTransitionedMediaId before replacing it.
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||

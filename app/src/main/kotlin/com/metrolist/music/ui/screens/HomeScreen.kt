@@ -109,6 +109,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.LocalNavController
+import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
@@ -849,6 +850,8 @@ fun HomeScreen(
         if (isRefreshing) {
             randomSeed = System.currentTimeMillis()
             if (selectedChip == null) showChips = false
+            // Like opening the app again: every sideways row starts from its beginning.
+            com.metrolist.music.ui.utils.TabStates.scrollRowsToStart("home", except = setOf("home/list"))
         }
     }
 
@@ -1426,7 +1429,7 @@ fun HomeScreen(
                                             {
                                                 when {
                                                     endpoint.browseId == "FEmusic_moods_and_genres" -> {
-                                                        navController.navigate("mood_and_genres")
+                                                        navController.openSearchTab()
                                                     }
 
                                                     endpoint.params != null -> {
@@ -2027,21 +2030,6 @@ fun HomeScreen(
                                     val title = stringResource(R.string.your_daily_discover)
                                     NavigationTitle(
                                         title = title,
-                                        onPlayAllClick = {
-                                            val queueItems =
-                                                discoverList.mapNotNull {
-                                                    (it.recommendation as? SongItem)?.toMediaMetadata()
-                                                }
-
-                                            if (queueItems.isNotEmpty()) {
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = title,
-                                                        items = queueItems.map { it.toMediaItem() },
-                                                    ),
-                                                )
-                                            }
-                                        },
                                     )
                                 }
 
@@ -2107,7 +2095,7 @@ fun HomeScreen(
                                 item(key = "keep_listening_list") {
                                     val rows = if (keepListening.size > 6) 2 else 1
                                     LazyHorizontalGrid(
-                                        state = remember("keep_listening_grid") { LazyGridState() },
+                                        state = com.metrolist.music.ui.utils.TabStates.grid("home/keep_listening_grid"),
                                         rows = GridCells.Fixed(rows),
                                         contentPadding =
                                             WindowInsets.systemBars
@@ -2365,7 +2353,7 @@ fun HomeScreen(
                                                 {
                                                     when {
                                                         endpoint.browseId == "FEmusic_moods_and_genres" -> {
-                                                            navController.navigate("mood_and_genres")
+                                                            navController.openSearchTab()
                                                         }
 
                                                         // Handle podcast-related browse endpoints
@@ -2386,19 +2374,6 @@ fun HomeScreen(
                                                     }
                                                 }
                                             },
-                                        onPlayAllClick =
-                                            if (hasPlayableSongs && !isListenTogetherGuest) {
-                                                {
-                                                    playerConnection.playQueue(
-                                                        ListQueue(
-                                                            title = sectionData.title,
-                                                            items = sectionSongs.map { it.toMediaMetadata().toMediaItem() },
-                                                        ),
-                                                    )
-                                                }
-                                            } else {
-                                                null
-                                            },
                                     )
                                 }
 
@@ -2406,7 +2381,7 @@ fun HomeScreen(
                                     // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
                                     item(key = "home_section_list_${section.index}") {
                                         LazyHorizontalGrid(
-                                            state = remember("section_${section.index}_grid") { LazyGridState() },
+                                            state = com.metrolist.music.ui.utils.TabStates.grid("home/section_${section.index}_grid"),
                                             rows = GridCells.Fixed(4),
                                             contentPadding =
                                                 WindowInsets.systemBars
@@ -2510,7 +2485,7 @@ fun HomeScreen(
                                     NavigationTitle(
                                         title = stringResource(R.string.mood_and_genres),
                                         onClick = {
-                                            navController.navigate("mood_and_genres")
+                                            navController.openSearchTab()
                                         },
                                     )
                                 }
@@ -2582,7 +2557,7 @@ fun HomeScreen(
                                 Row {
                                     repeat(2) {
                                         TextPlaceholder(
-                                            height = MoodAndGenresButtonHeight,
+                                            height = 48.dp,
                                             shape = RoundedCornerShape(6.dp),
                                             modifier =
                                                 Modifier
@@ -2844,5 +2819,14 @@ private fun <T : Any> HomeSongRows(
         items(entries, key = key) { entry ->
             itemContent(entry, Modifier.width(itemWidth))
         }
+    }
+}
+
+/** Moods and genres live on the Search tab now; the arrow and the YouTube link open that tab. */
+private fun NavController.openSearchTab() {
+    navigate(Screens.Search.route) {
+        popUpTo(graph.startDestinationId) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }

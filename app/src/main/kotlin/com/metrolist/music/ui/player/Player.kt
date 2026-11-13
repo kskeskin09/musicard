@@ -31,6 +31,11 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import com.metrolist.music.ui.component.bottomEdgeBlur
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -54,6 +59,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -279,8 +288,15 @@ fun BottomSheetPlayer(
             defaultValue = true,
         )
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
-    val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
+    val (hideStatusBarOnLyrics) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, true)
+    val edgeToEdgeArtPref by rememberPreference(com.metrolist.music.constants.EdgeToEdgeAlbumArtKey, false)
+    val edgeToEdgeArt = edgeToEdgeArtPref && !hidePlayerThumbnail
+    val edgeToEdgeArtEdge by rememberEnumPreference(
+        com.metrolist.music.constants.EdgeToEdgeArtEdgeKey,
+        com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT,
+    )
+    val showPlayingFrom by rememberPreference(com.metrolist.music.constants.ShowPlayingFromKey, true)
 
     var showInlineLyrics by rememberSaveable {
         mutableStateOf(false)
@@ -336,7 +352,7 @@ fun BottomSheetPlayer(
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val isKeepScreenOn by rememberPreference(KeepScreenOn, false)
-    DisposableEffect(playerBackground, state.isExpanded, useDarkTheme, isFullScreen, hideStatusBarOnFullscreen) {
+    DisposableEffect(playerBackground, state.isExpanded, useDarkTheme) {
         val window = (context as? android.app.Activity)?.window
         if (window != null && state.isExpanded) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -351,12 +367,6 @@ fun BottomSheetPlayer(
                 }
             }
 
-            if (isFullScreen && hideStatusBarOnFullscreen) {
-                insetsController.hide(WindowInsetsCompat.Type.statusBars())
-                insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            } else {
-                insetsController.show(WindowInsetsCompat.Type.statusBars())
-            }
         }
 
         onDispose {
@@ -542,8 +552,17 @@ fun BottomSheetPlayer(
         label = "icBackgroundColor",
     )
 
+    // "Background color" buttons take the song's color (the old Primary / Tertiary choices count
+    // as this one). Until the color is read, they look like Default.
+    val accentButtons = playerButtonsStyle != PlayerButtonsStyle.DEFAULT && gradientColors.isNotEmpty()
+    val accentPair = remember(gradientColors) { gradientColors.firstOrNull()?.let { com.metrolist.music.ui.theme.playerButtonAccent(it) } }
+    val accentLight by animateColorAsState(accentPair?.first ?: Color.White, tween(600), label = "buttonAccentLight")
+    val accentDeep by animateColorAsState(accentPair?.second ?: Color.Black, tween(600), label = "buttonAccentDeep")
+
     val (textButtonColor, iconButtonColor) =
-        when {
+        if (accentButtons) {
+            Pair(accentLight, accentDeep)
+        } else when {
             playerBackground == PlayerBackgroundStyle.BLUR ||
                 playerBackground == PlayerBackgroundStyle.GRADIENT -> {
                 when (playerButtonsStyle) {
@@ -596,7 +615,9 @@ fun BottomSheetPlayer(
 
     // Separate colors for Previous/Next buttons in PRIMARY/TERTIARY modes
     val (sideButtonContainerColor, sideButtonContentColor) =
-        when {
+        if (accentButtons) {
+            Pair(accentLight.copy(alpha = 0.22f), accentLight)
+        } else when {
             playerBackground == PlayerBackgroundStyle.BLUR ||
                 playerBackground == PlayerBackgroundStyle.GRADIENT -> {
                 when (playerButtonsStyle) {
@@ -706,7 +727,15 @@ fun BottomSheetPlayer(
                     modifier = Modifier.size(28.dp),
                 )
             },
-            title = { Text(stringResource(R.string.sleep_timer)) },
+            title = {
+                Text(
+                    text = stringResource(R.string.sleep_timer),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = com.metrolist.music.ui.theme.pageRaisedColor(),
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -737,8 +766,12 @@ fun BottomSheetPlayer(
                                 sleepTimerValue.roundToInt(),
                                 sleepTimerValue.roundToInt(),
                             ),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
+
+                    Spacer(Modifier.height(8.dp))
 
                     StyledSlider(
                         value = sleepTimerValue,
@@ -747,34 +780,40 @@ fun BottomSheetPlayer(
                         steps = (120 - 5) / 5 - 1,
                     )
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        // Real buttons: the round icon buttons used here before cut their text off.
-                        val saveDefault: () -> Unit = {
-                            scope.launch {
-                                context.safeDataStoreEdit { settings ->
-                                    settings[SleepTimerDefaultKey] = sleepTimerValue
-                                }
-                            }
-                            Toast.makeText(
-                                context,
-                                String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                        if (isAtDefault) {
-                            androidx.compose.material3.Button(onClick = saveDefault) {
-                                Text(stringResource(R.string.set_as_default))
-                            }
-                        } else {
-                            androidx.compose.material3.OutlinedButton(onClick = saveDefault) {
-                                Text(stringResource(R.string.set_as_default))
-                            }
-                        }
+                    Spacer(Modifier.height(12.dp))
 
-                        androidx.compose.material3.OutlinedButton(
+                    // Two boxes side by side: Set as default on the left (it reads "Already
+                    // default" when the time shown is the default; the box keeps its width), End
+                    // of song on the right.
+                    val saveDefault: () -> Unit = {
+                        scope.launch {
+                            context.safeDataStoreEdit { settings ->
+                                settings[SleepTimerDefaultKey] = sleepTimerValue
+                            }
+                        }
+                        Toast.makeText(
+                            context,
+                            String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    ) {
+                        SleepTimerChoiceBox(
+                            onClick = saveDefault,
+                            enabled = !isAtDefault,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        ) {
+                            com.metrolist.music.ui.component.SteadyText(
+                                text = stringResource(if (isAtDefault) R.string.already_default else R.string.set_as_default),
+                                variants = listOf(stringResource(R.string.set_as_default), stringResource(R.string.already_default)),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        SleepTimerChoiceBox(
                             onClick = {
                                 showSleepTimerDialog = false
                                 // End of song keeps the fade-out setting too.
@@ -784,8 +823,14 @@ fun BottomSheetPlayer(
                                     fadeOut = sleepTimerFadeOut,
                                 )
                             },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
                         ) {
-                            Text(stringResource(R.string.end_of_song))
+                            Text(
+                                text = stringResource(R.string.end_of_song),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                            )
                         }
                     }
                 }
@@ -995,6 +1040,23 @@ fun BottomSheetPlayer(
         val window = (context as? android.app.Activity)?.window
         if (keepAwake) window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
+
+    // "Hide status bar on lyrics mode": once the opened lyrics follow the song and the controls
+    // have slid away, the status bar hides too; it comes back with the controls.
+    val hideStatusBar =
+        hideStatusBarOnLyrics && state.isExpanded && cardOpen && cardPage == LyricsPage &&
+            !cardControlsShown && !lyricsFollow.paused
+    DisposableEffect(hideStatusBar) {
+        val window = (context as? android.app.Activity)?.window
+        val insetsController = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        if (hideStatusBar) {
+            insetsController?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            insetsController?.hide(WindowInsetsCompat.Type.statusBars())
+        }
+        onDispose {
+            if (hideStatusBar) insetsController?.show(WindowInsetsCompat.Type.statusBars())
+        }
     }
 
     LaunchedEffect(state.isExpanded) {
@@ -2276,6 +2338,23 @@ fun BottomSheetPlayer(
                             minOf(maxWidth - PlayerHorizontalPadding * 2, maxHeight - topInset - 500.dp),
                             120.dp,
                         )
+                    if (edgeToEdgeArt) {
+                        // Edge to edge: the art fills the top of the player behind the handle,
+                        // title and progress bar, and fades into the background. The usual art
+                        // stays in place (invisible) for swiping and for the lyrics header.
+                        val edgeArtHeight = topInset + 44.dp + artSize + 110.dp
+                        EdgeToEdgeAlbumArt(
+                            artworkUrl = mediaMetadata?.thumbnailUrl,
+                            isPlaying = effectiveIsPlaying,
+                            edge = edgeToEdgeArtEdge,
+                            blurFromBottomPx = with(density) { (edgeArtHeight * 0.45f).toPx() },
+                            alphaProvider = { (1f - cardExpand * 3f).coerceIn(0f, 1f) },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(edgeArtHeight),
+                        )
+                    }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxSize(),
@@ -2298,7 +2377,7 @@ fun BottomSheetPlayer(
                         // Sits halfway between the handle and the cover; tapping it opens the list.
                         val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
                         val sourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
-                        val playingFrom = queueTitle?.takeIf { it.isNotBlank() && sourceRoute != null }
+                        val playingFrom = queueTitle?.takeIf { showPlayingFrom && it.isNotBlank() && sourceRoute != null }
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier =
@@ -2345,6 +2424,11 @@ fun BottomSheetPlayer(
                                         Modifier
                                             .fillMaxWidth()
                                             .height(artSize)
+                                            .graphicsLayer {
+                                                // With edge-to-edge art it only shows while it
+                                                // moves into the lyrics / up next header.
+                                                if (edgeToEdgeArt) alpha = (cardExpand * 3f).coerceIn(0f, 1f)
+                                            }
                                             .onGloballyPositioned {
                                                 if (cardExpand == 0f) {
                                                     artBoxPos = it.positionInRoot()
@@ -3056,6 +3140,82 @@ private fun PlayerControlButton(
     }
 }
 
+/**
+ * The album art drawn edge to edge across the top of the player, fading out toward the bottom.
+ * While paused it shrinks slightly, like the regular art, and its corners round off.
+ */
+@Composable
+private fun EdgeToEdgeAlbumArt(
+    artworkUrl: String?,
+    isPlaying: Boolean,
+    edge: com.metrolist.music.constants.MiniPlayerEdgeEffect,
+    blurFromBottomPx: Float,
+    alphaProvider: () -> Float,
+    modifier: Modifier = Modifier,
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isPlaying) 1f else EdgeToEdgePausedScale,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "edgeArtScale",
+    )
+    androidx.compose.animation.Crossfade(
+        targetState = artworkUrl,
+        animationSpec = tween(400),
+        label = "edgeArt",
+        modifier =
+            modifier
+                .graphicsLayer {
+                    alpha = alphaProvider()
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = TransformOrigin(0.5f, 0.4f)
+                    // Corners round off as it shrinks, like a card lifted off the screen.
+                    val shrink = ((1f - scale) / (1f - EdgeToEdgePausedScale)).coerceIn(0f, 1f)
+                    shape = RoundedCornerShape((28f * shrink).dp)
+                    clip = shrink > 0f
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }.bottomEdgeBlur(
+                    // Blur: the lower part where the controls sit is blurred.
+                    enabled = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR,
+                    startFromBottomPx = { blurFromBottomPx },
+                ).drawWithContent {
+                    drawContent()
+                    // Blackout: fades out over the lower part, into the player's background.
+                    // Nothing and Blur: the art stays as it is and only its last edge softens,
+                    // so it never ends in a hard line.
+                    val blackout = edge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT
+                    drawRect(
+                        brush =
+                            if (blackout) {
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    0.55f to Color.Black,
+                                    0.8f to Color.Black.copy(alpha = 0.45f),
+                                    1f to Color.Transparent,
+                                )
+                            } else {
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    0.88f to Color.Black,
+                                    1f to Color.Transparent,
+                                )
+                            },
+                        blendMode = BlendMode.DstIn,
+                    )
+                },
+    ) { url ->
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+private const val EdgeToEdgePausedScale = 0.93f
+
 internal val DefaultAlbumBackground = Color(0xFF2B2A30)
 
 /**
@@ -3368,6 +3528,30 @@ private fun BufferingSweep(
                 size = Size(band, h),
                 cornerRadius = CornerRadius(h / 2f),
             )
+        }
+    }
+}
+
+/** A rounded box button in the sleep timer: Set as default, or End of song. */
+@Composable
+private fun SleepTimerChoiceBox(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(onSurface.copy(alpha = if (enabled) 0.1f else 0.05f))
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides onSurface.copy(alpha = if (enabled) 1f else 0.5f)) {
+            content()
         }
     }
 }

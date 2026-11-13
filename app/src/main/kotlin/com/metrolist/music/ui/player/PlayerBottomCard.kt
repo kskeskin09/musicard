@@ -40,6 +40,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.wrapContentWidth
 import com.metrolist.music.ui.component.PlayingIndicatorBox
 import com.metrolist.music.ui.component.InterludeDots
+import com.metrolist.music.ui.component.bottomEdgeBlur
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -301,6 +302,14 @@ fun PlayerBottomCard(
         }
 
         val pullDownConnection = rememberPullDownToClose(enabled = { expandFraction() >= 1f }, onClose = onPullDownClose)
+        // The Up next list's bottom edge follows the Edge effect setting (Blackout, Blur or
+        // Nothing); the lyrics keep their own fade and blur settings.
+        val oldEdgeBlackout by rememberPreference(com.metrolist.music.constants.MiniPlayerBlackoutKey, true)
+        val oldEdgeBlur by rememberPreference(com.metrolist.music.constants.MiniPlayerBlurKey, false)
+        val edgeEffect by rememberEnumPreference(
+            com.metrolist.music.constants.MiniPlayerEdgeEffectKey,
+            com.metrolist.music.constants.MiniPlayerEdgeEffect.fromOld(oldEdgeBlackout, oldEdgeBlur),
+        )
         HorizontalPager(
             state = pagerState,
             beyondViewportPageCount = 1,
@@ -309,18 +318,25 @@ fun PlayerBottomCard(
                     .fillMaxWidth()
                     .weight(1f),
         ) { page ->
+            val pageEdge =
+                if (page == LyricsPage) com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT else edgeEffect
             // Tapping the lyrics or swiping up on either page opens its full-screen view.
             // Dragging the card up is handled by the player around the card, which stays put
             // while the card grows (see BottomSheetPlayer).
+            val cardBottomFadePx = with(LocalDensity.current) { CardBottomFade.toPx() }
             val pageModifier =
                 Modifier
                     .fillMaxSize()
                     // Lyrics and the up-next list fade out toward the bottom of the card (and, once
                     // opened, under the header at the top). This is a single gradient mask drawn
                     // with the page, much cheaper than a real blur.
-                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .bottomEdgeBlur(
+                        enabled = pageEdge == com.metrolist.music.constants.MiniPlayerEdgeEffect.BLUR,
+                        startFromBottomPx = { openBottomCoverPx() + cardBottomFadePx },
+                    ).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                     .drawWithContent {
                         drawContent()
+                        if (pageEdge != com.metrolist.music.constants.MiniPlayerEdgeEffect.BLACKOUT) return@drawWithContent
                         // Fades out toward the bottom: over the card's last 72 dp when small, and
                         // just above the controls panel once opened.
                         val cover = openBottomCoverPx()
@@ -1716,6 +1732,37 @@ private fun CompactLyricsTranslations(lines: List<LyricsEntry>) {
     val translateMode by rememberPreference(com.metrolist.music.constants.TranslateModeKey, "Literal")
     val deeplFormality by rememberPreference(com.metrolist.music.constants.DeeplFormalityKey, "default")
     val aiSystemPrompt by rememberPreference(com.metrolist.music.constants.AiSystemPromptKey, "")
+    val autoTranslate by rememberPreference(com.metrolist.music.constants.AutoLyricsTranslationKey, false)
+
+    LaunchedEffect(currentSong?.id) {
+        com.metrolist.music.lyrics.LyricsTranslationHelper.currentSongId = currentSong?.id
+    }
+    // Automatic translation (AI settings): lyrics in another language than the target are
+    // translated on their own. Lyrics already in the target language are left alone, and so is a
+    // song whose translation was switched off by hand in the lyrics menu.
+    LaunchedEffect(autoTranslate, lines, lyricsEntity, translateLanguage, translateMode, currentSong?.id) {
+        val songId = currentSong?.id ?: return@LaunchedEffect
+        val entity = lyricsEntity ?: return@LaunchedEffect
+        if (!autoTranslate || lines.isEmpty() || entity.id != songId) return@LaunchedEffect
+        if (songId in com.metrolist.music.lyrics.LyricsTranslationHelper.autoTranslateDismissed) return@LaunchedEffect
+        val alreadyTranslated =
+            entity.translatedLyrics.isNotBlank() &&
+                entity.translationLanguage == translateLanguage &&
+                entity.translationMode == translateMode
+        if (alreadyTranslated) return@LaunchedEffect
+        val effectiveApiKey = if (aiProvider == "DeepL") deeplApiKey else openRouterApiKey
+        if (effectiveApiKey.isBlank()) return@LaunchedEffect
+        // A moment to settle (the lyrics of a new song arrive in steps).
+        kotlinx.coroutines.delay(800)
+        val language =
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                com.metrolist.music.lyrics.LyricsLanguageGuess.guess(lines.joinToString("\n") { it.text })
+            }
+        val target = translateLanguage.substringBefore('-').substringBefore('_').lowercase()
+        if (language == target) return@LaunchedEffect
+        if (!com.metrolist.music.lyrics.LyricsTranslationHelper.claimAutoTranslation(songId)) return@LaunchedEffect
+        com.metrolist.music.lyrics.LyricsTranslationHelper.triggerManualTranslation()
+    }
 
     androidx.compose.runtime.DisposableEffect(Unit) {
         com.metrolist.music.lyrics.LyricsTranslationHelper.setCompositionActive(true)

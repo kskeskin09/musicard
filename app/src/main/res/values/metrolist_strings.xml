@@ -101,6 +101,7 @@
     <string name="player_buttons_style">Player button colors</string>
     <string name="default_style">Default</string>
     <string name="primary_color_style">Primary color</string>
+    <string name="player_buttons_background_color">Background color</string>
     <string name="tertiary_color_style">Tertiary color</string>
     <string name="display_density">Display density</string>
     <string name="restart">Restart</string>
@@ -114,6 +115,8 @@
     <string name="lyrics_from_provider">Lyrics from %s</string>
     <string name="lyrics_auto_scroll">Auto-scroll lyrics</string>
     <string name="hide_status_bar_fullscreen">Hide status bar on fullscreen</string>
+    <string name="hide_status_bar_lyrics">Hide status bar on lyrics mode</string>
+    <string name="hide_status_bar_lyrics_desc">Hide the status bar while the opened lyrics follow the song and the controls are hidden</string>
     <string name="hide_status_bar_fullscreen_desc">Hide the status bar when lyrics fullscreen mode is active</string>
     <string name="show_interval_indicator">Show interval indicator</string>
     <string name="show_interval_indicator_desc">Shows a progress bar during long instrumental gaps</string>
@@ -301,6 +304,7 @@
 
     <!-- Sleep timer -->
     <string name="set_as_default">Set as default</string>
+    <string name="already_default">Already default</string>
     <string name="sleep_timer_default_set">Sleep timer default set to %d minutes</string>
     <string name="enable_automatic_sleeptimer">Enable automatic sleep timer</string>
     <string name="sleeptimer_description">Automatically starts the sleep timer at a set time using the default duration</string>
@@ -1082,9 +1086,9 @@
     <string name="lyrics_blur_keep_neighbors_desc">The lines just before and after the current one are not blurred</string>
     <string name="lyrics_blur_strength">Blur strength: %1$d%%</string>
     <string name="lyrics_blur_desc">Blur lines the farther they are from the current one. Requires Android 12</string>
-    <string name="like_icon_color">Like icon color</string>
-    <string name="like_icon_color_white">White</string>
-    <string name="like_icon_color_red">Red</string>
+    <string name="like_icon_color">Like icon style</string>
+    <string name="like_icon_color_white">Modern</string>
+    <string name="like_icon_color_red">Classic</string>
     <string name="play_list_button">Play</string>
     <string name="pause_list_button">Pause</string>
     <string name="playlist_title_label">Playlist title</string>

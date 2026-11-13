@@ -65,6 +65,7 @@ import com.metrolist.music.utils.rememberPreference
 @Composable
 fun AiSettings(navController: NavController) {
     var aiProvider by rememberPreference(AiProviderKey, "OpenRouter")
+    var autoLyricsTranslation by rememberPreference(com.metrolist.music.constants.AutoLyricsTranslationKey, false)
     var openRouterApiKey by rememberPreference(OpenRouterApiKey, "")
     var openRouterBaseUrl by rememberPreference(OpenRouterBaseUrlKey, "https://openrouter.ai/api/v1/chat/completions")
     var openRouterModel by rememberPreference(OpenRouterModelKey, "google/gemini-2.5-flash-lite")
@@ -594,6 +595,29 @@ fun AiSettings(navController: NavController) {
             title = stringResource(R.string.ai_translation_mode),
             items =
                 buildList {
+                    // Lyrics in another language than the target are translated on their own; the
+                    // switch in each song's lyrics menu still turns it off for that song.
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.translate),
+                            title = { Text(stringResource(R.string.ai_auto_translate)) },
+                            description = { Text(stringResource(R.string.ai_auto_translate_desc)) },
+                            trailingContent = {
+                                androidx.compose.material3.Switch(
+                                    checked = autoLyricsTranslation,
+                                    onCheckedChange = { autoLyricsTranslation = it },
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(if (autoLyricsTranslation) R.drawable.check else R.drawable.close),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            onClick = { autoLyricsTranslation = !autoLyricsTranslation },
+                        ),
+                    )
                     if (aiProvider != "DeepL") {
                         add(
                             Material3SettingsItem(
