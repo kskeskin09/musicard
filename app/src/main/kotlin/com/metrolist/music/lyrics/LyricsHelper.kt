@@ -49,8 +49,15 @@ constructor(
     private val cache = LruCache<String, List<LyricsResult>>(MAX_CACHE_SIZE)
     private var currentLyricsJob: Job? = null
 
-    suspend fun getLyrics(mediaMetadata: MediaMetadata): LyricsWithProvider {
-        currentLyricsJob?.cancel()
+    /**
+     * @param cancelOtherJobs false for background prefetching, so it doesn't stop a lyrics search
+     * the user started from the lyrics menu.
+     */
+    suspend fun getLyrics(
+        mediaMetadata: MediaMetadata,
+        cancelOtherJobs: Boolean = true,
+    ): LyricsWithProvider {
+        if (cancelOtherJobs) currentLyricsJob?.cancel()
 
         val cached = cache.get(mediaMetadata.id)?.firstOrNull()
         if (cached != null) {

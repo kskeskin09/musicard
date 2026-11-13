@@ -96,6 +96,7 @@ import com.metrolist.music.lyrics.LyricsProviderRegistry
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import kotlin.math.roundToInt
 import java.net.Proxy
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,6 +120,16 @@ fun ContentSettings(
     val (contentLanguage, onContentLanguageChange) = rememberPreference(key = ContentLanguageKey, defaultValue = "system")
     val (contentCountry, onContentCountryChange) = rememberPreference(key = ContentCountryKey, defaultValue = "system")
     val (hideExplicit, onHideExplicitChange) = rememberPreference(key = HideExplicitKey, defaultValue = false)
+    val (prefetchNextLyrics, onPrefetchNextLyricsChange) =
+        rememberPreference(key = com.metrolist.music.constants.PrefetchNextLyricsKey, defaultValue = false)
+    val (prefetchNextLyricsCount, onPrefetchNextLyricsCountChange) =
+        rememberPreference(
+            key = com.metrolist.music.constants.PrefetchNextLyricsCountKey,
+            defaultValue = com.metrolist.music.constants.DEFAULT_PREFETCH_NEXT_LYRICS_COUNT,
+        )
+    var prefetchSliderValue by remember(prefetchNextLyricsCount) {
+        mutableFloatStateOf(prefetchNextLyricsCount.toFloat())
+    }
     val (reLikeProtection, onReLikeProtectionChange) =
         rememberPreference(key = com.metrolist.music.constants.ReLikeProtectionKey, defaultValue = true)
     val (hideVideoSongs, onHideVideoSongsChange) = rememberPreference(key = HideVideoSongsKey, defaultValue = false)
@@ -728,8 +739,55 @@ fun ContentSettings(
                     icon = painterResource(R.drawable.translate),
                     title = { Text(stringResource(R.string.ai_lyrics_translation)) },
                     onClick = { navController.navigate("settings/ai") }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.queue_music),
+                    title = { Text(stringResource(R.string.prefetch_next_lyrics)) },
+                    description = { Text(stringResource(R.string.prefetch_next_lyrics_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = prefetchNextLyrics,
+                            onCheckedChange = onPrefetchNextLyricsChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (prefetchNextLyrics) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onPrefetchNextLyricsChange(!prefetchNextLyrics) }
+                ),
+            ) + if (prefetchNextLyrics) {
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.skip_next),
+                        title = {
+                            Text(stringResource(R.string.prefetch_next_lyrics_count, prefetchSliderValue.roundToInt()))
+                        },
+                        description = {
+                            Column {
+                                Text(stringResource(R.string.prefetch_next_lyrics_count_desc))
+                                StyledSlider(
+                                    value = prefetchSliderValue,
+                                    onValueChange = { prefetchSliderValue = it },
+                                    onValueChangeFinished = {
+                                        onPrefetchNextLyricsCountChange(prefetchSliderValue.roundToInt())
+                                    },
+                                    valueRange = 1f..com.metrolist.music.constants.MAX_PREFETCH_NEXT_LYRICS_COUNT.toFloat(),
+                                    steps = com.metrolist.music.constants.MAX_PREFETCH_NEXT_LYRICS_COUNT - 2,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        },
+                    )
                 )
-            )
+            } else {
+                emptyList()
+            }
         )
 
         Spacer(modifier = Modifier.height(27.dp))

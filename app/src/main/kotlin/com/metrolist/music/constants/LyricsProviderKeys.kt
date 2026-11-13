@@ -30,3 +30,12 @@ val SearchBestSyncedLyricsKey = booleanPreferencesKey("searchBestSyncedLyrics")
  * English songs) once; it can still be changed on the Lyrics providers page.
  */
 val LyricsProviderOrderV2Key = stringPreferencesKey("lyricsProviderOrderV2")
+
+/** Fetch the lyrics of the next songs in the queue before they start playing. */
+val PrefetchNextLyricsKey = booleanPreferencesKey("prefetchNextLyrics")
+
+/** How many upcoming songs to fetch lyrics for (1-10). */
+val PrefetchNextLyricsCountKey = androidx.datastore.preferences.core.intPreferencesKey("prefetchNextLyricsCount")
+
+const val DEFAULT_PREFETCH_NEXT_LYRICS_COUNT = 1
+const val MAX_PREFETCH_NEXT_LYRICS_COUNT = 10

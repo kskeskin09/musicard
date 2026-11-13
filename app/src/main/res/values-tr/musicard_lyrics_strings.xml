@@ -14,4 +14,8 @@
     <string name="song_change_animation">Şarkı değişim animasyonu</string>
     <string name="song_change_animation_desc">Albüm resmi sonraki şarkıya kayarak geçer, kaydırırken sonraki şarkının resmi görünür. Kapalıyken resim kaymadan değişir</string>
     <string name="battery_opt_song_change_animation_desc">Albüm resmi kaymadan değişir</string>
+    <string name="prefetch_next_lyrics">Sıradaki şarkıların sözlerini çek</string>
+    <string name="prefetch_next_lyrics_desc">Sıradaki şarkıların sözlerini daha başlamadan çeker, böylece şarkı başlayınca sözler hemen görünür. Ekstra internet kullanır. Pil optimizasyonu devredeyken durur</string>
+    <string name="prefetch_next_lyrics_count">Önceden çekilecek şarkı: %1$d</string>
+    <string name="prefetch_next_lyrics_count_desc">Sıradaki kaç şarkının sözleri önceden çekilsin</string>
 </resources>
