@@ -1,3 +1,40 @@
+---v13.9.0
+# Musicard 13.9.0
+
+## Highlights
+- Nine new lyrics sources: SimpMusic, NetEase, QQ Music, Musixmatch, Spotify, Unison, BetterLyrics Portato, lrc.red and YouTube auto captions (off by default)
+- "Always find the best-synced lyrics": every source is asked at once and word-by-word lyrics win over line-by-line ones
+- Each lyrics source has a short note on the music it's best at, and YouTube Music lyrics can now be turned off
+- AI lyrics translation can switch on by itself, and each song remembers your choice
+- Edge-to-edge album art on the player, with Nothing, Blackout and Blur edge styles
+
+## New features
+- Player: auto-hide status and navigation bars, crop album art by default, show where the song is playing from
+- Status bar in lyrics mode and background-coloured player buttons
+- Redesigned sleep timer; normalization changes apply instantly
+- Notification: app-style icons, and choose where quick-add puts songs
+- Settings: new Login or Backup page, download quality and update page
+- Sign in to YouTube Music from Import from other apps
+- Artist page: icon-only radio button next to shuffle
+- Turkish translation for every Musicard feature
+
+## Fixes and improvements
+- Softer edge blur in Up next and on lyrics
+- Home rows reset on refresh, and tabs start at the top after a fresh launch
+- Removed the slim tab bar and the refresh-rate item in Battery optimization
+
+## Türkçe özet
+- 9 yeni şarkı sözü kaynağı ve "her zaman en iyi senkronlu sözü bul" seçeneği
+- AI şarkı sözü çevirisi otomatik açılabiliyor, her şarkı kendi seçimini hatırlıyor
+- Oynatıcıda kenardan kenara albüm kapağı, otomatik gizlenen sistem çubukları
+- Yeni uyku zamanlayıcısı, bildirim simgeleri, Giriş veya Yedekleme sayfası
+- Tüm Musicard özellikleri artık Türkçe
+
+## Which APK should I download?
+- **Musicard.apk**: the standard build, with casting to Chromecast, Google TV and Nest speakers (needs Google Play Services)
+- **Musicard-without-Google-Cast.apk**: works on every phone, no Google components
+- **Musicard-izzy.apk**: build for the IzzyOnDroid repository
+
 ---v13.7.0
 # KMP status update
 Metrolist-KMP remains in alpha, but tester feedback has been very positive. To try it, join our Discord and donate at least $1 to support development.
