@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library auto list: liked songs, songs in your playlists and songs you saved -->
+    <string name="library_playlist">Library</string>
+    <string name="show_library_playlist">Show Library playlist</string>
+    <!-- Storage settings: the group with downloaded songs, download quality, clear downloads -->
+    <string name="downloads_group">Downloads</string>
+    <string name="auto_download_library">Automatically download library</string>
+    <string name="auto_download_library_desc">Downloads liked songs and songs in your playlists. Pauses while battery optimization is on.</string>
+    <string name="auto_download_cellular">Use cellular too</string>
+    <string name="auto_download_cellular_desc">Off: only downloads on Wi-Fi</string>
+</resources>

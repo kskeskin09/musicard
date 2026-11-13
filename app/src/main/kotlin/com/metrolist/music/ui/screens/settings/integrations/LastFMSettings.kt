@@ -608,6 +608,7 @@ fun LastFMSettings(
                 ),
             )
         )
+        Spacer(Modifier.height(16.dp))
     }
 
     TopAppBar(

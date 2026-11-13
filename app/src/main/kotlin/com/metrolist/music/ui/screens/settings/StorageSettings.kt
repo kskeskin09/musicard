@@ -9,6 +9,7 @@ import com.metrolist.music.ui.component.StyledSlider
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
@@ -51,6 +52,8 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AudioQuality
+import com.metrolist.music.constants.AutoDownloadCellularKey
+import com.metrolist.music.constants.AutoDownloadLibraryKey
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.DownloadQuality
 import com.metrolist.music.constants.DownloadQualityKey
@@ -109,6 +112,10 @@ fun StorageSettings(
     )
     val (playingQuality, _) = rememberEnumPreference(AudioQualityKey, defaultValue = AudioQuality.AUTO)
     var showDownloadQualityDialog by remember { mutableStateOf(false) }
+    val (autoDownloadLibrary, onAutoDownloadLibraryChange) =
+        rememberPreference(AutoDownloadLibraryKey, defaultValue = false)
+    val (autoDownloadCellular, onAutoDownloadCellularChange) =
+        rememberPreference(AutoDownloadCellularKey, defaultValue = false)
     // "Same as playing quality (Auto)": only the name of the playing setting, without the Auto hint.
     val playingQualityName = when (playingQuality) {
         AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
@@ -332,9 +339,9 @@ fun StorageSettings(
             ),
         )
         Material3SettingsGroup(
-            title = stringResource(R.string.storage),
+            title = stringResource(R.string.downloads_group),
             items =
-                listOf(
+                listOfNotNull(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.storage),
                         title = { Text(stringResource(R.string.downloaded_songs)) },
@@ -348,6 +355,52 @@ fun StorageSettings(
                         description = { Text(downloadQualityText(downloadQuality)) },
                         onClick = { showDownloadQualityDialog = true },
                     ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.download),
+                        title = { Text(stringResource(R.string.auto_download_library)) },
+                        description = { Text(stringResource(R.string.auto_download_library_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = autoDownloadLibrary,
+                                onCheckedChange = onAutoDownloadLibraryChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (autoDownloadLibrary) R.drawable.check else R.drawable.close,
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onAutoDownloadLibraryChange(!autoDownloadLibrary) },
+                    ),
+                    if (autoDownloadLibrary) {
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.signal_cellular),
+                            title = { Text(stringResource(R.string.auto_download_cellular)) },
+                            description = { Text(stringResource(R.string.auto_download_cellular_desc)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = autoDownloadCellular,
+                                    onCheckedChange = onAutoDownloadCellularChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (autoDownloadCellular) R.drawable.check else R.drawable.close,
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            onClick = { onAutoDownloadCellularChange(!autoDownloadCellular) },
+                        )
+                    } else {
+                        null
+                    },
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.clear_all),
                         title = { Text(stringResource(R.string.clear_all_downloads)) },
@@ -514,6 +567,7 @@ fun StorageSettings(
                     ),
                 ),
         )
+        Spacer(Modifier.height(16.dp))
     }
 
     TopAppBar(

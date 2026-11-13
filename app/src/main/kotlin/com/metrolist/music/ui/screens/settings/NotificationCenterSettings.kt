@@ -155,6 +155,7 @@ fun NotificationCenterSettings(navController: NavController) {
                 ),
             ),
         )
+        Spacer(Modifier.height(16.dp))
     }
 
     editingSlot?.let { slot ->

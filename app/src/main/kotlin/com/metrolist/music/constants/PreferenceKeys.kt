@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -193,6 +194,14 @@ val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val AutoRadioQueueKey = booleanPreferencesKey("autoRadioQueue")
 val DisableLoadMoreWhenRepeatAllKey = booleanPreferencesKey("disableLoadMoreWhenRepeatAll")
 val AutoDownloadOnLikeKey = booleanPreferencesKey("autoDownloadOnLike")
+
+// Storage > Downloads: keep every library song (liked or in your playlists) downloaded.
+val AutoDownloadLibraryKey = booleanPreferencesKey("autoDownloadLibrary")
+// Off: only on Wi-Fi (unmetered) networks. On: also on mobile data.
+val AutoDownloadCellularKey = booleanPreferencesKey("autoDownloadCellular")
+// Songs downloaded by "Automatically download library" rather than the download button.
+// They show in the Library list but not in Downloaded.
+val AutoDownloadedSongIdsKey = stringSetPreferencesKey("autoDownloadedSongIds")
 val SimilarContent = booleanPreferencesKey("similarContent")
 val AutoSkipNextOnErrorKey = booleanPreferencesKey("autoSkipNextOnError")
 val AutoplayKey = booleanPreferencesKey("autoplay")
@@ -318,6 +327,7 @@ val ShowLikedPlaylistKey = booleanPreferencesKey("show_liked_playlist")
 val ShowDownloadedPlaylistKey = booleanPreferencesKey("show_downloaded_playlist")
 val ShowTopPlaylistKey = booleanPreferencesKey("show_top_playlist")
 val ShowCachedPlaylistKey = booleanPreferencesKey("show_cached_playlist")
+val ShowLibraryPlaylistKey = booleanPreferencesKey("show_library_playlist")
 
 enum class LibraryViewType {
     LIST,

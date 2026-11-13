@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.settings.integrations
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.Column
@@ -59,6 +61,7 @@ fun IntegrationScreen(
                 )
             )
         )
+        Spacer(Modifier.height(16.dp))
     }
 
     TopAppBar(

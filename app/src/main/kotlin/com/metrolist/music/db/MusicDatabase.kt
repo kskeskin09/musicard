@@ -212,11 +212,13 @@ abstract class InternalDatabase : RoomDatabase() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
                             applyPragmaSettings(db)
+                            applyLibraryMembershipRules(db)
                         }
 
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
                             applyPragmaSettings(db)
+                            applyLibraryMembershipRules(db)
                         }
 
                         override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
@@ -247,6 +249,60 @@ private fun applyPragmaSettings(db: SupportSQLiteDatabase) {
         db.query("PRAGMA synchronous = NORMAL").close()
     } catch (e: Exception) {
         Timber.tag("MusicDatabase").e(e, "Failed to set PRAGMA settings")
+    }
+}
+
+// Song dates are stored as the phone's local time written as if it were UTC (see Converters).
+private const val SQL_NOW_MILLIS = "(CAST(strftime('%s', 'now', 'localtime') AS INTEGER) * 1000)"
+
+// Songs in a playlist the user owns (created here or editable on YouTube Music).
+private const val SQL_OWN_PLAYLIST_SONGS =
+    "SELECT psm.songId FROM playlist_song_map psm JOIN playlist p ON p.id = psm.playlistId " +
+        "WHERE p.isLocal = 1 OR p.isEditable = 1"
+
+/**
+ * A liked song, or one added to any of the user's own playlists, always counts as a library song.
+ * Database triggers keep this true however the song gets there (like button, add to playlist,
+ * YouTube Music sync, import), and existing songs are brought in line on every open.
+ */
+private fun applyLibraryMembershipRules(db: SupportSQLiteDatabase) {
+    try {
+        db.execSQL(
+            """
+            CREATE TRIGGER IF NOT EXISTS musicard_library_on_like_update
+            AFTER UPDATE OF liked ON song
+            WHEN NEW.liked = 1 AND NEW.inLibrary IS NULL AND NEW.isEpisode = 0
+            BEGIN
+                UPDATE song SET inLibrary = COALESCE(NEW.likedDate, $SQL_NOW_MILLIS) WHERE id = NEW.id;
+            END
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            CREATE TRIGGER IF NOT EXISTS musicard_library_on_like_insert
+            AFTER INSERT ON song
+            WHEN NEW.liked = 1 AND NEW.inLibrary IS NULL AND NEW.isEpisode = 0
+            BEGIN
+                UPDATE song SET inLibrary = COALESCE(NEW.likedDate, $SQL_NOW_MILLIS) WHERE id = NEW.id;
+            END
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            CREATE TRIGGER IF NOT EXISTS musicard_library_on_playlist_add
+            AFTER INSERT ON playlist_song_map
+            WHEN EXISTS (SELECT 1 FROM playlist WHERE id = NEW.playlistId AND (isLocal = 1 OR isEditable = 1))
+            BEGIN
+                UPDATE song SET inLibrary = $SQL_NOW_MILLIS WHERE id = NEW.songId AND inLibrary IS NULL AND isEpisode = 0;
+            END
+            """.trimIndent(),
+        )
+        db.execSQL(
+            "UPDATE song SET inLibrary = COALESCE(likedDate, $SQL_NOW_MILLIS) " +
+                "WHERE inLibrary IS NULL AND isEpisode = 0 AND (liked = 1 OR id IN ($SQL_OWN_PLAYLIST_SONGS))",
+        )
+    } catch (e: Exception) {
+        Timber.tag("MusicDatabase").e(e, "Failed to apply library membership rules")
     }
 }
 
