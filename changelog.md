@@ -16,6 +16,7 @@
 - The playlist sort row on the app's own lists
 - Battery optimization detects Xiaomi's own battery saver
 - Sleep timer goes up to 5 hours (5 min to 300 min), longer times shown as "1 hour 30 minutes"
+- Tapping the sleep timer while it runs shows the time left and a Cancel timer button instead of cancelling straight away
 
 ## Fixes and improvements
 - Up next: taps under the playback controls no longer start hidden songs
@@ -33,7 +34,7 @@
 - Kütüphanede ayrı İndirilenler, Önbellek ve Kütüphane listeleri, kütüphanenin otomatik indirilmesi (varsayılan olarak sadece Wi-Fi)
 - Karıştırmada önceki şarkılar kaybolmuyor, geri gitmek her zaman çalışıyor
 - Bildirimde ses çıkışı butonu, telefonun karanlık moduna uyan Sistem logo teması
-- Uyku zamanlayıcısı 5 saate kadar çıkıyor, uzun süreler "1 saat 30 dakika" şeklinde yazıyor
+- Uyku zamanlayıcısı 5 saate kadar çıkıyor, uzun süreler "1 saat 30 dakika" şeklinde yazıyor; çalışırken basınca kalan süreyi ve iptal butonunu gösteriyor
 - Ana sayfadaki eski görünümlü satırlar yeni temaya uyarlandı, birçok küçük düzeltme
 
 ## Which APK should I download?

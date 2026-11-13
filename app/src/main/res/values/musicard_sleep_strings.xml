@@ -5,4 +5,6 @@
         <item quantity="other">%d hours</item>
     </plurals>
     <string name="sleep_timer_default_set_duration">Sleep timer default set to %s</string>
+    <string name="sleep_timer_time_left">%s left</string>
+    <string name="cancel_sleep_timer">Cancel timer</string>
 </resources>
