@@ -224,7 +224,6 @@ fun ImportFromServicesScreen(
                         stringResource(R.string.import_chip_library),
                         stringResource(R.string.import_chip_albums),
                         stringResource(R.string.import_chip_artists),
-                        stringResource(R.string.import_chip_uploads),
                         stringResource(R.string.import_chip_podcasts),
                     ),
                     expanded = expanded == "ytm",

@@ -69,7 +69,11 @@ fun AiSettings(navController: NavController) {
     var openRouterApiKey by rememberPreference(OpenRouterApiKey, "")
     var openRouterBaseUrl by rememberPreference(OpenRouterBaseUrlKey, "https://openrouter.ai/api/v1/chat/completions")
     var openRouterModel by rememberPreference(OpenRouterModelKey, "google/gemini-2.5-flash-lite")
-    var translateLanguage by rememberPreference(TranslateLanguageKey, "en")
+    var translateLanguage by rememberPreference(TranslateLanguageKey, com.metrolist.music.constants.SYSTEM_DEFAULT)
+    val systemLanguageLabel = stringResource(R.string.system_language) + " (" + com.metrolist.music.utils.SystemLanguage.languageName() + ")"
+    val translateLanguageText: (String) -> String = {
+        if (it == com.metrolist.music.constants.SYSTEM_DEFAULT) systemLanguageLabel else LanguageCodeToName[it] ?: it
+    }
     var translateMode by rememberPreference(TranslateModeKey, "Literal")
     var deeplApiKey by rememberPreference(DeeplApiKey, "")
     var deeplFormality by rememberPreference(DeeplFormalityKey, "default")
@@ -339,8 +343,8 @@ fun AiSettings(navController: NavController) {
             },
             title = stringResource(R.string.ai_target_language),
             current = translateLanguage,
-            values = LanguageCodeToName.keys.sortedBy { LanguageCodeToName[it] },
-            valueText = { LanguageCodeToName[it] ?: it },
+            values = listOf(com.metrolist.music.constants.SYSTEM_DEFAULT) + LanguageCodeToName.keys.sortedBy { LanguageCodeToName[it] },
+            valueText = { translateLanguageText(it) },
         )
     }
 
@@ -667,7 +671,7 @@ fun AiSettings(navController: NavController) {
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.language),
                             title = { Text(stringResource(R.string.ai_target_language)) },
-                            description = { Text(LanguageCodeToName[translateLanguage] ?: translateLanguage) },
+                            description = { Text(translateLanguageText(translateLanguage)) },
                             onClick = { showLanguageDialog = true },
                         ),
                     )

@@ -1728,7 +1728,8 @@ private fun CompactLyricsTranslations(lines: List<LyricsEntry>) {
         com.metrolist.music.constants.OpenRouterModelKey,
         com.metrolist.music.constants.OpenRouterDefaultModel,
     )
-    val translateLanguage by rememberPreference(com.metrolist.music.constants.TranslateLanguageKey, "en")
+    val translateLanguageSetting by rememberPreference(com.metrolist.music.constants.TranslateLanguageKey, com.metrolist.music.constants.SYSTEM_DEFAULT)
+    val translateLanguage = com.metrolist.music.utils.resolveTranslateLanguage(translateLanguageSetting)
     val translateMode by rememberPreference(com.metrolist.music.constants.TranslateModeKey, "Literal")
     val deeplFormality by rememberPreference(com.metrolist.music.constants.DeeplFormalityKey, "default")
     val aiSystemPrompt by rememberPreference(com.metrolist.music.constants.AiSystemPromptKey, "")

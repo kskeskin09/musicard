@@ -107,6 +107,14 @@ fun ContentSettings(
     val database = LocalDatabase.current
     // Used only before Android 13
     val (appLanguage, onAppLanguageChange) = rememberPreference(key = AppLanguageKey, defaultValue = SYSTEM_DEFAULT)
+    // "System default (Türkçe)": what "System default" currently means for content language/country.
+    val effectiveLocale = remember(appLanguage) {
+        appLanguage.takeUnless { it == SYSTEM_DEFAULT }?.let { java.util.Locale.forLanguageTag(it) }
+            ?: com.metrolist.music.utils.SystemLanguage.locale()
+    }
+    val systemDefaultText = stringResource(R.string.system_default)
+    val systemLanguageText = "$systemDefaultText (${com.metrolist.music.utils.SystemLanguage.languageName(effectiveLocale)})"
+    val systemCountryText = "$systemDefaultText (${com.metrolist.music.utils.SystemLanguage.countryName(effectiveLocale)})"
 
     val (contentLanguage, onContentLanguageChange) = rememberPreference(key = ContentLanguageKey, defaultValue = "system")
     val (contentCountry, onContentCountryChange) = rememberPreference(key = ContentCountryKey, defaultValue = "system")
@@ -312,7 +320,7 @@ fun ContentSettings(
             current = contentLanguage,
             values = (listOf(SYSTEM_DEFAULT) + LanguageCodeToName.keys.toList()),
             valueText = {
-                LanguageCodeToName.getOrElse(it) { stringResource(R.string.system_default) }
+                LanguageCodeToName.getOrElse(it) { systemLanguageText }
             }
         )
     }
@@ -332,7 +340,7 @@ fun ContentSettings(
             current = contentCountry,
             values = (listOf(SYSTEM_DEFAULT) + CountryCodeToName.keys.toList()),
             valueText = {
-                CountryCodeToName.getOrElse(it) { stringResource(R.string.system_default) }
+                CountryCodeToName.getOrElse(it) { systemCountryText }
             }
         )
     }
@@ -440,7 +448,7 @@ fun ContentSettings(
                     title = { Text(stringResource(R.string.content_language)) },
                     description = {
                         Text(
-                            LanguageCodeToName.getOrElse(contentLanguage) { stringResource(R.string.system_default) }
+                            LanguageCodeToName.getOrElse(contentLanguage) { systemLanguageText }
                         )
                     },
                     onClick = { showContentLanguageDialog = true }
@@ -450,7 +458,7 @@ fun ContentSettings(
                     title = { Text(stringResource(R.string.content_country)) },
                     description = {
                         Text(
-                            CountryCodeToName.getOrElse(contentCountry) { stringResource(R.string.system_default) }
+                            CountryCodeToName.getOrElse(contentCountry) { systemCountryText }
                         )
                     },
                     onClick = { showContentCountryDialog = true }
