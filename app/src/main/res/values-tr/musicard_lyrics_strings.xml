@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ai_auto_translate">Sözleri otomatik çevir</string>
-    <string name="ai_auto_translate_desc">Hedef dilden farklı dildeki sözler açıldığında çevrilir. Zaten hedef dildeki sözler atlanır</string>
+    <string name="ai_auto_translate_desc">Hedef dilden farklı dildeki sözler açıldığında çevrilir. Bu yüzden her yeni şarkı için AI servisine çeviri isteği gönderilir (kotanı harcayabilir veya ücretli olabilir). Zaten hedef dildeki sözler atlanır ve şarkının kendi çeviri ayarı her zaman önceliklidir</string>
     <string name="edge_to_edge_album_art">Kenardan kenara albüm resmi</string>
     <string name="edge_to_edge_album_art_desc">Albüm resmi oynatıcının üst kısmını ekran kenarlarına kadar doldurur</string>
     <string name="edge_to_edge_art_edge">Resmin tuşlarla kesiştiği yer</string>

@@ -88,7 +88,9 @@ object LyricsTranslationHelper {
     }
 
     fun triggerManualTranslation() {
-        currentSongId?.let { autoTranslateDismissed.remove(it) }
+        currentSongId?.let { songId ->
+            if (autoTranslateDismissed.remove(songId)) saveDismissed()
+        }
         _manualTrigger.tryEmit(Unit)
     }
 
@@ -102,8 +104,32 @@ object LyricsTranslationHelper {
     fun triggerClearTranslations() {
         _clearTranslationsTrigger.tryEmit(Unit)
         _hasActiveTranslations.value = false
-        // Turned off by hand: automatic translation leaves this song alone from now on.
-        currentSongId?.let { autoTranslateDismissed.add(it) }
+        // Turned off by hand: automatic translation leaves this song alone from now on, also
+        // after the app restarts.
+        currentSongId?.let { songId ->
+            if (autoTranslateDismissed.add(songId)) saveDismissed()
+        }
+    }
+
+    private const val ChoicesPrefs = "lyrics_translation_choices"
+    private const val DismissedKey = "dismissed"
+
+    @Volatile
+    private var prefs: android.content.SharedPreferences? = null
+
+    /**
+     * Loads the songs whose translation was switched off by hand (kept on the device), so a
+     * song's own choice always wins over automatic translation. Called once at app start.
+     */
+    fun attach(context: Context) {
+        if (prefs != null) return
+        val p = context.applicationContext.getSharedPreferences(ChoicesPrefs, Context.MODE_PRIVATE)
+        prefs = p
+        p.getStringSet(DismissedKey, null)?.let { autoTranslateDismissed.addAll(it) }
+    }
+
+    private fun saveDismissed() {
+        prefs?.edit()?.putStringSet(DismissedKey, HashSet(autoTranslateDismissed))?.apply()
     }
 
     /** The song whose lyrics are on screen (set by the lyrics view). */
