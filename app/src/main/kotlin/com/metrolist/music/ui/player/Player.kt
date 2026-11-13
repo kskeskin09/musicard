@@ -201,6 +201,7 @@ import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
+import com.metrolist.music.ui.utils.drawBehindCutout
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
@@ -1068,11 +1069,16 @@ fun BottomSheetPlayer(
         val window = (context as? android.app.Activity)?.window
         val insetsController = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
         if (hideStatusBar) {
+            // Keeps the camera cutout strip showing the player instead of turning black.
+            window?.drawBehindCutout(true)
             insetsController?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             insetsController?.hide(WindowInsetsCompat.Type.statusBars())
         }
         onDispose {
-            if (hideStatusBar) insetsController?.show(WindowInsetsCompat.Type.statusBars())
+            if (hideStatusBar) {
+                insetsController?.show(WindowInsetsCompat.Type.statusBars())
+                window?.drawBehindCutout(false)
+            }
         }
     }
 
