@@ -388,7 +388,7 @@
     <string name="enable_scrobbling">Aktiveer skrobbeling</string>
     <string name="lastfm_now_playing">Stuur Speel nou-status</string>
     <string name="last_fm_send_likes">Sinkroniseer Gunstelinge en Nie-gunstelinge</string>
-    <string name="last_fm_send_likes_description">Merk liedjies as gunstelinge of verwyder gunsteling-status in Last.fm wanneer jy daarvan hou of nie meer daarvan hou nie in Metrolist</string>
+    <string name="last_fm_send_likes_description">Merk liedjies as gunstelinge of verwyder gunsteling-status in Last.fm wanneer jy daarvan hou of nie meer daarvan hou nie in Musicard</string>
     <string name="logging_in">Meld tans aan…</string>
     <string name="scrobbling_configuration">Skrobbeling-opstelling</string>
     <string name="scrobble_min_track_duration">Skrobbel liedjies langer as (sekondes)</string>
@@ -484,7 +484,7 @@
     <string name="crash_description">’n Onverwagte fout het voorgekom. Deel asseblief die ineenstortingsverslag om ons te help om die probleem op te los</string>
     <string name="crash_share_logs">Deel logs</string>
     <string name="crash_share_title">Deel ineenstortingsverslag</string>
-    <string name="crash_report_subject">Metrolist-ineenstortingsverslag</string>
+    <string name="crash_report_subject">Musicard-ineenstortingsverslag</string>
     <string name="crash_close">Sluit</string>
     <string name="crash_no_log">Geen ineenstortingslog beskikbaar nie</string>
     <string name="palette_dynamic">Dinamies</string>
@@ -530,7 +530,7 @@
     <string name="clear_recognition_history_confirm">Is jy seker jy wil alle herkenninggeskiedenis uitvee?</string>
     <string name="delete_from_history">Vee uit geskiedenis</string>
     <string name="re_listen">Luister weer</string>
-    <string name="play_on_app">Speel op Metrolist</string>
+    <string name="play_on_app">Speel op Musicard</string>
     <string name="qs_tile_music_recognizer">Herken musiek</string>
     <string name="recognition_notification_channel_name">Musiekherkenning</string>
     <string name="recognition_notification_channel_desc">Wys \'n kennisgewing terwyl \'n liedjie vanuit die vinnige instellings geïdentifiseer word</string>
@@ -538,7 +538,7 @@
     <string name="recognition_notification_processing">Besig om te identifiseer…</string>
     <string name="recognition_notification_no_match">Geen passing gevind nie</string>
     <string name="recognition_notification_failed">Herkenning het misluk</string>
-    <string name="listen_on_metrolist">Luister op Metrolist</string>
+    <string name="listen_on_metrolist">Luister op Musicard</string>
     <string name="map_csv_columns">Karteer CSV-kolomme</string>
     <string name="first_row_is_header">Eerste ry is koptekst</string>
     <string name="artist_name_column">Kunstenaarnaam-kolom</string>
@@ -550,7 +550,7 @@
     <string name="recently_converted">Onlangs omgeskakel</string>
     <string name="column_label">Kolom %d</string>
     <string name="discord_connect_description">Teken in met Discord om te deel waarna jy luister</string>
-    <string name="discord_information_warning">Metrolist gebruik Discord se publieke OAuth2- en Gateway-API\'s om te deel waarna jy luister. Magtiging vind plaas deur \'n plaaslike blaaier-sessie wat homself toemaak nadat die kode opgevang is — niks word na derdeparty-bedieners gestuur nie. Jou teken word op hierdie toestel in versleutelde voorkeure gestoor en word nooit gedeel nie. Metrolist maak direk kontak met wss://gateway.discord.gg om jou aktiwiteit te publiseer, en versoek slegs die minimum omvang wat benodig word (sdk.social_layer_presence).</string>
+    <string name="discord_information_warning">Musicard gebruik Discord se publieke OAuth2- en Gateway-API\'s om te deel waarna jy luister. Magtiging vind plaas deur \'n plaaslike blaaier-sessie wat homself toemaak nadat die kode opgevang is — niks word na derdeparty-bedieners gestuur nie. Jou teken word op hierdie toestel in versleutelde voorkeure gestoor en word nooit gedeel nie. Musicard maak direk kontak met wss://gateway.discord.gg om jou aktiwiteit te publiseer, en versoek slegs die minimum omvang wat benodig word (sdk.social_layer_presence).</string>
     <string name="discord_status_connected">Gekoppel</string>
     <string name="discord_status_authorizing">Besig om te magtig…</string>
     <string name="discord_status_authorized">Gemagtig</string>
@@ -625,10 +625,10 @@
     <string name="wrapped_total_artists_subtitle">unieke kunstenaars!</string>
     <string name="wrapped_total_songs_title">Jy het geluister na</string>
     <string name="wrapped_total_songs_subtitle">unieke liedjies!</string>
-    <string name="wrapped_intro_title">METROLIST</string>
+    <string name="wrapped_intro_title">MUSICARD</string>
     <string name="wrapped_intro_subtitle">dit is tyd om te sien waarna jy die hele jaar geluister het…</string>
     <string name="wrapped_intro_button">kom ons gaan!</string>
-    <string name="wrapped_logo_content_description">Metrolist-logo</string>
+    <string name="wrapped_logo_content_description">Musicard-logo</string>
     <string name="wrapped_year">2025</string>
     <string name="wrapped_ready_title">JOUN WRAPPED IS GEREED!</string>
     <string name="wrapped_ready_subtitle">Tyd om te sien wat jy die hele jaar geliefhet het…</string>
@@ -825,13 +825,13 @@
     <string name="view_channel">Bekyk kanaal</string>
     <string name="album_art">Albumkuns</string>
     <string name="no_song_playing">Geen liedjie speel nie</string>
-    <string name="tap_to_open">Tik om Metrolist oop te maak</string>
+    <string name="tap_to_open">Tik om Musicard oop te maak</string>
     <string name="previous">Vorige</string>
     <string name="play_pause">Speel/Pauseer</string>
     <string name="next">Volgende</string>
     <string name="like">Hou van</string>
     <string name="not_playing">Geen liedjie speel nie</string>
-    <string name="tap_to_play">Tik om Metrolist oop te maak</string>
+    <string name="tap_to_play">Tik om Musicard oop te maak</string>
     <string name="widget_description">Musiekspeler-widget met afspeelbeheer</string>
     <string name="turntable_widget_description">Sirkelvormige musiek-widget met speel- en hou-van-beheer</string>
     <string name="widget_music_player">Musiekspeler</string>

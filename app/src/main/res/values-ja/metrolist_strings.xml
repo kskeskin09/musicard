@@ -200,7 +200,7 @@
     <string name="lyrics_offset">歌詞のタイミングを調整</string>
     <string name="google_cast_description">Chromecastなどのキャスト対応のデバイスに音声をキャストできます</string>
     <string name="last_fm_send_likes">高評価/低評価を反映</string>
-    <string name="last_fm_send_likes_description">Metrolistで曲に高評価/低評価をつけると、Last.fmでもラブ/アンラブされます</string>
+    <string name="last_fm_send_likes_description">Musicardで曲に高評価/低評価をつけると、Last.fmでもラブ/アンラブされます</string>
     <string name="edit_desc">タイトルやアーティスト名を編集します</string>
     <string name="start_radio_desc">この項目をもとにラジオを開始します</string>
     <string name="play_next_desc">キューの先頭に追加します</string>
@@ -215,7 +215,7 @@
     <string name="equalizer_desc">オーディオイコライザーを調整します</string>
     <string name="listen_together">Listen Together</string>
     <string name="play_pause">再生/停止</string>
-    <string name="wrapped_intro_title">METROLIST</string>
+    <string name="wrapped_intro_title">MUSICARD</string>
     <string name="none">なし</string>
     <string name="cache_size_warning_confirm">続行</string>
     <string name="wrapped_top_song_album_art_content_description">アルバムアート</string>
@@ -274,7 +274,7 @@
     <string name="crash_title">アプリがクラッシュしました</string>
     <string name="crash_share_logs">クラッシュログを共有</string>
     <string name="crash_share_title">クラッシュレポートを共有</string>
-    <string name="crash_report_subject">Metrolistのクラッシュレポート</string>
+    <string name="crash_report_subject">Musicardのクラッシュレポート</string>
     <string name="crash_close">閉じる</string>
     <string name="crash_no_log">クラッシュログがありません</string>
     <string name="palette_dynamic">ダイナミック</string>
@@ -345,7 +345,7 @@
     <string name="wrapped_total_songs_subtitle">ユニークな曲たち！</string>
     <string name="wrapped_intro_subtitle">今年聴いてきた曲を振り返る時が来ました…</string>
     <string name="wrapped_intro_button">さあ、始めよう！</string>
-    <string name="wrapped_logo_content_description">Metrolistロゴ</string>
+    <string name="wrapped_logo_content_description">Musicardロゴ</string>
     <string name="wrapped_ready_title">あなたのWrappedが完成しました！</string>
     <string name="wrapped_ready_subtitle">今年あなたが夢中になった音楽を見てみましょう…</string>
     <string name="wrapped_thank_you">聴いてくれてありがとう！</string>
@@ -366,9 +366,9 @@
     <string name="failed_to_parse_proxy">プロキシURLを解析できません</string>
     <string name="error_playback_failed">再生に失敗しました</string>
     <string name="no_song_playing">再生中の曲はありません</string>
-    <string name="tap_to_open">タップしてMetrolistを開く</string>
+    <string name="tap_to_open">タップしてMusicardを開く</string>
     <string name="previous">前へ</string>
-    <string name="tap_to_play">タップしてMetrolistを開く</string>
+    <string name="tap_to_play">タップしてMusicardを開く</string>
     <string name="listen_together_you_are_host">あなたはホストです</string>
     <string name="listen_together_you_are_guest">あなたはゲストです</string>
     <string name="listen_together_join_requests">参加リクエスト</string>
@@ -450,7 +450,7 @@
     <string name="clear_recognition_history_confirm">認識履歴をすべて削除しますか？</string>
     <string name="delete_from_history">履歴から削除</string>
     <string name="re_listen">もう一度聴く</string>
-    <string name="play_on_app">Metrolistで再生</string>
+    <string name="play_on_app">Musicardで再生</string>
     <string name="map_csv_columns">CSV列の対応設定</string>
     <string name="first_row_is_header">1行目をヘッダーとして扱う</string>
     <string name="artist_name_column">アーティスト名の列</string>
@@ -487,7 +487,7 @@
     <string name="discord_buttons">ボタン</string>
     <string name="discord_button_1">ボタン 1</string>
     <string name="discord_button_2">ボタン 2</string>
-    <string name="discord_information_warning">Metrolistは、あなたが聴いているものを共有するためにDiscordの公開OAuth2 APIおよびGateway APIを使用します。認可はローカルのブラウザセッションを通じて行われ、コードを取得した後はそのセッションは自動的に閉じられます — サードパーティのサーバーに何かが送信されることはありません。あなたのトークンはこのデバイス上の暗号化された設定に保存され、共有されることは決してありません。Metrolistはあなたのアクティビティを公開するためにwss://gateway.discord.ggに直接接続し、必要な最小限のスコープ（sdk.social_layer_presence）のみをリクエストします。</string>
+    <string name="discord_information_warning">Musicardは、あなたが聴いているものを共有するためにDiscordの公開OAuth2 APIおよびGateway APIを使用します。認可はローカルのブラウザセッションを通じて行われ、コードを取得した後はそのセッションは自動的に閉じられます — サードパーティのサーバーに何かが送信されることはありません。あなたのトークンはこのデバイス上の暗号化された設定に保存され、共有されることは決してありません。Musicardはあなたのアクティビティを公開するためにwss://gateway.discord.ggに直接接続し、必要な最小限のスコープ（sdk.social_layer_presence）のみをリクエストします。</string>
     <string name="discord_activity_type">アクティビティの種類</string>
     <string name="discord_activity_playing">プレイ中</string>
     <string name="discord_activity_listening">再生中</string>
@@ -705,7 +705,7 @@
     <string name="recognition_notification_processing">認識中…</string>
     <string name="recognition_notification_no_match">一致する曲が見つかりませんでした</string>
     <string name="recognition_notification_failed">認識に失敗しました</string>
-    <string name="listen_on_metrolist">Metrolistで聴く</string>
+    <string name="listen_on_metrolist">Musicardで聴く</string>
     <string name="android_auto">Android Auto</string>
     <string name="android_auto_visible_sections">表示する項目</string>
     <string name="android_auto_reorder_hint">項目をタップするとオン/オフを切り替えられます。長押しで並び替えができます。先頭の項目がデフォルトで表示されます</string>
@@ -845,7 +845,7 @@
     <string name="playlist_position_end">プレイリストの最後</string>
     <string name="playlist_position_end_desc">新しく追加された曲は既存の曲の後に表示されます</string>
     <string name="playlist_created_locally">YouTube の同期に失敗しました。プレイリストはローカルに作成されます。</string>
-    <string name="update_available_message">Metrolist %s は既にダウンロードする準備ができています。</string>
+    <string name="update_available_message">Musicard %s は既にダウンロードする準備ができています。</string>
     <string name="update_action">アップデート</string>
     <string name="error_no_internet_connection">インターネットに接続されていません</string>
     <string name="error_offline_playback">オフラインです。インターネットに接続するか、オフライン用にダウンロードした曲を再生してください。</string>

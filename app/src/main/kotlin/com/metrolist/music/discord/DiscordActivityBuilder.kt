@@ -56,13 +56,13 @@ object DiscordActivityBuilder {
             } else null
             renderedBtn2Label = if (btn2Enabled) {
                 DiscordTemplateRenderer.render(
-                    btn2Label.ifEmpty { DiscordDefaults.BUTTON2_LABEL },
+                    DiscordDefaults.button2Label(btn2Label),
                     songTitle, artistName, albumName, song.song.id
                 )
             } else null
             renderedBtn2Url = if (btn2Enabled) {
                 DiscordTemplateRenderer.render(
-                    btn2Url.ifEmpty { DiscordDefaults.BUTTON2_URL },
+                    DiscordDefaults.button2Url(btn2Url),
                     songTitle, artistName, albumName, song.song.id
                 )
             } else null

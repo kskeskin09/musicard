@@ -246,32 +246,36 @@ fun DiscordSettings(
         )
 
         AnimatedVisibility(visible = !infoDismissed) {
+            // Same look as Musicard's settings groups: 24dp rounded surfaceContainer card,
+            // a calm info icon in the accent colour instead of a warning sign.
             Card(
+                shape = RoundedCornerShape(24.dp),
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(start = 20.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.warning),
+                        painter = painterResource(R.drawable.info),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp),
                     )
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.discord_information_warning),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(8.dp))
                         TextButton(
@@ -296,9 +300,11 @@ fun DiscordSettings(
 
         if (!lastErrorText.isNullOrBlank()) {
             Card(
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                 ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
@@ -340,11 +346,12 @@ fun DiscordSettings(
         }
 
         Card(
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(24.dp),
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -659,14 +666,14 @@ fun DiscordSettings(
                                 add(
                                     Material3SettingsItem(
                                         title = { Text("${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_label)}") },
-                                        description = { Text(btn2Label) },
+                                        description = { Text(DiscordDefaults.button2Label(btn2Label)) },
                                         onClick = { showBtn2LabelDialog = true },
                                     ),
                                 )
                                 add(
                                     Material3SettingsItem(
                                         title = { Text("${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_url)}") },
-                                        description = { Text(btn2Url) },
+                                        description = { Text(DiscordDefaults.button2Url(btn2Url)) },
                                         onClick = { showBtn2UrlDialog = true },
                                     ),
                                 )
@@ -822,7 +829,7 @@ fun DiscordSettings(
     if (showBtn2LabelDialog) {
         TemplateFieldDialog(
             title = "${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_label)}",
-            value = btn2Label,
+            value = DiscordDefaults.button2Label(btn2Label),
             onDone = {
                 onBtn2LabelChange(it)
                 coroutineScope.launch(Dispatchers.IO) {
@@ -837,7 +844,7 @@ fun DiscordSettings(
     if (showBtn2UrlDialog) {
         TemplateFieldDialog(
             title = "${stringResource(R.string.discord_button_2)} — ${stringResource(R.string.discord_button_url)}",
-            value = btn2Url,
+            value = DiscordDefaults.button2Url(btn2Url),
             onDone = {
                 onBtn2UrlChange(it)
                 coroutineScope.launch(Dispatchers.IO) {
@@ -977,7 +984,7 @@ fun RichPresence(
         DiscordDefaults.BUTTON1_LABEL
     }
     val renderedBtn2Label = if (advancedMode) {
-        DiscordTemplateRenderer.render(btn2Label.ifEmpty { DiscordDefaults.BUTTON2_LABEL }, previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
+        DiscordTemplateRenderer.render(DiscordDefaults.button2Label(btn2Label), previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
     } else {
         DiscordDefaults.BUTTON2_LABEL
     }
@@ -987,7 +994,7 @@ fun RichPresence(
         "${DiscordDefaults.YOUTUBE_WATCH_URL}${song?.song?.id.orEmpty()}"
     }
     val renderedBtn2Url = if (advancedMode) {
-        DiscordTemplateRenderer.render(btn2Url.ifEmpty { DiscordDefaults.BUTTON2_URL }, previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
+        DiscordTemplateRenderer.render(DiscordDefaults.button2Url(btn2Url), previewSongTitle, previewArtistName, previewAlbumName, song?.song?.id ?: "")
     } else {
         DiscordDefaults.BUTTON2_URL
     }
