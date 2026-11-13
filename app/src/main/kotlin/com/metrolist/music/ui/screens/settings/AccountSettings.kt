@@ -113,11 +113,12 @@ fun AccountSettings(
 
         Material3SettingsGroup(
             items = buildList {
-                // Sign-in, token and sync now live on the "Login or Backup" page.
+                // Import or Export: backup, restore, playlist files and "Import from other apps"
+                // (where YouTube Music sign-in lives).
                 add(
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.backup_restore)) },
-                        icon = painterResource(R.drawable.login),
+                        icon = painterResource(R.drawable.backup),
                         onClick = {
                             onClose()
                             navController.navigate("settings/backup_restore")
@@ -342,7 +343,7 @@ fun AccountLoginSettings(
                             }
 
                             Text(
-                                text = if (isLoggedIn) accountName else stringResource(R.string.login),
+                                text = if (isLoggedIn) accountName else stringResource(R.string.login_with_ytm),
                             )
                         }
                     },
@@ -388,7 +389,7 @@ fun AccountLoginSettings(
         Spacer(Modifier.height(8.dp))
 
         Material3SettingsGroup(
-            items = listOf(
+            items = listOfNotNull(
                 Material3SettingsItem(
                     title = {
                         Text(
@@ -406,8 +407,8 @@ fun AccountLoginSettings(
                         else showTokenEditor = true
                     }
                 ),
-                Material3SettingsItem(
-                    // Needs an account: shown faded until the user is logged in.
+                // Personalized content and Auto-sync appear once signed in.
+                if (isLoggedIn) Material3SettingsItem(
                     enabled = isLoggedIn,
                     title = { Text(stringResource(R.string.more_content)) },
                     icon = painterResource(R.drawable.cached),
@@ -430,8 +431,8 @@ fun AccountLoginSettings(
                             }
                         )
                     },
-                ),
-                Material3SettingsItem(
+                ) else null,
+                if (isLoggedIn) Material3SettingsItem(
                     enabled = isLoggedIn,
                     title = { Text(stringResource(R.string.yt_sync)) },
                     icon = painterResource(R.drawable.cached),
@@ -451,7 +452,7 @@ fun AccountLoginSettings(
                             }
                         )
                     },
-                )
+                ) else null,
             ),
         )
 

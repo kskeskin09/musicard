@@ -20,4 +20,8 @@
     <string name="auto_hide_nav_after">After %1$d seconds</string>
     <string name="auto_hide_status">Auto-hide status bar</string>
     <string name="auto_hide_status_desc">Hides the clock and battery bar at the top on the full-screen player and lyrics. Swipe down from the top to show it.</string>
+    <string name="login_with_ytm">Login with YouTube Music</string>
+    <string name="import_chip_artists">Artists</string>
+    <string name="import_chip_uploads">Uploads</string>
+    <string name="import_chip_podcasts">Podcasts</string>
 </resources>

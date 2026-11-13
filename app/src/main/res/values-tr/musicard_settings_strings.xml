@@ -20,4 +20,8 @@
     <string name="auto_hide_nav_after">%1$d saniye sonra</string>
     <string name="auto_hide_status">Durum çubuğunu otomatik gizle</string>
     <string name="auto_hide_status_desc">Tam ekran oynatıcıda ve şarkı sözlerinde üstteki saat ve pil çubuğunu gizler. Göstermek için üstten aşağı kaydır.</string>
+    <string name="login_with_ytm">YouTube Music ile giriş yap</string>
+    <string name="import_chip_artists">Sanatçılar</string>
+    <string name="import_chip_uploads">Yüklemeler</string>
+    <string name="import_chip_podcasts">Podcastler</string>
 </resources>
