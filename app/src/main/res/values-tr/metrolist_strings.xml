@@ -942,6 +942,8 @@
     <string name="logo_theme_desc">%s · telefon temasından bağımsız</string>
     <string name="logo_theme_dark">Koyu</string>
     <string name="logo_theme_light">Aydınlık</string>
+    <string name="logo_theme_system">Sistem</string>
+    <string name="logo_theme_desc_system">Telefonun açık/koyu temasını takip eder</string>
     <string name="history_duration_desc">Bir şarkı %1$d saniye dinlendikten sonra geçmişine ve istatistiklerine eklenir. Daha önce geçtiğin şarkılar sayılmaz.</string>
     <string name="battery_optimization">Pil optimizasyonu</string>
     <string name="battery_optimization_summary">Pil %%%1$d altına inince ağır efektleri kapatır</string>
