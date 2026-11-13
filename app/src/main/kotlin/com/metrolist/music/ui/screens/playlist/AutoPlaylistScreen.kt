@@ -199,47 +199,6 @@ fun AutoPlaylistScreen(
         }
 
     var inSelectMode by rememberSaveable { mutableStateOf(false) }
-
-    // Library list: take out songs that are neither liked nor in one of your playlists.
-    var showCleanUpLibrary by rememberSaveable { mutableStateOf(false) }
-    if (showCleanUpLibrary) {
-        var looseCount by remember { mutableStateOf<Int?>(null) }
-        LaunchedEffect(Unit) {
-            looseCount = withContext(Dispatchers.IO) { viewModel.looseLibrarySongCount() }
-        }
-        val cleanedText = stringResource(R.string.clean_up_library_done)
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showCleanUpLibrary = false },
-            title = { Text(stringResource(R.string.clean_up_library)) },
-            text = {
-                Text(
-                    when (val count = looseCount) {
-                        null -> "…"
-                        0 -> stringResource(R.string.clean_up_library_none)
-                        else -> pluralStringResource(R.plurals.clean_up_library_message, count, count)
-                    },
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = (looseCount ?: 0) > 0,
-                    onClick = {
-                        showCleanUpLibrary = false
-                        viewModel.removeLooseLibrarySongs { removed ->
-                            Toast.makeText(context, cleanedText.format(removed), Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.clean_up_library_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCleanUpLibrary = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        )
-    }
     val selection =
         rememberSaveable(
             saver =
@@ -890,16 +849,6 @@ fun AutoPlaylistScreen(
                                 painter = painterResource(R.drawable.search),
                                 contentDescription = null,
                             )
-                        }
-                        if (playlistId == "library") {
-                            IconButton(
-                                onClick = { showCleanUpLibrary = true },
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.clear_all),
-                                    contentDescription = stringResource(R.string.clean_up_library),
-                                )
-                            }
                         }
                     }
                 },
