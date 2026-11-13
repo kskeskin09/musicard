@@ -17,9 +17,11 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
+import com.metrolist.innertube.models.preferOfficialSongs
 import com.metrolist.innertube.utils.YouTubeUrlParser
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
+import com.metrolist.music.constants.PreferOfficialSongsKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
 import com.metrolist.music.utils.dataStore
@@ -78,6 +80,7 @@ class OnlineSearchSuggestionViewModel
                                 val result = YouTube.searchSuggestions(query).getOrNull()
                                 val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                                 val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+                                val preferOfficialSongs = context.dataStore.get(PreferOfficialSongsKey, true)
 
                                 database
                                     .searchHistory(query)
@@ -97,6 +100,7 @@ class OnlineSearchSuggestionViewModel
                                                     ?.distinctBy { it.id }
                                                     ?.filterExplicit(hideExplicit)
                                                     ?.filterVideoSongs(hideVideoSongs)
+                                                    ?.preferOfficialSongs(preferOfficialSongs)
                                                     .orEmpty(),
                                         )
                                     }

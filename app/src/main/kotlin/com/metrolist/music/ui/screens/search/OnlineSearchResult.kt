@@ -505,6 +505,8 @@ fun OnlineSearchResult(
                                 .flatMap { it.items }
                                 .filter { it is SongItem && it.id != topItem?.id && isExactMatch(it.title, decodedQuery) }
                                 .distinctBy { it.id }
+                                // Official releases (square cover) before video uploads of the same name.
+                                .sortedBy { (it as? SongItem)?.isVideoSong == true }
                                 .take(3)
                         if (topItem != null) {
                             item(key = "top_title") {
