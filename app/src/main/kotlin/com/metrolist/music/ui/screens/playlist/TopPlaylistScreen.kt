@@ -276,7 +276,7 @@ fun TopPlaylistScreen(
     val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
     val pageGlassUrl = songs?.firstOrNull()?.thumbnailUrl
 
-    TintedPageColors(tint) {
+    TintedPageColors(tint, glassUrl = if (pageGlass) pageGlassUrl else null) {
         Box(
             modifier =
                 Modifier

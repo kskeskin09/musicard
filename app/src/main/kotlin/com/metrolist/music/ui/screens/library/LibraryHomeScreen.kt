@@ -816,36 +816,22 @@ fun PlaylistCover(
     size: Dp = CoverSize,
     corner: Dp = CoverCorner,
 ) {
-    val thumbnails = playlist.thumbnails
-    com.metrolist.music.ui.theme.PrefetchCoverColor(thumbnails.firstOrNull())
+    // Its own cover, or the first four songs in the order the playlist page shows them.
+    val collage = com.metrolist.music.ui.component.rememberPlaylistCollage(playlist)
+    com.metrolist.music.ui.theme.PrefetchCoverColor(playlist.coverUrl ?: collage?.firstOrNull())
     androidx.compose.runtime.SideEffect { com.metrolist.music.viewmodels.PlaylistPreviewCache.put(playlist) }
     val shape = RoundedCornerShape(corner)
     when {
-        playlist.playlist.thumbnailUrl == null && thumbnails.size >= 4 ->
-            Column(
+        collage != null && collage.isNotEmpty() ->
+            com.metrolist.music.ui.component.PlaylistCollageGrid(
+                covers = collage,
                 modifier =
                     Modifier
                         .size(size)
                         .clip(shape),
-            ) {
-                listOf(0, 2).forEach { row ->
-                    Row(Modifier.weight(1f)) {
-                        listOf(row, row + 1).forEach { index ->
-                            AsyncImage(
-                                model = thumbnails[index],
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .fillMaxSize(),
-                            )
-                        }
-                    }
-                }
-            }
+            )
 
-        else -> CoverImage(thumbnails.firstOrNull(), shape, R.drawable.queue_music, size)
+        else -> CoverImage(playlist.coverUrl, shape, R.drawable.queue_music, size)
     }
 }
 

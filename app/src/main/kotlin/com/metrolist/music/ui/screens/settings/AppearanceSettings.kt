@@ -184,7 +184,7 @@ fun AppearanceSettings(
     // Follow theme, or Follow background (the player's background: the glass cover or the album
     // color). Older choices count as Follow theme.
     val availableMiniPlayerBackgroundStyles =
-        listOf(MiniPlayerBackgroundStyle.DEFAULT, MiniPlayerBackgroundStyle.BLUR)
+        listOf(MiniPlayerBackgroundStyle.DEFAULT, MiniPlayerBackgroundStyle.BLUR, MiniPlayerBackgroundStyle.PAGE)
 
     var showMiniPlayerBackgroundDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -242,6 +242,9 @@ fun AppearanceSettings(
     var showPageBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     val (pageEdgeToEdgeCover, onPageEdgeToEdgeCoverChange) =
         rememberPreference(com.metrolist.music.constants.PageEdgeToEdgeCoverKey, defaultValue = false)
+    val (pageCoverEdge, onPageCoverEdgeChange) =
+        rememberEnumPreference(com.metrolist.music.constants.PageEdgeToEdgeCoverEdgeKey, defaultValue = MiniPlayerEdgeEffect.BLACKOUT)
+    var showPageCoverEdgeDialog by rememberSaveable { mutableStateOf(false) }
     var showPlayerCardBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -719,6 +722,20 @@ fun AppearanceSettings(
         )
     }
 
+    if (showPageCoverEdgeDialog) {
+        EnumDialog(
+            onDismiss = { showPageCoverEdgeDialog = false },
+            onSelect = {
+                onPageCoverEdgeChange(it)
+                showPageCoverEdgeDialog = false
+            },
+            title = stringResource(R.string.edge_to_edge_art_edge),
+            current = pageCoverEdge,
+            values = listOf(MiniPlayerEdgeEffect.NONE, MiniPlayerEdgeEffect.BLACKOUT, MiniPlayerEdgeEffect.BLUR),
+            valueText = { miniPlayerEdgeEffectText(it) },
+        )
+    }
+
     if (showMiniPlayerBackgroundDialog) {
         EnumDialog(
             onDismiss = { showMiniPlayerBackgroundDialog = false },
@@ -727,15 +744,9 @@ fun AppearanceSettings(
                 showMiniPlayerBackgroundDialog = false
             },
             title = stringResource(R.string.mini_player_background_style),
-            current = if (miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR) miniPlayerBackground else MiniPlayerBackgroundStyle.DEFAULT,
+            current = if (miniPlayerBackground in availableMiniPlayerBackgroundStyles) miniPlayerBackground else MiniPlayerBackgroundStyle.DEFAULT,
             values = availableMiniPlayerBackgroundStyles,
-            valueText = {
-                if (it == MiniPlayerBackgroundStyle.BLUR) {
-                    stringResource(R.string.follow_background)
-                } else {
-                    stringResource(R.string.follow_theme)
-                }
-            },
+            valueText = { miniPlayerBackgroundText(it) },
         )
     }
 
@@ -1213,6 +1224,13 @@ fun AppearanceSettings(
                         },
                         onClick = { onPageEdgeToEdgeCoverChange(!pageEdgeToEdgeCover) },
                     ),
+                    Material3SettingsItem(
+                        icon = painterResource(if (pageCoverEdge == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
+                        title = { Text(stringResource(R.string.edge_to_edge_art_edge)) },
+                        description = { Text(miniPlayerEdgeEffectText(pageCoverEdge)) },
+                        onClick = { showPageCoverEdgeDialog = true },
+                        visible = pageEdgeToEdgeCover,
+                    ),
                 ),
         )
 
@@ -1333,13 +1351,7 @@ fun AppearanceSettings(
                         icon = painterResource(R.drawable.gradient),
                         title = { Text(stringResource(R.string.mini_player_background_style)) },
                         description = {
-                            Text(
-                                if (miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR) {
-                                    stringResource(R.string.follow_background)
-                                } else {
-                                    stringResource(R.string.follow_theme)
-                                },
-                            )
+                            Text(miniPlayerBackgroundText(miniPlayerBackground))
                         },
                         onClick = { showMiniPlayerBackgroundDialog = true },
                     ),
@@ -1461,16 +1473,13 @@ fun AppearanceSettings(
                         },
                         onClick = { onEdgeToEdgeArtChange(!edgeToEdgeArt) },
                     ),
-                    if (edgeToEdgeArt) {
-                        Material3SettingsItem(
-                            icon = painterResource(if (edgeToEdgeArtEdge == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
-                            title = { Text(stringResource(R.string.edge_to_edge_art_edge)) },
-                            description = { Text(miniPlayerEdgeEffectText(edgeToEdgeArtEdge)) },
-                            onClick = { showEdgeToEdgeArtEdgeDialog = true },
-                        )
-                    } else {
-                        null
-                    },
+                    Material3SettingsItem(
+                        icon = painterResource(if (edgeToEdgeArtEdge == MiniPlayerEdgeEffect.BLUR) R.drawable.blur_on else R.drawable.contrast),
+                        title = { Text(stringResource(R.string.edge_to_edge_art_edge)) },
+                        description = { Text(miniPlayerEdgeEffectText(edgeToEdgeArtEdge)) },
+                        onClick = { showEdgeToEdgeArtEdgeDialog = true },
+                        visible = edgeToEdgeArt,
+                    ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.queue_music),
                         title = { Text(stringResource(R.string.show_playing_location)) },
@@ -1998,4 +2007,13 @@ private fun miniPlayerEdgeEffectText(effect: MiniPlayerEdgeEffect): String =
         MiniPlayerEdgeEffect.BLACKOUT -> stringResource(R.string.mini_player_blackout)
         MiniPlayerEdgeEffect.BLUR -> stringResource(R.string.mini_player_blur)
         MiniPlayerEdgeEffect.NONE -> stringResource(R.string.mini_player_edge_none)
+    }
+
+/** The name of a mini player background choice; older stored choices count as Follow theme. */
+@Composable
+private fun miniPlayerBackgroundText(style: MiniPlayerBackgroundStyle): String =
+    when (style) {
+        MiniPlayerBackgroundStyle.BLUR -> stringResource(R.string.follow_background)
+        MiniPlayerBackgroundStyle.PAGE -> stringResource(R.string.follow_page_background)
+        else -> stringResource(R.string.follow_theme)
     }

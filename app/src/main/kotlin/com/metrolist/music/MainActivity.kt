@@ -106,6 +106,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
@@ -1410,20 +1411,49 @@ class MainActivity : FragmentActivity() {
                                         // at that depth, instead of being squeezed.
                                         val endAlpha =
                                             0.85f + 0.15f * ((total - BottomFadeRamp.value) / (homeFadeHeight.value - BottomFadeRamp.value)).coerceIn(0f, 1f)
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .align(Alignment.BottomCenter)
-                                                    .fillMaxWidth()
-                                                    .height(bottomFadeHeight)
-                                                    .background(
-                                                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                                                            0f to fadeColor.copy(alpha = 0f),
-                                                            rampEnd to fadeColor.copy(alpha = 0.85f),
-                                                            1f to fadeColor.copy(alpha = endAlpha),
+                                        val fadeGlassUrl = com.metrolist.music.ui.theme.PageFadeColors.currentGlassUrl
+                                        if (fadeGlassUrl != null) {
+                                            // A Glass page fades into its own blurred cover: the same
+                                            // background drawn again over the page's lower part.
+                                            com.metrolist.music.ui.component.PageGlassBackground(
+                                                url = fadeGlassUrl,
+                                                modifier =
+                                                    Modifier
+                                                        .matchParentSize()
+                                                        .graphicsLayer {
+                                                            compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                                                        }.drawWithContent {
+                                                            drawContent()
+                                                            val fadePx = bottomFadeHeight.toPx()
+                                                            drawRect(
+                                                                brush =
+                                                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                                                        0f to Color.Black.copy(alpha = 0f),
+                                                                        rampEnd to Color.Black.copy(alpha = 0.85f),
+                                                                        1f to Color.Black.copy(alpha = endAlpha),
+                                                                        startY = size.height - fadePx,
+                                                                        endY = size.height,
+                                                                    ),
+                                                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                                                            )
+                                                        },
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier =
+                                                    Modifier
+                                                        .align(Alignment.BottomCenter)
+                                                        .fillMaxWidth()
+                                                        .height(bottomFadeHeight)
+                                                        .background(
+                                                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                                                0f to fadeColor.copy(alpha = 0f),
+                                                                rampEnd to fadeColor.copy(alpha = 0.85f),
+                                                                1f to fadeColor.copy(alpha = endAlpha),
+                                                            ),
                                                         ),
-                                                    ),
-                                        )
+                                            )
+                                        }
                                     }
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(

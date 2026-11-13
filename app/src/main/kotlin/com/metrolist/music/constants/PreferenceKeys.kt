@@ -51,6 +51,9 @@ enum class MiniPlayerBackgroundStyle {
     BLUR,
     GRADIENT,
     PURE_BLACK,
+
+    // Follows the background of the page on screen (album and playlist pages).
+    PAGE,
 }
 
 val DensityScaleKey = floatPreferencesKey("density_scale_factor")
@@ -501,6 +504,9 @@ val PageBackgroundKey = stringPreferencesKey("pageBackground")
 
 /** Album and playlist covers fill the top of their page up to the screen edges. */
 val PageEdgeToEdgeCoverKey = booleanPreferencesKey("pageEdgeToEdgeCover")
+
+/** How an edge-to-edge page cover meets the page: Blackout, Blur or Nothing (MiniPlayerEdgeEffect). */
+val PageEdgeToEdgeCoverEdgeKey = stringPreferencesKey("pageEdgeToEdgeCoverEdge")
 
 val LyricStyleKey = stringPreferencesKey("lyricStyle")
 val LyricsBlurKey = booleanPreferencesKey("lyricsBlur")
