@@ -518,7 +518,7 @@ fun AutoPlaylistScreen(
     val pageGlass = com.metrolist.music.ui.component.rememberPageGlass() && playlistType != PlaylistType.LIKE
     val pageGlassUrl = songs?.firstOrNull()?.song?.thumbnailUrl
 
-    TintedPageColors(tint) {
+    TintedPageColors(tint, glassUrl = if (pageGlass) pageGlassUrl else null) {
         Box(
             modifier =
                 Modifier

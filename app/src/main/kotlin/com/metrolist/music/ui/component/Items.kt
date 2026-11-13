@@ -940,6 +940,7 @@ fun PlaylistListItem(
         androidx.compose.runtime.SideEffect { com.metrolist.music.viewmodels.PlaylistPreviewCache.put(playlist) }
         PlaylistThumbnail(
             thumbnails = playlist.thumbnails,
+            collage = if (autoPlaylist) null else rememberPlaylistCollage(playlist),
             size = ListThumbnailSize,
             placeHolder = {
                 val painter = when (playlist.playlist.name) {
@@ -1041,6 +1042,7 @@ fun PlaylistGridItem(
         val width = maxWidth
         PlaylistThumbnail(
             thumbnails = playlist.thumbnails,
+            collage = if (autoPlaylist) null else rememberPlaylistCollage(playlist),
             size = width,
             placeHolder = {
                 val painter = when (playlist.playlist.name) {
@@ -1669,8 +1671,15 @@ fun PlaylistThumbnail(
     size: Dp,
     placeHolder: @Composable () -> Unit,
     shape: Shape,
-    cacheKey: String? = null
+    cacheKey: String? = null,
+    // The first four songs in the playlist page's order; shown 2×2 with black empty squares.
+    collage: List<String?>? = null,
 ) {
+    if (!collage.isNullOrEmpty()) {
+        com.metrolist.music.ui.theme.PrefetchCoverColor(collage.firstOrNull())
+        PlaylistCollageGrid(covers = collage, modifier = Modifier.size(size).clip(shape))
+        return
+    }
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, true)
     com.metrolist.music.ui.theme.PrefetchCoverColor(thumbnails.firstOrNull())
     

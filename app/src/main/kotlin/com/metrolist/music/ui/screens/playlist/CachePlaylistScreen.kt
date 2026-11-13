@@ -207,7 +207,7 @@ fun CachePlaylistScreen(
     val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
     val pageGlassUrl = filteredSongs.firstOrNull()?.thumbnailUrl
 
-    TintedPageColors(tint) {
+    TintedPageColors(tint, glassUrl = if (pageGlass) pageGlassUrl else null) {
         Box(
             modifier = Modifier.fillMaxSize().background(tint),
         ) {

@@ -193,6 +193,10 @@ private fun NewMiniPlayer(
     val playerCardBackground =
         if (com.metrolist.music.utils.LocalBatterySaver.current.blur) PlayerCardBackground.CLASSIC else playerCardBackgroundPreference
     val followBackground = miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR
+    // Follow page background: the pill takes the background of the page on screen (its raised
+    // color, or its glass), and the theme's colors on other pages.
+    val followPage = miniPlayerBackground == MiniPlayerBackgroundStyle.PAGE
+    val pageGlassUrl = if (followPage) com.metrolist.music.ui.theme.PageFadeColors.currentGlassUrl else null
     val context = LocalContext.current
     var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     val isSystemInDarkTheme = isSystemInDarkTheme()
@@ -329,6 +333,7 @@ private fun NewMiniPlayer(
     val themePillColor by androidx.compose.animation.animateColorAsState(
         targetValue =
             com.metrolist.music.ui.theme.PageFadeColors.current
+                ?.takeIf { followPage }
                 ?.let { com.metrolist.music.ui.theme.raisedPageColor(it) }
                 ?: MaterialTheme.colorScheme.surfaceContainer,
         animationSpec = androidx.compose.animation.core.tween(200),
@@ -342,7 +347,7 @@ private fun NewMiniPlayer(
             else -> albumColor
         }
     // Both player backgrounds are mid-dark, so the text and buttons on them are white.
-    val forceLightColors = followBackground && !useDarkTheme
+    val forceLightColors = (followBackground || pageGlassUrl != null) && !useDarkTheme
 
     val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
     val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
@@ -471,6 +476,9 @@ private fun NewMiniPlayer(
                         )
                     },
         ) {
+            if (pageGlassUrl != null) {
+                MiniGlassBackground(pageGlassUrl)
+            }
             if (followBackground) {
                 if (playerCardBackground == PlayerCardBackground.GLASS) {
                     MiniGlassBackground(mediaMetadata?.thumbnailUrl)

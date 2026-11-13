@@ -459,7 +459,7 @@
     <string name="equalizer_desc">Open the audio equalizer</string>
     <string name="mini_player">Mini-player</string>
     <string name="mini_player_background_style">Mini-player background style</string>
-    <string name="follow_background">Follow background</string>
+    <string name="follow_background">Follow music background</string>
     <string name="mini_player_blackout">Blackout</string>
     <string name="mini_player_blackout_desc">The page darkens toward the mini-player and the tab bar</string>
     <string name="mini_player_blur">Blur</string>

@@ -213,7 +213,7 @@ fun AlbumScreen(
                 .background(tint),
     ) {
         if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageGlassUrl)
-    TintedPageColors(tint) {
+    TintedPageColors(tint, glassUrl = if (pageGlass) pageGlassUrl else null) {
             val albumListState = androidx.compose.foundation.lazy.rememberLazyListState()
             val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(albumListState)
             LazyColumn(
