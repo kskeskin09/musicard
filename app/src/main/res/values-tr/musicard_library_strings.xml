@@ -5,6 +5,14 @@
     <string name="downloads_group">İndirmeler</string>
     <string name="auto_download_library">Kütüphaneyi otomatik indir</string>
     <string name="auto_download_library_desc">Beğendiğin şarkıları ve çalma listelerindeki şarkıları indirir. Pil optimizasyonu açıkken bekler.</string>
-    <string name="auto_download_cellular">Mobil veriyi de kullan</string>
-    <string name="auto_download_cellular_desc">Kapalıyken sadece Wi-Fi\'da indirir</string>
+    <string name="auto_download_wifi_only">Sadece Wi-Fi ile indir</string>
+    <string name="auto_download_wifi_only_desc">Kapalıyken mobil veride de indirir</string>
+    <string name="clean_up_library">Kütüphaneyi temizle</string>
+    <string name="clean_up_library_confirm">Kaldır</string>
+    <string name="clean_up_library_none">Kütüphanendeki her şarkı beğenilmiş ya da bir çalma listende.</string>
+    <string name="clean_up_library_done">Kütüphaneden %d şarkı kaldırıldı</string>
+    <plurals name="clean_up_library_message">
+        <item quantity="one">%d şarkı ne beğenilmiş ne de bir çalma listende. Kütüphaneden kaldırılsın mı? Giriş yaptıysan YouTube Music kütüphanenden de kaldırılır. Kendi indirdiğin şarkılar İndirilenler\'de kalır.</item>
+        <item quantity="other">%d şarkı ne beğenilmiş ne de bir çalma listende. Kütüphaneden kaldırılsın mı? Giriş yaptıysan YouTube Music kütüphanenden de kaldırılır. Kendi indirdiğin şarkılar İndirilenler\'de kalır.</item>
+    </plurals>
 </resources>

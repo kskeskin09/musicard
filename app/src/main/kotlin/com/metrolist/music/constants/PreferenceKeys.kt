@@ -200,8 +200,8 @@ val AutoDownloadOnLikeKey = booleanPreferencesKey("autoDownloadOnLike")
 
 // Storage > Downloads: keep every library song (liked or in your playlists) downloaded.
 val AutoDownloadLibraryKey = booleanPreferencesKey("autoDownloadLibrary")
-// Off: only on Wi-Fi (unmetered) networks. On: also on mobile data.
-val AutoDownloadCellularKey = booleanPreferencesKey("autoDownloadCellular")
+// On (default): only on Wi-Fi (unmetered) networks. Off: also on mobile data.
+val AutoDownloadWifiOnlyKey = booleanPreferencesKey("autoDownloadWifiOnly")
 // Songs downloaded by "Automatically download library" rather than the download button.
 // They show in the Library list but not in Downloaded.
 val AutoDownloadedSongIdsKey = stringSetPreferencesKey("autoDownloadedSongIds")
