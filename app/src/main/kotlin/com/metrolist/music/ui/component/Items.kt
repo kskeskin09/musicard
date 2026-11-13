@@ -115,6 +115,7 @@ import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.SmallGridThumbnailHeight
 import com.metrolist.music.constants.SwipeToSongKey
+import com.metrolist.music.constants.GridThumbnailCornerRadius
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.Artist
@@ -356,7 +357,7 @@ fun ListItem(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -387,7 +388,7 @@ fun ListItem(
         if (!subtitle.isNullOrEmpty()) {
             Text(
                 text = subtitle,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -461,7 +462,7 @@ fun GridItem(
     title = {
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -473,7 +474,7 @@ fun GridItem(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -531,7 +532,7 @@ fun SongListItem(
                               makeTimeString(song.song.duration * 1000L)
                           ),
                           style = MaterialTheme.typography.bodySmall,
-                          color = MaterialTheme.colorScheme.secondary,
+                          color = MaterialTheme.colorScheme.onSurfaceVariant,
                           maxLines = 1,
                           overflow = TextOverflow.Ellipsis,
                       )
@@ -539,7 +540,7 @@ fun SongListItem(
                      Text(
                          text = subtitleOverride,
                          style = MaterialTheme.typography.bodySmall,
-                         color = MaterialTheme.colorScheme.secondary,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                          maxLines = 1,
                          overflow = TextOverflow.Ellipsis,
                      )
@@ -604,7 +605,7 @@ fun SongGridItem(
     title = {
         Text(
             text = song.song.title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -621,7 +622,7 @@ fun SongGridItem(
                 makeTimeString(song.song.duration * 1000L)
             ),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -633,7 +634,7 @@ fun SongGridItem(
             thumbnailUrl = song.song.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(GridThumbnailCornerRadius),
             modifier = Modifier.size(gridHeight)
         )
         if (!isActive) {
@@ -771,7 +772,7 @@ fun AlbumListItem(
                 album.album.year?.toString()
             ),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -835,7 +836,7 @@ fun AlbumGridItem(
     title = {
         Text(
             text = album.album.title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -846,7 +847,7 @@ fun AlbumGridItem(
          Text(
              text = album.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
              style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -861,7 +862,7 @@ fun AlbumGridItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(GridThumbnailCornerRadius),
         )
 
         AlbumPlayButton(
@@ -1002,7 +1003,7 @@ fun PlaylistGridItem(
     title = {
         Text(
             text = playlist.playlist.name,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1030,7 +1031,7 @@ fun PlaylistGridItem(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -1063,7 +1064,7 @@ fun PlaylistGridItem(
                     )
                 }
             },
-            shape = RoundedCornerShape(ThumbnailCornerRadius)
+            shape = RoundedCornerShape(GridThumbnailCornerRadius)
         )
     },
     fillMaxWidth = fillMaxWidth,
@@ -1100,7 +1101,7 @@ fun MediaMetadataListItem(
                         }
                     }
                 },
-                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.secondary),
+                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1273,7 +1274,7 @@ fun YouTubeGridItem(
             } else {
                 item.title
             },
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1296,7 +1297,7 @@ fun YouTubeGridItem(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1312,7 +1313,7 @@ fun YouTubeGridItem(
             thumbnailUrl = item.thumbnail,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
+            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(GridThumbnailCornerRadius),
         )
 
         if (item is SongItem && !isActive) {
@@ -1357,12 +1358,12 @@ fun LocalSongsGrid(
     fillMaxWidth: Boolean = false,
     modifier: Modifier = Modifier
 ) = GridItem(
-    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    title = { Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
     subtitle = {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.basicMarquee(
@@ -1378,7 +1379,7 @@ fun LocalSongsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(GridThumbnailCornerRadius),
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = true,
             playButtonVisible = false
@@ -1399,12 +1400,12 @@ fun LocalArtistsGrid(
     fillMaxWidth: Boolean = false,
     modifier: Modifier = Modifier
 ) = GridItem(
-    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    title = { Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
     subtitle = {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.basicMarquee(
@@ -1441,12 +1442,12 @@ fun LocalAlbumsGrid(
     fillMaxWidth: Boolean = false,
     modifier: Modifier = Modifier
 ) = GridItem(
-    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    title = { Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
     subtitle = {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.basicMarquee(
@@ -1462,7 +1463,7 @@ fun LocalAlbumsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(GridThumbnailCornerRadius),
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = false,
             playButtonVisible = true
