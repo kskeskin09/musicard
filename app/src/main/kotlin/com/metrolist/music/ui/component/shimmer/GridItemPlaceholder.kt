@@ -25,13 +25,13 @@ import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.GridThumbnailHeight
 import com.metrolist.music.constants.SmallGridThumbnailHeight
-import com.metrolist.music.constants.ThumbnailCornerRadius
+import com.metrolist.music.constants.GridThumbnailCornerRadius
 import com.metrolist.music.utils.rememberEnumPreference
 
 @Composable
 fun GridItemPlaceHolder(
     modifier: Modifier = Modifier,
-    thumbnailShape: Shape = RoundedCornerShape(ThumbnailCornerRadius),
+    thumbnailShape: Shape = RoundedCornerShape(GridThumbnailCornerRadius),
     fillMaxWidth: Boolean = false,
 ) {
     val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)

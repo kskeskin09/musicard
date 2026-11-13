@@ -38,7 +38,11 @@ val SmallGridThumbnailHeight = 104.dp
 val GridThumbnailHeight = 128.dp
 val AlbumThumbnailSize = 144.dp
 
-val ThumbnailCornerRadius = 6.dp
+// Rounder than the old 6dp corners, to match the rest of the Musicard design.
+val ThumbnailCornerRadius = 10.dp
+
+// Corners of square covers in grids (library, artist pages, search, Home).
+val GridThumbnailCornerRadius = 16.dp
 
 val PlayerHorizontalPadding = 32.dp
 

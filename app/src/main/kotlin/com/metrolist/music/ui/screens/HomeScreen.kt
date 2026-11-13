@@ -28,7 +28,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -76,7 +75,6 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.metrolist.music.ui.component.RefreshIndicator
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -133,15 +131,11 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AutoRadioQueueKey
-import com.metrolist.music.constants.GridItemSize
-import com.metrolist.music.constants.GridItemsSizeKey
-import com.metrolist.music.constants.GridThumbnailHeight
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.constants.ListThumbnailSize
 import com.metrolist.music.constants.RandomizeHomeOrderKey
 import com.metrolist.music.constants.HomeSectionOrderKey
-import com.metrolist.music.constants.SmallGridThumbnailHeight
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.Artist
@@ -156,20 +150,16 @@ import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.LocalAlbumRadio
 import com.metrolist.music.playback.queues.YouTubeAlbumRadio
 import com.metrolist.music.playback.queues.YouTubeQueue
-import com.metrolist.music.ui.component.AlbumGridItem
-import com.metrolist.music.ui.component.ArtistGridItem
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.NavigationTitle
 import com.metrolist.music.ui.component.RandomizeGridItem
-import com.metrolist.music.ui.component.SongGridItem
 import com.metrolist.music.ui.component.SongListItem
 import com.metrolist.music.ui.component.SpeedDialGridItem
-import com.metrolist.music.ui.component.YouTubeGridItem
+import com.metrolist.music.ui.component.ItemThumbnail
 import com.metrolist.music.ui.component.YouTubeListItem
-import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
 import com.metrolist.music.ui.menu.AlbumMenu
@@ -250,15 +240,10 @@ fun CommunityPlaylistCard(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val scope = rememberCoroutineScope()
-    val isDark = isSystemInDarkTheme()
     val artistNameAliases = LocalArtistNameAliases.current
 
-    val containerColor =
-        if (isDark) {
-            MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        }
+    // The same raised color as the app's other cards, instead of Material's tinted surface.
+    val containerColor = com.metrolist.music.ui.theme.pageRaisedColor()
 
     val dbPlaylist by database.playlistByBrowseId(item.playlist.id).collectAsStateWithLifecycle(initialValue = null)
     val isBookmarked = dbPlaylist?.playlist?.bookmarkedAt != null
@@ -574,7 +559,7 @@ fun DailyDiscoverCard(
                 ),
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = com.metrolist.music.ui.theme.pageRaisedColor(),
             ),
         shape = RoundedCornerShape(28.dp),
     ) {
@@ -815,8 +800,6 @@ fun HomeScreen(
     var randomizeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val lazylistState = com.metrolist.music.ui.utils.TabStates.list("home/list")
-    val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
-    val currentGridHeight = if (gridItemSize == GridItemSize.BIG) GridThumbnailHeight else SmallGridThumbnailHeight
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
         backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
@@ -885,14 +868,19 @@ fun HomeScreen(
         }
     }
 
+    val artistNameAliases = LocalArtistNameAliases.current
+    val andSeparator = " ${stringResource(R.string.and)} "
     val localGridItem: @Composable (LocalItem) -> Unit = {
         when (it) {
             is Song -> {
-                SongGridItem(
-                    song = it,
-                    modifier =
+                HomeCoverCard(
+                    title = it.title,
+                    subtitle =
+                        it.orderedArtists.joinToString { artist ->
+                            ArtistNameAliases.resolve(artistNameAliases, artist.id, artist.name)
+                        },
+                    clickModifier =
                         Modifier
-                            .fillMaxWidth()
                             .combinedClickable(
                                 onClick = {
                                     if (!isListenTogetherGuest) {
@@ -924,20 +912,20 @@ fun HomeScreen(
                                     }
                                 },
                             ),
-                    isActive = it.id == mediaMetadata?.id,
-                    isPlaying = isPlaying,
-                )
+                ) { size, shape ->
+                    HomeItemCover(it.thumbnailUrl, size, shape, isActive = it.id == mediaMetadata?.id, isPlaying = isPlaying)
+                }
             }
 
             is Album -> {
-                AlbumGridItem(
-                    album = it,
-                    isActive = it.id == mediaMetadata?.album?.id,
-                    isPlaying = isPlaying,
-                    coroutineScope = scope,
-                    modifier =
+                HomeCoverCard(
+                    title = it.title,
+                    subtitle =
+                        it.artists.joinToString { artist ->
+                            ArtistNameAliases.resolve(artistNameAliases, artist.id, artist.name)
+                        }.ifBlank { stringResource(R.string.library_kind_album) },
+                    clickModifier =
                         Modifier
-                            .fillMaxWidth()
                             .combinedClickable(
                                 onClick = {
                                     navController.navigate("album/${it.id}")
@@ -952,15 +940,24 @@ fun HomeScreen(
                                     }
                                 },
                             ),
-                )
+                ) { size, shape ->
+                    HomeItemCover(
+                        it.thumbnailUrl,
+                        size,
+                        shape,
+                        isActive = it.id == mediaMetadata?.album?.id,
+                        isPlaying = isPlaying,
+                    )
+                }
             }
 
             is Artist -> {
-                ArtistGridItem(
-                    artist = it,
-                    modifier =
+                HomeCoverCard(
+                    title = ArtistNameAliases.resolve(artistNameAliases, it.id, it.title),
+                    subtitle = stringResource(R.string.library_kind_artist),
+                    centered = true,
+                    clickModifier =
                         Modifier
-                            .fillMaxWidth()
                             .combinedClickable(
                                 onClick = {
                                     navController.navigate("artist/${it.id}")
@@ -978,7 +975,9 @@ fun HomeScreen(
                                     }
                                 },
                             ),
-                )
+                ) { size, _ ->
+                    HomeItemCover(it.thumbnailUrl, size, CircleShape, isActive = false, isPlaying = false)
+                }
             }
 
             is Playlist -> {}
@@ -986,13 +985,35 @@ fun HomeScreen(
     }
 
     val ytGridItem: @Composable (YTItem) -> Unit = { item ->
-        YouTubeGridItem(
-            item = item,
-            isActive = item.id in listOf(mediaMetadata?.album?.id, mediaMetadata?.id),
-            isPlaying = isPlaying,
-            coroutineScope = scope,
-            thumbnailRatio = 1f,
-            modifier =
+        HomeCoverCard(
+            title =
+                if (item is ArtistItem) {
+                    ArtistNameAliases.resolve(artistNameAliases, item.id, item.title)
+                } else {
+                    item.title
+                },
+            subtitle =
+                when (item) {
+                    is SongItem ->
+                        item.artists.joinToArtistString(andSeparator) { ArtistNameAliases.resolve(artistNameAliases, it.id, it.name) }
+                    is AlbumItem ->
+                        joinByBullet(
+                            item.artists?.joinToArtistString(andSeparator) { ArtistNameAliases.resolve(artistNameAliases, it.id, it.name) },
+                            item.year?.toString(),
+                        ).ifBlank { stringResource(R.string.library_kind_album) }
+                    is ArtistItem -> stringResource(R.string.library_kind_artist)
+                    is PlaylistItem ->
+                        joinByBullet(item.author?.let { ArtistNameAliases.resolve(artistNameAliases, it.id, it.name) }, item.songCountText)
+                    is PodcastItem ->
+                        joinByBullet(item.author?.let { ArtistNameAliases.resolve(artistNameAliases, it.id, it.name) }, item.episodeCountText)
+                    is EpisodeItem ->
+                        joinByBullet(
+                            item.author?.let { ArtistNameAliases.resolve(artistNameAliases, it.id, it.name) },
+                            makeTimeString(item.duration?.times(1000L)),
+                        )
+                },
+            centered = item is ArtistItem,
+            clickModifier =
                 Modifier
                     .combinedClickable(
                         onClick = {
@@ -1096,7 +1117,15 @@ fun HomeScreen(
                             }
                         },
                     ),
-        )
+        ) { size, shape ->
+            HomeItemCover(
+                item.thumbnail,
+                size,
+                if (item is ArtistItem) CircleShape else shape,
+                isActive = item.id in listOf(mediaMetadata?.album?.id, mediaMetadata?.id),
+                isPlaying = isPlaying,
+            )
+        }
     }
 
     val homeSections =
@@ -1326,10 +1355,8 @@ fun HomeScreen(
                         item(key = "00_your_shows_list") {
                             LazyRow(
                                 state = com.metrolist.music.ui.utils.TabStates.list("home/00_your_shows_list"),
-                                contentPadding =
-                                    WindowInsets.systemBars
-                                        .only(WindowInsetsSides.Horizontal)
-                                        .asPaddingValues(),
+                                contentPadding = HomeRowPadding,
+                                horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                             ) {
                                 items(savedPodcastShows.distinctBy { it.id }, key = { "home_saved_podcast_${it.id}" }) { podcast ->
                                     ytGridItem(podcast)
@@ -1352,10 +1379,8 @@ fun HomeScreen(
                         item(key = "00_episodes_for_later_list") {
                             LazyRow(
                                 state = com.metrolist.music.ui.utils.TabStates.list("home/00_episodes_for_later_list"),
-                                contentPadding =
-                                    WindowInsets.systemBars
-                                        .only(WindowInsetsSides.Horizontal)
-                                        .asPaddingValues(),
+                                contentPadding = HomeRowPadding,
+                                horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                             ) {
                                 items(episodesForLater.distinctBy { it.id }, key = { "home_episode_later_${it.id}" }) { episode ->
                                     ytGridItem(episode)
@@ -1376,10 +1401,8 @@ fun HomeScreen(
                         item(key = "0_podcast_channels_list") {
                             LazyRow(
                                 state = com.metrolist.music.ui.utils.TabStates.list("home/0_podcast_channels_list"),
-                                contentPadding =
-                                    WindowInsets.systemBars
-                                        .only(WindowInsetsSides.Horizontal)
-                                        .asPaddingValues(),
+                                contentPadding = HomeRowPadding,
+                                horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                             ) {
                                 items(featuredPodcasts.distinctBy { it.id }, key = { "home_featured_podcast_${it.id}" }) { podcast ->
                                     ytGridItem(podcast)
@@ -1450,10 +1473,8 @@ fun HomeScreen(
                             item(key = "1_chip_section_list_${section.index}") {
                                 LazyRow(
                                     state = com.metrolist.music.ui.utils.TabStates.list("home/1_chip_section_list_${section.index}"),
-                                    contentPadding =
-                                        WindowInsets.systemBars
-                                            .only(WindowInsetsSides.Horizontal)
-                                            .asPaddingValues(),
+                                    contentPadding = HomeRowPadding,
+                                    horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                 ) {
                                     items(sectionData.items.distinctBy { it.id }, key = { "home_chip_section_${it.id}" }) { item ->
                                         ytGridItem(item)
@@ -1858,8 +1879,8 @@ fun HomeScreen(
                                 item(key = "albums_for_you_row") {
                                     LazyRow(
                                         state = com.metrolist.music.ui.utils.TabStates.list("home/albums_for_you_row"),
-                                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        contentPadding = HomeRowPadding,
+                                        horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                     ) {
                                         items(forYouAlbums, key = { "for_you_${it.id}" }) { album ->
                                             HomeCoverCard(
@@ -1967,7 +1988,7 @@ fun HomeScreen(
                                         LazyRow(
                                             state = com.metrolist.music.ui.utils.TabStates.list("home/recents_collections"),
                                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                         ) {
                                             items(recentCollections, key = { it.key }) { item ->
                                                 RecentCollectionCard(
@@ -2097,23 +2118,15 @@ fun HomeScreen(
                                     LazyHorizontalGrid(
                                         state = com.metrolist.music.ui.utils.TabStates.grid("home/keep_listening_grid"),
                                         rows = GridCells.Fixed(rows),
-                                        contentPadding =
-                                            WindowInsets.systemBars
-                                                .only(WindowInsetsSides.Horizontal)
-                                                .asPaddingValues(),
+                                        contentPadding = HomeRowPadding,
+                                        horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
+                                        verticalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
                                                 .height(
-                                                    (
-                                                        currentGridHeight +
-                                                            with(LocalDensity.current) {
-                                                                MaterialTheme.typography.bodyLarge.lineHeight
-                                                                    .toDp() * 2 +
-                                                                    MaterialTheme.typography.bodyMedium.lineHeight
-                                                                        .toDp() * 2
-                                                            }
-                                                    ) * rows,
+                                                    homeCoverCardHeight() * rows + HomeRowSpacing * (rows - 1) +
+                                                        HomeRowPadding.calculateTopPadding() + HomeRowPadding.calculateBottomPadding(),
                                                 ),
                                     ) {
                                         items(keepListening.distinctBy { it.id }, key = { "home_keep_listening_${it.id}" }) {
@@ -2167,10 +2180,8 @@ fun HomeScreen(
                                 item(key = "account_playlists_list") {
                                     LazyRow(
                                         state = com.metrolist.music.ui.utils.TabStates.list("home/account_playlists_list"),
-                                        contentPadding =
-                                            WindowInsets.systemBars
-                                                .only(WindowInsetsSides.Horizontal)
-                                                .asPaddingValues(),
+                                        contentPadding = HomeRowPadding,
+                                        horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                     ) {
                                         items(
                                             items = accountPlaylists.distinctBy { it.id },
@@ -2294,10 +2305,8 @@ fun HomeScreen(
                                 item(key = "similar_to_list_${section.index}") {
                                     LazyRow(
                                         state = com.metrolist.music.ui.utils.TabStates.list("home/similar_to_list_${section.index}"),
-                                        contentPadding =
-                                            WindowInsets.systemBars
-                                                .only(WindowInsetsSides.Horizontal)
-                                                .asPaddingValues(),
+                                        contentPadding = HomeRowPadding,
+                                        horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                     ) {
                                         items(recommendation.items.distinctBy { it.id }, key = { "home_similar_${it.id}" }) { item ->
                                             ytGridItem(item)
@@ -2458,10 +2467,8 @@ fun HomeScreen(
                                     item(key = "home_section_list_${section.index}") {
                                         LazyRow(
                                             state = com.metrolist.music.ui.utils.TabStates.list("home/home_section_list_${section.index}"),
-                                            contentPadding =
-                                                WindowInsets.systemBars
-                                                    .only(WindowInsetsSides.Horizontal)
-                                                    .asPaddingValues(),
+                                            contentPadding = HomeRowPadding,
+                                            horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                         ) {
                                             items(
                                                 items = sectionData.items.distinctBy { it.id },
@@ -2535,13 +2542,11 @@ fun HomeScreen(
                                             .width(250.dp),
                                 )
                                 LazyRow(
-                                    contentPadding =
-                                        WindowInsets.systemBars
-                                            .only(WindowInsetsSides.Horizontal)
-                                            .asPaddingValues(),
+                                    contentPadding = HomeRowPadding,
+                                    horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
                                 ) {
                                     items(4) {
-                                        GridItemPlaceHolder()
+                                        HomeCoverCardPlaceholder()
                                     }
                                 }
                             }
@@ -2742,25 +2747,48 @@ private fun RecentCollectionCard(
     }
 }
 
-/** A square cover with a title and a subtitle under it, as in the Recents row. */
+/** Side padding and gap shared by every card row on Home. */
+private val HomeRowPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
+private val HomeRowSpacing = 14.dp
+private val HomeCoverSize = 150.dp
+private val HomeCoverShape = RoundedCornerShape(20.dp)
+
+/** Height of one [HomeCoverCard]: the cover, the gap, two lines of text and the room under them. */
+@Composable
+private fun homeCoverCardHeight(): Dp =
+    with(LocalDensity.current) {
+        HomeCoverSize + 8.dp +
+            MaterialTheme.typography.titleSmall.lineHeight.toDp() +
+            MaterialTheme.typography.bodySmall.lineHeight.toDp() + 8.dp
+    }
+
+/**
+ * A square cover with a title and a subtitle under it, as in the Recents row. Every card row on
+ * Home uses it, so they all share one size, corner and text style. Pass [onClick] for a plain tap,
+ * or [clickModifier] for a tap and a long press.
+ */
 @Composable
 private fun HomeCoverCard(
     title: String,
-    subtitle: String,
-    onClick: () -> Unit,
+    subtitle: String?,
+    onClick: (() -> Unit)? = null,
+    clickModifier: Modifier = Modifier,
+    centered: Boolean = false,
     cover: @Composable (Dp, Shape) -> Unit,
 ) {
-    val size = 150.dp
+    val size = HomeCoverSize
+    val textAlign = if (centered) TextAlign.Center else TextAlign.Start
     Column(
+        horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
         modifier =
             Modifier
                 .width(size)
                 .clip(RoundedCornerShape(16.dp))
-                .clickable(onClick = onClick)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else clickModifier)
                 // Room under the text so the rounded corner never cuts into it.
                 .padding(bottom = 8.dp),
     ) {
-        cover(size, RoundedCornerShape(20.dp))
+        cover(size, HomeCoverShape)
         Spacer(Modifier.height(8.dp))
         Text(
             text = title,
@@ -2769,16 +2797,60 @@ private fun HomeCoverCard(
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp),
+            textAlign = textAlign,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         )
         Text(
-            text = subtitle,
+            text = subtitle.orEmpty(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp),
+            textAlign = textAlign,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         )
+    }
+}
+
+/** The cover of a [HomeCoverCard], with the playing bars over it while it plays. */
+@Composable
+private fun HomeItemCover(
+    url: String?,
+    size: Dp,
+    shape: Shape,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(size)
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        ItemThumbnail(
+            thumbnailUrl = url,
+            isActive = isActive,
+            isPlaying = isPlaying,
+            shape = shape,
+        )
+    }
+}
+
+/** A grey stand-in for a [HomeCoverCard] while Home loads. */
+@Composable
+private fun HomeCoverCardPlaceholder() {
+    Column(modifier = Modifier.width(HomeCoverSize)) {
+        Spacer(
+            Modifier
+                .size(HomeCoverSize)
+                .clip(HomeCoverShape)
+                .background(MaterialTheme.colorScheme.onSurface),
+        )
+        Spacer(Modifier.height(8.dp))
+        TextPlaceholder()
+        TextPlaceholder()
     }
 }
 
