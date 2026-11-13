@@ -234,6 +234,8 @@ val DiscordUserStatusKey = stringPreferencesKey("discordUserStatus")
 
 // Google Cast
 val EnableGoogleCastKey = booleanPreferencesKey("enableGoogleCast")
+val ShowCastButtonOnArtKey = booleanPreferencesKey("showCastButtonOnArt")
+val DoubleTapSeekKey = booleanPreferencesKey("doubleTapSeek")
 
 // Listen Together
 val ListenTogetherServerUrlKey = stringPreferencesKey("listenTogetherServerUrl")

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -573,6 +574,8 @@ private fun ThumbnailItem(
         label = "artScale",
     )
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
+    val doubleTapSeek by rememberPreference(com.metrolist.music.constants.DoubleTapSeekKey, defaultValue = true)
+    val showCastButtonOnArt by rememberPreference(com.metrolist.music.constants.ShowCastButtonOnArtKey, defaultValue = false)
     var skipMultiplier by remember { mutableIntStateOf(1) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
@@ -592,10 +595,15 @@ private fun ThumbnailItem(
                 // Render entire thumbnail item on separate hardware layer for smooth animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
-            .pointerInput(Unit) {
+            .pointerInput(doubleTapSeek) {
+                // Double-tap seek can be turned off in the settings; then no taps are waited for.
+                if (!doubleTapSeek) return@pointerInput
                 detectTapGestures(
                     onDoubleTap = { offset ->
                         if (isListenTogetherGuest) return@detectTapGestures
+                        // Only the outer thirds seek; taps near the middle do nothing.
+                        val third = size.width / 3f
+                        if (offset.x > third && offset.x < size.width - third) return@detectTapGestures
 
                         val currentPosition = playerConnection.player.currentPosition
                         val duration = playerConnection.player.duration
@@ -658,13 +666,16 @@ private fun ThumbnailItem(
                 )
             }
             
-            // Cast button at top-right corner of thumbnail
-            CastButton(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp),
-                tintColor = textBackgroundColor
-            )
+            // Cast button in the art's top-right corner, only when turned on in the settings
+            // (otherwise Cast is in the player menu).
+            if (showCastButtonOnArt) {
+                CastButton(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 6.dp, y = (-6).dp),
+                    tintColor = textBackgroundColor
+                )
+            }
         }
     }
 }
