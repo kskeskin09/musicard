@@ -203,6 +203,11 @@ fun AppearanceSettings(
             CropAlbumArtKey,
             defaultValue = false,
         )
+    val (edgeToEdgeArt, onEdgeToEdgeArtChange) =
+        rememberPreference(
+            com.metrolist.music.constants.EdgeToEdgeAlbumArtKey,
+            defaultValue = false,
+        )
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
             PlayerBackgroundStyleKey,
@@ -1341,6 +1346,28 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onCropAlbumArtChange(!cropAlbumArt) },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.fullscreen),
+                        title = { Text(stringResource(R.string.edge_to_edge_album_art)) },
+                        description = { Text(stringResource(R.string.edge_to_edge_album_art_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = edgeToEdgeArt,
+                                onCheckedChange = onEdgeToEdgeArtChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (edgeToEdgeArt) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onEdgeToEdgeArtChange(!edgeToEdgeArt) },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),

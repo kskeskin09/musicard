@@ -2,4 +2,6 @@
 <resources>
     <string name="ai_auto_translate">Translate lyrics automatically</string>
     <string name="ai_auto_translate_desc">Lyrics in another language than the target language are translated when they open. Lyrics already in the target language are skipped</string>
+    <string name="edge_to_edge_album_art">Edge-to-edge album art</string>
+    <string name="edge_to_edge_album_art_desc">The album art fills the top of the player up to the screen edges and fades into the background</string>
 </resources>
