@@ -31,8 +31,8 @@
 - Tüm Musicard özellikleri artık Türkçe
 
 ## Which APK should I download?
-- **Musicard.apk**: works on every phone, no Google components
-- **Musicard-with-Google-Cast.apk**: adds casting to Chromecast, Google TV and Nest speakers (needs Google Play Services)
+- **Musicard.apk**: the standard build, with casting to Chromecast, Google TV and Nest speakers (needs Google Play Services)
+- **Musicard-without-Google-Cast.apk**: works on every phone, no Google components
 - **Musicard-izzy.apk**: build for the IzzyOnDroid repository
 
 ---v13.7.0
