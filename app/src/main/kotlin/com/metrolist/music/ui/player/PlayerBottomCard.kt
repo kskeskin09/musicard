@@ -1163,35 +1163,39 @@ fun CompactLyrics(
                     // Lyrics blur: lines get softer the farther they are from the current one. It
                     // switches off while the lyrics no longer follow the song (after a manual
                     // scroll) and comes back once they are re-synced.
-                    val blurRadius by animateDpAsState(
-                        targetValue =
-                            if (lyricsBlur && synced && !followPaused) {
-                                // During a break the dots count as the current line, so one line
-                                // above and one below them stay clear, like around a sung line.
-                                val gap = activeGap
-                                val away =
-                                    if (gap != null) {
-                                        if (index <= gap.afterLine) gap.afterLine - index + 1 else index - gap.afterLine
-                                    } else {
-                                        abs(index - currentIndex)
-                                    }
-                                val compactBlur = LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps)
-                                // Opened, the text is much larger, so the same look needs a wider
-                                // blur. The lines right next to the current one stay easy to read
-                                // unless that is switched off in the settings.
-                                val fullBlur =
-                                    if (away <= 1 && lyricsBlurKeepNeighbors) {
-                                        LyricsBlurStep * away
-                                    } else {
-                                        LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps) * FullLyricsBlurScale
-                                    }
-                                lerp(compactBlur, fullBlur, fraction) * lyricsBlurStrength
+                    // Only the change of line is animated. Opening the card applies at once, so
+                    // the blur is at its full level the moment the lyrics grow, instead of
+                    // lagging behind the growing text.
+                    val blurOn = lyricsBlur && synced && !followPaused
+                    val away =
+                        activeGap.let { gap ->
+                            // During a break the dots count as the current line, so one line
+                            // above and one below them stay clear, like around a sung line.
+                            if (gap != null) {
+                                if (index <= gap.afterLine) gap.afterLine - index + 1 else index - gap.afterLine
                             } else {
-                                0.dp
+                                abs(index - currentIndex)
+                            }
+                        }
+                    val compactBlur by animateDpAsState(
+                        targetValue = if (blurOn) LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps) else 0.dp,
+                        animationSpec = tween(LineScrollMillis, easing = FastOutSlowInEasing),
+                        label = "lineBlurCompact",
+                    )
+                    // Opened, the text is much larger, so the same look needs a wider blur. The
+                    // lines right next to the current one stay easy to read unless that is
+                    // switched off in the settings.
+                    val fullBlur by animateDpAsState(
+                        targetValue =
+                            when {
+                                !blurOn -> 0.dp
+                                away <= 1 && lyricsBlurKeepNeighbors -> LyricsBlurStep * away
+                                else -> LyricsBlurStep * away.coerceAtMost(LyricsBlurMaxSteps) * FullLyricsBlurScale
                             },
                         animationSpec = tween(LineScrollMillis, easing = FastOutSlowInEasing),
-                        label = "lineBlur",
+                        label = "lineBlurFull",
                     )
+                    val blurRadius = lerp(compactBlur, fullBlur, fraction) * lyricsBlurStrength
                     val words = line.words
                     val textModifier = Modifier.fillMaxWidth().wrapContentWidth(BiasAlignment.Horizontal(bias))
                     Box(

@@ -148,6 +148,14 @@ fun PlayerSettings(
         defaultValue = false
     )
 
+    val (showCastButtonOnArt, onShowCastButtonOnArtChange) = rememberPreference(
+        key = com.metrolist.music.constants.ShowCastButtonOnArtKey,
+        defaultValue = false,
+    )
+    val (doubleTapSeek, onDoubleTapSeekChange) = rememberPreference(
+        key = com.metrolist.music.constants.DoubleTapSeekKey,
+        defaultValue = true,
+    )
     val (enableGoogleCast, onEnableGoogleCastChange) = rememberPreference(
         key = EnableGoogleCastKey,
         defaultValue = true
@@ -548,7 +556,51 @@ fun PlayerSettings(
                         },
                         onClick = { onEnableGoogleCastChange(!enableGoogleCast) }
                     ))
+                    if (enableGoogleCast) {
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.cast),
+                        title = { Text(stringResource(R.string.show_cast_button_on_art)) },
+                        description = { Text(stringResource(R.string.show_cast_button_on_art_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = showCastButtonOnArt,
+                                onCheckedChange = onShowCastButtonOnArtChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (showCastButtonOnArt) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onShowCastButtonOnArtChange(!showCastButtonOnArt) }
+                    ))
+                    }
                 }
+                add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.fast_forward),
+                        title = { Text(stringResource(R.string.double_tap_seek)) },
+                        description = { Text(stringResource(R.string.double_tap_seek_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = doubleTapSeek,
+                                onCheckedChange = onDoubleTapSeekChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (doubleTapSeek) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onDoubleTapSeekChange(!doubleTapSeek) }
+                    ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.arrow_forward),
                     title = { Text(stringResource(R.string.seek_seconds_addup)) },

@@ -7,4 +7,11 @@
     <string name="edge_to_edge_art_edge">Resmin tuşlarla kesiştiği yer</string>
     <string name="show_playing_location">Çalınan konumu göster</string>
     <string name="show_playing_location_desc">Şarkının başlatıldığı listeyi oynatıcının üstünde "Şuradan çalınıyor" yazısıyla göster</string>
+    <string name="show_cast_button_on_art">Albüm resminde Cast tuşu</string>
+    <string name="show_cast_button_on_art_desc">Cast tuşunu albüm resminin köşesinde göster. Cast her zaman oynatıcı menüsünde de var</string>
+    <string name="double_tap_seek">Çift dokunarak sar</string>
+    <string name="double_tap_seek_desc">Albüm resminin sol veya sağ üçte birine çift dokunarak 5 saniye sar</string>
+    <string name="song_change_animation">Şarkı değişim animasyonu</string>
+    <string name="song_change_animation_desc">Albüm resmi sonraki şarkıya kayarak geçer, kaydırırken sonraki şarkının resmi görünür. Kapalıyken resim kaymadan değişir</string>
+    <string name="battery_opt_song_change_animation_desc">Albüm resmi kaymadan değişir</string>
 </resources>

@@ -97,6 +97,7 @@ val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
 val EdgeToEdgeAlbumArtKey = booleanPreferencesKey("edgeToEdgeAlbumArt")
+val SongChangeAnimationKey = booleanPreferencesKey("songChangeAnimation")
 val EdgeToEdgeArtEdgeKey = stringPreferencesKey("edgeToEdgeArtEdge")
 val ShowPlayingFromKey = booleanPreferencesKey("showPlayingFrom")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
@@ -234,6 +235,8 @@ val DiscordUserStatusKey = stringPreferencesKey("discordUserStatus")
 
 // Google Cast
 val EnableGoogleCastKey = booleanPreferencesKey("enableGoogleCast")
+val ShowCastButtonOnArtKey = booleanPreferencesKey("showCastButtonOnArt")
+val DoubleTapSeekKey = booleanPreferencesKey("doubleTapSeek")
 
 // Listen Together
 val ListenTogetherServerUrlKey = stringPreferencesKey("listenTogetherServerUrl")

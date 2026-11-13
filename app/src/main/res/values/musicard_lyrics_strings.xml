@@ -7,4 +7,11 @@
     <string name="edge_to_edge_art_edge">Where the art meets the controls</string>
     <string name="show_playing_location">Show playing location</string>
     <string name="show_playing_location_desc">Show "Playing from" with the list the song was started from at the top of the player</string>
+    <string name="show_cast_button_on_art">Cast button on album art</string>
+    <string name="show_cast_button_on_art_desc">Show the cast button in the corner of the album art. Cast is always in the player menu</string>
+    <string name="double_tap_seek">Double-tap to seek</string>
+    <string name="double_tap_seek_desc">Double-tap the left or right third of the album art to seek 5 seconds</string>
+    <string name="song_change_animation">Song change animation</string>
+    <string name="song_change_animation_desc">The album art slides to the next song, and while swiping the next song\'s art is already visible. Off: the art changes without sliding</string>
+    <string name="battery_opt_song_change_animation_desc">The album art changes without sliding</string>
 </resources>

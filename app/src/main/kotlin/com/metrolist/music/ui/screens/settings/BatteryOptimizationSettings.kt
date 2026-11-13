@@ -182,6 +182,13 @@ fun BatteryOptimizationSettings(navController: NavController) {
                         R.string.battery_opt_lyrics_animations_desc,
                         enabled,
                     ),
+                    effectItem(
+                        com.metrolist.music.utils.BatteryOptReduceSongChangeAnimationKey,
+                        R.drawable.skip_next,
+                        R.string.song_change_animation,
+                        R.string.battery_opt_song_change_animation_desc,
+                        enabled,
+                    ),
                 ),
         )
 
