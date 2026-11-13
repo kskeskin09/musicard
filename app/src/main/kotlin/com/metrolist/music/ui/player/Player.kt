@@ -554,10 +554,27 @@ fun BottomSheetPlayer(
 
     // "Background color" buttons take the song's color (the old Primary / Tertiary choices count
     // as this one). Until the color is read, they look like Default.
-    val accentButtons = playerButtonsStyle != PlayerButtonsStyle.DEFAULT && gradientColors.isNotEmpty()
-    val accentPair = remember(gradientColors) { gradientColors.firstOrNull()?.let { com.metrolist.music.ui.theme.playerButtonAccent(it) } }
-    val accentLight by animateColorAsState(accentPair?.first ?: Color.White, tween(600), label = "buttonAccentLight")
-    val accentDeep by animateColorAsState(accentPair?.second ?: Color.Black, tween(600), label = "buttonAccentDeep")
+    // The song's color comes from the gradient background when that is used, otherwise straight
+    // from the cover, so the buttons follow the song with every background style.
+    val coverButtonColor = com.metrolist.music.ui.theme.rememberCoverColor(mediaMetadata?.thumbnailUrl)
+    val accentBase = gradientColors.firstOrNull() ?: coverButtonColor
+    val accentButtons = playerButtonsStyle != PlayerButtonsStyle.DEFAULT && accentBase != null
+    val accentPair =
+        remember(accentBase, shouldUseDarkButtonColors) {
+            accentBase?.let { com.metrolist.music.ui.theme.playerButtonAccent(it, shouldUseDarkButtonColors) }
+        }
+    // On a dark player the buttons are a light shade of the song's color, on a light player a
+    // dark shade, so they always stand out from the background.
+    val accentLight by animateColorAsState(
+        accentPair?.first ?: Color.White,
+        tween(600),
+        label = "buttonAccentLight",
+    )
+    val accentDeep by animateColorAsState(
+        accentPair?.second ?: Color.Black,
+        tween(600),
+        label = "buttonAccentDeep",
+    )
 
     val (textButtonColor, iconButtonColor) =
         if (accentButtons) {
@@ -1839,6 +1856,9 @@ fun BottomSheetPlayer(
             ) {
                 Column {
                     if (useCardLayout) {
+                        // "Background color" buttons: the song's color, brightened on a dark player
+                        // and darkened on a light one.
+                        val cardControlColor = if (accentButtons) accentLight else TextBackgroundColor
                         Row(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically,
@@ -1851,7 +1871,7 @@ fun BottomSheetPlayer(
                                 icon = R.drawable.player_backward,
                                 contentDescription = null,
                                 enabled = canSkipPrevious && !isListenTogetherGuest,
-                                color = TextBackgroundColor,
+                                color = cardControlColor,
                                 iconSize = 52.dp,
                                 onClick = playerConnection::seekToPrevious,
                                 modifier = Modifier.size(72.dp),
@@ -1873,7 +1893,7 @@ fun BottomSheetPlayer(
                                         if (effectiveIsPlaying) stringResource(R.string.player_pause) else stringResource(R.string.play)
                                     },
                                 enabled = true,
-                                color = TextBackgroundColor,
+                                color = cardControlColor,
                                 iconSize = 60.dp,
                                 onClick = onPlayPauseClick,
                                 modifier =
@@ -1886,7 +1906,7 @@ fun BottomSheetPlayer(
                                 icon = R.drawable.player_forward,
                                 contentDescription = null,
                                 enabled = canSkipNext && !isListenTogetherGuest,
-                                color = TextBackgroundColor,
+                                color = cardControlColor,
                                 iconSize = 52.dp,
                                 onClick = playerConnection::seekToNext,
                                 modifier = Modifier.size(72.dp),
