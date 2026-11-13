@@ -1,19 +1,10 @@
 name: Build APKs
 
 on:
+  # Nightly APKs are built only on request (Actions -> Build APKs -> Run workflow).
+  # Pull requests still get their own test APKs from "Build PR", and releases
+  # are built by "Release".
   workflow_dispatch:
-  push:
-    # Feature branches are covered by "Build PR". Building them here too added
-    # four more APK builds on top of it for every push. Use workflow_dispatch
-    # when a branch needs nightly artifacts.
-    branches: ["main"]
-    paths-ignore:
-      - "README.md"
-      - "fastlane/**"
-      - "assets/**"
-      - ".github/**/*.md"
-      - ".github/FUNDING.yml"
-      - ".github/ISSUE_TEMPLATE/**"
 
 permissions:
   contents: write
