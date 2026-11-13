@@ -124,7 +124,7 @@ import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.SongListItem
-import com.metrolist.music.ui.component.SortHeader
+import com.metrolist.music.ui.component.SongSortRow
 import com.metrolist.music.ui.menu.AutoPlaylistMenu
 import com.metrolist.music.ui.menu.SelectionSongMenu
 import com.metrolist.music.ui.menu.SongMenu
@@ -571,19 +571,11 @@ fun AutoPlaylistScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(start = 16.dp),
                             ) {
-                                SortHeader(
+                                SongSortRow(
                                     sortType = sortType,
                                     sortDescending = sortDescending,
                                     onSortTypeChange = onSortTypeChange,
                                     onSortDescendingChange = onSortDescendingChange,
-                                    sortTypeText = { sortType ->
-                                        when (sortType) {
-                                            SongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                            SongSortType.NAME -> R.string.sort_by_name
-                                            SongSortType.ARTIST -> R.string.sort_by_artist
-                                            SongSortType.PLAY_TIME -> R.string.sort_by_play_time
-                                        }
-                                    },
                                     modifier = Modifier.weight(1f),
                                 )
                             }

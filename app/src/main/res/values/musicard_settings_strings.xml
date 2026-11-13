@@ -26,4 +26,5 @@
     <string name="system_language">System language</string>
     <string name="about_made_by">Made by</string>
     <string name="playlist_position_custom_only">Only used when the playlist is sorted by Custom. Other sort orders (name, artist, date…) arrange songs by their own rule.</string>
+    <string name="sort_most_played">Most played</string>
 </resources>
