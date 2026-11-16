@@ -62,4 +62,16 @@ class SearchRelevanceTest {
         assertEquals("t", SearchRelevance.pickTop(query, unrelated, ranked)?.id)
         assertEquals("t", SearchRelevance.pickTop(query, wanted, ranked)?.id)
     }
+
+    @Test
+    fun `spelling fix and known songs help ranking`() {
+        val other = song("o", "Tark Remix", "DJ")
+        val wanted = song("t", "Kuzu Kuzu", "Tarkan")
+        val ranked = SearchRelevance.rank("tarkn kuzu", listOf(other, wanted), alsoMatches = "tarkan kuzu")
+        assertEquals("t", ranked.first().id)
+
+        val a = song("a", "Kuzu Kuzu", "Tarkan")
+        val b = song("b", "Kuzu Kuzu", "Tarkan")
+        assertEquals("b", SearchRelevance.rank("kuzu kuzu", listOf(a, b), knownIds = setOf("b")).first().id)
+    }
 }

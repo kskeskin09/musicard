@@ -21,12 +21,14 @@ import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
 import com.metrolist.innertube.models.preferOfficialSongs
 import com.metrolist.innertube.models.filterYoutubeShorts
+import com.metrolist.innertube.pages.SearchSpellCorrection
 import com.metrolist.innertube.pages.SearchSummaryPage
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.PreferOfficialSongsKey
 import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.constants.PauseSearchHistoryKey
+import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.models.ItemsPage
 import com.metrolist.music.utils.SearchRoutes
 import com.metrolist.music.utils.dataStore
@@ -46,6 +48,7 @@ class OnlineSearchViewModel
 constructor(
     @ApplicationContext val context: Context,
     savedStateHandle: SavedStateHandle,
+    private val database: MusicDatabase,
 ) : ViewModel() {
     val query = SearchRoutes.decodeQuery(savedStateHandle.get<String>("query").orEmpty())
     val filter = MutableStateFlow<YouTube.SearchFilter?>(null)
@@ -61,6 +64,9 @@ constructor(
 
     /** The large card on top: YouTube's top result, unless it clearly matches the query worse. */
     var topResult by mutableStateOf<YTItem?>(null)
+
+    /** YouTube's spelling fix for the query ("Did you mean" / "Showing results for"), if any. */
+    var spellCorrection by mutableStateOf<SearchSpellCorrection?>(null)
 
     // The "Music" chip shows everything playable: official songs and videos together. They come
     // from two separate searches, so each keeps its own "load more" token.
@@ -224,11 +230,37 @@ constructor(
         val summaryItems = summaryPage?.summaries.orEmpty().flatMap { it.items }
         val musicItems = viewStateMap[YouTube.SearchFilter.FILTER_SONG.value]?.items.orEmpty()
         if (summaryPage == null && musicItems.isEmpty()) return
+        val correction = spellCorrection
+        // "Did you mean X": the results above are still for what was typed, so X's results are
+        // added to the pool too (YouTube already searched X when it says "Showing results for").
+        val correctedItems =
+            if (correction != null && !correction.autoCorrected) {
+                YouTube
+                    .searchSummary(correction.query)
+                    .getOrNull()
+                    ?.summaries
+                    .orEmpty()
+                    .flatMap { it.items }
+                    .applyContentFilters()
+            } else {
+                emptyList()
+            }
+        val knownIds = runCatching { database.knownSongIds().toSet() }.getOrDefault(emptySet())
         val ranked =
             SearchRelevance
-                .rank(query, summaryItems + musicItems)
-                .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
-        topResult = SearchRelevance.pickTop(query, summaryPage?.summaries?.firstOrNull()?.items?.firstOrNull(), ranked)
+                .rank(
+                    query,
+                    summaryItems + musicItems + correctedItems,
+                    alsoMatches = correction?.query,
+                    knownIds = knownIds,
+                ).preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
+        topResult =
+            SearchRelevance.pickTop(
+                query,
+                summaryPage?.summaries?.firstOrNull()?.items?.firstOrNull(),
+                ranked,
+                alsoMatches = correction?.query,
+            )
         rankedResults = ranked
     }
 
@@ -237,6 +269,7 @@ constructor(
             YouTube
                 .searchSummary(query, recordSearchHistory = !context.dataStore.get(PauseSearchHistoryKey, false))
                 .onSuccess { page ->
+                    spellCorrection = page.spellCorrection
                     val resolvedItems = resolveSearchMetadata(page.summaries.flatMap { it.items })
                     var offset = 0
                     val resolvedSummaries =

@@ -67,6 +67,7 @@ import com.metrolist.innertube.pages.SearchPage
 import com.metrolist.innertube.pages.SearchResult
 import com.metrolist.innertube.pages.SearchSuggestionPage
 import com.metrolist.innertube.pages.SearchSummary
+import com.metrolist.innertube.pages.SearchSpellCorrection
 import com.metrolist.innertube.pages.SearchSummaryPage
 import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB
 import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_REMIX
@@ -170,6 +171,7 @@ object YouTube {
         runCatching {
             val response = innerTube.search(WEB_REMIX, query, setLogin = recordSearchHistory).body<SearchResponse>()
             val allSummaries = mutableListOf<SearchSummary>()
+            var spellCorrection: SearchSpellCorrection? = null
 
             response.contents
                 ?.tabbedSearchResultsRenderer
@@ -241,6 +243,19 @@ object YouTube {
                             allSummaries.addAll(groupItemsByType(items))
                         }
                     } else if (section.itemSectionRenderer != null) {
+                        section.itemSectionRenderer.contents?.forEach { content ->
+                            val correction = content.showingResultsForRenderer ?: content.didYouMeanRenderer
+                            val corrected =
+                                correction?.correctedQueryEndpoint?.searchEndpoint?.query
+                                    ?: correction?.correctedQuery?.runs?.joinToString("") { it.text }
+                            if (spellCorrection == null && !corrected.isNullOrBlank()) {
+                                spellCorrection =
+                                    SearchSpellCorrection(
+                                        query = corrected,
+                                        autoCorrected = content.showingResultsForRenderer != null,
+                                    )
+                            }
+                        }
                         val items =
                             section.itemSectionRenderer.contents
                                 ?.mapNotNull { it.musicResponsiveListItemRenderer }
@@ -280,7 +295,7 @@ object YouTube {
                         }
                     }
 
-            SearchSummaryPage(summaries = mergedSummaries)
+            SearchSummaryPage(summaries = mergedSummaries, spellCorrection = spellCorrection)
         }
 
     private fun groupItemsByType(items: List<YTItem>): List<SearchSummary> {
