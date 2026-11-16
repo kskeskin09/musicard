@@ -505,6 +505,24 @@ fun OnlineSearchResult(
                         // preferred, replaced by the best match when it doesn't fit the query), then
                         // one list of everything else, best match first.
                         val topItem = viewModel.topResult
+                        viewModel.spellCorrection?.let { correction ->
+                            item(key = "spell_correction") {
+                                Text(
+                                    text =
+                                        stringResource(
+                                            if (correction.autoCorrected) R.string.search_showing_results_for else R.string.search_did_you_mean,
+                                            correction.query,
+                                        ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onSearch(correction.query) }
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                )
+                            }
+                        }
                         if (topItem != null) {
                             item(key = "top_title") {
                                 NavigationTitle(stringResource(R.string.search_top_result))

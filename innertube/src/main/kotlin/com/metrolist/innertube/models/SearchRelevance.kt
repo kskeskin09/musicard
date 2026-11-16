@@ -118,20 +118,34 @@ object SearchRelevance {
      * [items] in YouTube's order (best first, duplicates allowed). Returns them sorted by relevance,
      * without duplicates and, when at least [minGoodMatches] items match well, without the items
      * that share no word with the query.
+     *
+     * [alsoMatches]: YouTube's spelling fix of the query, if any. An item is scored against both and
+     * keeps the better score, so "tarkn" still finds "Tarkan".
+     * [knownIds]: songs in the user's library or listening history; when they match the query
+     * they get a boost.
      */
     fun rank(
         query: String,
         items: List<YTItem>,
         minGoodMatches: Int = 5,
+        alsoMatches: String? = null,
+        knownIds: Set<String> = emptySet(),
     ): List<YTItem> {
+        val queries = listOfNotNull(query, alsoMatches?.takeIf { it.isNotBlank() && normalize(it) != normalize(query) })
         val unique = items.distinctBy { it.id }.withIndex().toList()
-        val coverages = unique.map { coverage(query, it.value) }
+        val coverages = unique.map { item -> queries.maxOf { coverage(it, item.value) } }
         val dropUnrelated = coverages.count { it >= 0.5 } >= minGoodMatches
         return unique
             .filter { !dropUnrelated || coverages[it.index] > 0.0 }
-            .sortedByDescending { score(query, it.value, it.index) }
-            .map { it.value }
+            .sortedByDescending { item ->
+                val base = queries.maxOf { score(it, item.value, item.index) }
+                val known = if (item.value.id in knownIds && coverages[item.index] >= 0.5) KNOWN_BOOST else 0.0
+                base + known
+            }.map { it.value }
     }
+
+    /** Extra score for a matching song the user already has or has listened to. */
+    const val KNOWN_BOOST = 15.0
 
     /**
      * The large "Top result" card. YouTube's pick stays unless it matches the query clearly worse
@@ -142,9 +156,11 @@ object SearchRelevance {
         query: String,
         youtubeTop: YTItem?,
         ranked: List<YTItem>,
+        alsoMatches: String? = null,
     ): YTItem? {
         val best = ranked.firstOrNull() ?: return youtubeTop
         if (youtubeTop == null) return best
-        return if (coverage(query, youtubeTop) + 0.25 >= coverage(query, best)) youtubeTop else best
+        fun cover(item: YTItem) = maxOf(coverage(query, item), alsoMatches?.let { coverage(it, item) } ?: 0.0)
+        return if (cover(youtubeTop) + 0.25 >= cover(best)) youtubeTop else best
     }
 }

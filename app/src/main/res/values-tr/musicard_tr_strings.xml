@@ -56,6 +56,8 @@
     <string name="search_results">Sonuçlar</string>
     <string name="search_recent_contents">Son içerikler</string>
     <string name="search_recent_searches">Son aramalar</string>
+    <string name="search_did_you_mean">Bunu mu demek istedin: %1$s</string>
+    <string name="search_showing_results_for">Şunun sonuçları gösteriliyor: %1$s</string>
     <string name="search_suggestions">Öneriler</string>
     <string name="search_recommended">Önerilenler</string>
     <string name="search_kind_song">Şarkı</string>

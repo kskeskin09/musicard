@@ -1052,6 +1052,8 @@
     <string name="search_results">Results</string>
     <string name="search_recent_contents">Recent contents</string>
     <string name="search_recent_searches">Recent searches</string>
+    <string name="search_did_you_mean">Did you mean: %1$s</string>
+    <string name="search_showing_results_for">Showing results for: %1$s</string>
     <string name="search_suggestions">Suggestions</string>
     <string name="search_recommended">Recommended</string>
     <string name="search_kind_song">Song</string>
