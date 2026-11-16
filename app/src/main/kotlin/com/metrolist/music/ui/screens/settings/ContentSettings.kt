@@ -122,7 +122,7 @@ fun ContentSettings(
     val (contentCountry, onContentCountryChange) = rememberPreference(key = ContentCountryKey, defaultValue = "system")
     val (hideExplicit, onHideExplicitChange) = rememberPreference(key = HideExplicitKey, defaultValue = false)
     val (prefetchNextLyrics, onPrefetchNextLyricsChange) =
-        rememberPreference(key = com.metrolist.music.constants.PrefetchNextLyricsKey, defaultValue = false)
+        rememberPreference(key = com.metrolist.music.constants.PrefetchNextLyricsKey, defaultValue = true)
     val (prefetchNextLyricsCount, onPrefetchNextLyricsCountChange) =
         rememberPreference(
             key = com.metrolist.music.constants.PrefetchNextLyricsCountKey,
