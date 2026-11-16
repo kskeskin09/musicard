@@ -2389,30 +2389,58 @@ fun HomeScreen(
                                 if (isSongsOnlySection) {
                                     // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
                                     item(key = "home_section_list_${section.index}") {
-                                        LazyHorizontalGrid(
+                                        // Snaps column by column, the same as Quick picks.
+                                        HomeSongRows(
+                                            entries = sectionSongs.distinctBy { it.id },
                                             state = com.metrolist.music.ui.utils.TabStates.grid("home/section_${section.index}_grid"),
-                                            rows = GridCells.Fixed(4),
-                                            contentPadding =
-                                                WindowInsets.systemBars
-                                                    .only(WindowInsetsSides.Horizontal)
-                                                    .asPaddingValues(),
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .height(ListItemHeight * 4),
-                                        ) {
-                                            items(
-                                                items = sectionSongs.distinctBy { it.id },
-                                                key = { "home_section_${section.index}_song_${it.id}" },
-                                            ) { song ->
-                                                YouTubeListItem(
-                                                    item = song,
-                                                    isActive = song.id == mediaMetadata?.id,
-                                                    isPlaying = isPlaying,
-                                                    isSwipeable = false,
-                                                    trailingContent = {
-                                                        IconButton(
+                                            itemWidth = horizontalLazyGridItemWidth,
+                                            itemWidthFactor = horizontalLazyGridItemWidthFactor,
+                                            key = { "home_section_${section.index}_song_${it.id}" },
+                                        ) { song, itemModifier ->
+                                            YouTubeListItem(
+                                                item = song,
+                                                isActive = song.id == mediaMetadata?.id,
+                                                isPlaying = isPlaying,
+                                                isSwipeable = false,
+                                                trailingContent = {
+                                                    IconButton(
+                                                        onClick = {
+                                                            menuState.show {
+                                                                YouTubeSongMenu(
+                                                                    song = song,
+                                                                    onDismiss = menuState::dismiss,
+                                                                )
+                                                            }
+                                                        },
+                                                    ) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.more_vert),
+                                                            contentDescription = null,
+                                                        )
+                                                    }
+                                                },
+                                                modifier =
+                                                    itemModifier
+                                                        .combinedClickable(
                                                             onClick = {
+                                                                if (!isListenTogetherGuest) {
+                                                                    playerConnection.playQueue(
+                                                                        if (autoRadioQueue) {
+                                                                            YouTubeQueue(
+                                                                                song.endpoint ?: WatchEndpoint(videoId = song.id),
+                                                                                song.toMediaMetadata(),
+                                                                            )
+                                                                        } else {
+                                                                            ListQueue(
+                                                                                title = song.title,
+                                                                                items = listOf(song.toMediaItem())
+                                                                            )
+                                                                        }
+                                                                    )
+                                                                }
+                                                            },
+                                                            onLongClick = {
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                 menuState.show {
                                                                     YouTubeSongMenu(
                                                                         song = song,
@@ -2420,46 +2448,8 @@ fun HomeScreen(
                                                                     )
                                                                 }
                                                             },
-                                                        ) {
-                                                            Icon(
-                                                                painter = painterResource(R.drawable.more_vert),
-                                                                contentDescription = null,
-                                                            )
-                                                        }
-                                                    },
-                                                    modifier =
-                                                        Modifier
-                                                            .width(horizontalLazyGridItemWidth)
-                                                            .combinedClickable(
-                                                                onClick = {
-                                                                    if (!isListenTogetherGuest) {
-                                                                        playerConnection.playQueue(
-                                                                            if (autoRadioQueue) {
-                                                                                YouTubeQueue(
-                                                                                    song.endpoint ?: WatchEndpoint(videoId = song.id),
-                                                                                    song.toMediaMetadata(),
-                                                                                )
-                                                                            } else {
-                                                                                ListQueue(
-                                                                                    title = song.title,
-                                                                                    items = listOf(song.toMediaItem())
-                                                                                )
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                },
-                                                                onLongClick = {
-                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                    menuState.show {
-                                                                        YouTubeSongMenu(
-                                                                            song = song,
-                                                                            onDismiss = menuState::dismiss,
-                                                                        )
-                                                                    }
-                                                                },
-                                                            ),
-                                                )
-                                            }
+                                                        ),
+                                            )
                                         }
                                     }
                                 } else {
