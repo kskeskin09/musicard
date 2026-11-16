@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -161,8 +163,12 @@ fun ResetScreen(navController: NavController) {
                 ResetKind.SETTINGS -> R.string.reset_settings_confirm
                 ResetKind.EVERYTHING -> R.string.reset_everything_confirm
             }
-        DefaultDialog(
-            onDismiss = { pending = null },
+        // A standard full-width Material confirm dialog: title and two buttons, no long text.
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             icon = {
                 Icon(
                     painter = painterResource(R.drawable.warning),
@@ -171,10 +177,12 @@ fun ResetScreen(navController: NavController) {
                 )
             },
             title = { Text(stringResource(question)) },
-            buttons = {
+            dismissButton = {
                 TextButton(onClick = { pending = null }) {
                     Text(stringResource(android.R.string.cancel))
                 }
+            },
+            confirmButton = {
                 TextButton(
                     onClick = {
                         pending = null
@@ -200,7 +208,7 @@ fun ResetScreen(navController: NavController) {
                     Text(stringResource(R.string.reset_action), color = MaterialTheme.colorScheme.error)
                 }
             },
-        ) {}
+        )
     }
 
     if (running) {
