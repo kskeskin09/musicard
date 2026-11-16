@@ -54,6 +54,9 @@
     <string name="search_top_result">En iyi sonuç</string>
     <string name="search_exact_matches">Tam eşleşmeler</string>
     <string name="search_results">Sonuçlar</string>
+    <string name="search_recent_contents">Son içerikler</string>
+    <string name="search_suggestions">Öneriler</string>
+    <string name="search_recommended">Önerilenler</string>
     <string name="search_kind_song">Şarkı</string>
     <string name="genre_filter_for_you">Sana özel</string>
     <string name="genre_filter_popular">Popüler</string>

@@ -825,6 +825,8 @@ val LibraryCustomOrderKey = stringPreferencesKey("libraryCustomOrder")
 val LibraryPinnedKey = stringPreferencesKey("libraryPinned")
 val LibraryEditLockKey = booleanPreferencesKey("libraryEditLock")
 val RecentPlaylistsKey = stringPreferencesKey("recentPlaylists")
+// Search: the last items opened from search results (JSON array, newest first), see RecentSearchContents.kt.
+val RecentSearchContentsKey = stringPreferencesKey("recentSearchContents")
 
 enum class LibrarySortOption {
     CUSTOM,

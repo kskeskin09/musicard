@@ -1050,6 +1050,9 @@
     <string name="search_top_result">Top result</string>
     <string name="search_exact_matches">Exact matches</string>
     <string name="search_results">Results</string>
+    <string name="search_recent_contents">Recent contents</string>
+    <string name="search_suggestions">Suggestions</string>
+    <string name="search_recommended">Recommended</string>
     <string name="search_kind_song">Song</string>
     <string name="profile_username">Username</string>
     <string name="profile_tab">Profile</string>

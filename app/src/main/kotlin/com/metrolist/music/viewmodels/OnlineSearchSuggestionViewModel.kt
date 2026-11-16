@@ -24,13 +24,16 @@ import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.PreferOfficialSongsKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
+import com.metrolist.music.utils.RECENT_SEARCH_CONTENTS_SHOWN
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
+import com.metrolist.music.utils.recentSearchContents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -53,9 +56,10 @@ class OnlineSearchSuggestionViewModel
                 query
                     .flatMapLatest { query ->
                         if (query.isEmpty()) {
-                            database.searchHistory().map { history ->
+                            combine(database.searchHistory(), context.recentSearchContents()) { history, recent ->
                                 SearchSuggestionViewState(
                                     history = history,
+                                    recentContents = recent.take(RECENT_SEARCH_CONTENTS_SHOWN),
                                 )
                             }
                         } else {
@@ -82,9 +86,11 @@ class OnlineSearchSuggestionViewModel
                                 val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
                                 val preferOfficialSongs = context.dataStore.get(PreferOfficialSongsKey, true)
 
+                                // "Suggestions": up to 5 rows, past searches first, then YouTube's.
+                                // "Recommended": up to 5 items.
                                 database
                                     .searchHistory(query)
-                                    .map { it.take(3) }
+                                    .map { it.take(MAX_SUGGESTIONS) }
                                     .map { history ->
                                         SearchSuggestionViewState(
                                             history = history,
@@ -93,7 +99,8 @@ class OnlineSearchSuggestionViewModel
                                                     ?.queries
                                                     ?.filter { suggestionQuery ->
                                                         history.none { it.query == suggestionQuery }
-                                                    }.orEmpty(),
+                                                    }.orEmpty()
+                                                    .take(MAX_SUGGESTIONS - history.size),
                                             items =
                                                 result
                                                     ?.recommendedItems
@@ -101,7 +108,8 @@ class OnlineSearchSuggestionViewModel
                                                     ?.filterExplicit(hideExplicit)
                                                     ?.filterVideoSongs(hideVideoSongs)
                                                     ?.preferOfficialSongs(preferOfficialSongs)
-                                                    .orEmpty(),
+                                                    .orEmpty()
+                                                    .take(MAX_RECOMMENDED),
                                         )
                                     }
                             }
@@ -166,8 +174,13 @@ class OnlineSearchSuggestionViewModel
             }
     }
 
+private const val MAX_SUGGESTIONS = 5
+private const val MAX_RECOMMENDED = 5
+
 data class SearchSuggestionViewState(
     val history: List<SearchHistory> = emptyList(),
+    /** Items opened from search lately; shown only while the search box is empty. */
+    val recentContents: List<YTItem> = emptyList(),
     val suggestions: List<String> = emptyList(),
     val items: List<YTItem> = emptyList(),
     val parsedUrlItem: YTItem? = null,
