@@ -774,6 +774,7 @@ fun LocalPlaylistScreen(
                                                             startIndex = songs.indexOfFirst { it.map.id == song.map.id },
                                                         ),
                                                     )
+                                                    playerConnection.service.getAutomix(playlist!!.playlist.browseId, song.song.id)
                                                 }
                                             },
                                             // While songs can be moved, holding one picks it up instead.
@@ -1310,6 +1311,7 @@ fun LocalPlaylistHeader(
                             startIndex = shuffleAwareStartIndex(playerConnection.player.shuffleModeEnabled, songs.size),
                         ),
                     )
+                    playerConnection.service.getAutomix(playlist.playlist.browseId, songs.firstOrNull()?.song?.id)
                 },
             )
 
