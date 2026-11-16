@@ -407,16 +407,26 @@ fun StorageSettings(
                     },
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.download),
+                        // The library download already covers liked songs, so show it on and locked
+                        // while that is on. The stored choice is kept for when it is turned off.
+                        enabled = !autoDownloadLibrary,
                         title = { Text(stringResource(R.string.auto_download_on_like)) },
-                        description = { Text(stringResource(R.string.auto_download_on_like_desc)) },
+                        description = {
+                            Text(
+                                stringResource(
+                                    if (autoDownloadLibrary) R.string.auto_download_on_like_covered else R.string.auto_download_on_like_desc,
+                                ),
+                            )
+                        },
                         trailingContent = {
                             Switch(
-                                checked = autoDownloadOnLike,
+                                checked = autoDownloadOnLike || autoDownloadLibrary,
+                                enabled = !autoDownloadLibrary,
                                 onCheckedChange = onAutoDownloadOnLikeChange,
                                 thumbContent = {
                                     Icon(
                                         painter = painterResource(
-                                            id = if (autoDownloadOnLike) R.drawable.check else R.drawable.close
+                                            id = if (autoDownloadOnLike || autoDownloadLibrary) R.drawable.check else R.drawable.close
                                         ),
                                         contentDescription = null,
                                         modifier = Modifier.size(SwitchDefaults.IconSize)
