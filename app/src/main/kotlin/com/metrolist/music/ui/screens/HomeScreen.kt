@@ -2491,10 +2491,21 @@ fun HomeScreen(
                                 item(key = "mood_and_genres_list") {
                                     // The same colored tiles as the Genres page in Search, two rows
                                     // that scroll sideways.
+                                    // A fling moves one column and settles it at the row's start,
+                                    // never half way between two columns.
                                     val pageBackground = MaterialTheme.colorScheme.background
+                                    val moodsGridState = com.metrolist.music.ui.utils.TabStates.grid("home/mood_and_genres_list")
+                                    val moodsSnap =
+                                        remember(moodsGridState) {
+                                            SnapLayoutInfoProvider(
+                                                lazyGridState = moodsGridState,
+                                                positionInLayout = { _, _ -> 0f },
+                                            )
+                                        }
                                     LazyHorizontalGrid(
-                                        state = com.metrolist.music.ui.utils.TabStates.grid("home/mood_and_genres_list"),
+                                        state = moodsGridState,
                                         rows = GridCells.Fixed(2),
+                                        flingBehavior = rememberSnapFlingBehavior(moodsSnap),
                                         contentPadding = PaddingValues(horizontal = 20.dp),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
