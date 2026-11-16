@@ -91,6 +91,19 @@ import com.metrolist.shazamkit.models.RecognitionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -347,54 +360,105 @@ private fun ReadyState(onStartRecognition: () -> Unit) {
 
 @Composable
 private fun ListeningState(onCancel: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "scale",
+    val rawLevel by com.metrolist.music.recognition.MusicRecognitionService.micLevel
+        .collectAsStateWithLifecycle()
+    // Smooth the raw loudness so the waves grow and settle softly instead of flickering.
+    val level by animateFloatAsState(
+        targetValue = rawLevel,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 260f),
+        label = "mic_level",
     )
+
+    // Continuous clock for the wave motion and the outgoing ripples.
+    var time by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { now -> time = (now - start) / 1_000_000_000f }
+        }
+    }
+
+    val primary = MaterialTheme.colorScheme.primary
+    val tertiary = MaterialTheme.colorScheme.tertiary
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        // Container large enough for scaled animation (200dp * 1.2 = 240dp)
         Box(
-            modifier = Modifier.size(260.dp),
+            modifier = Modifier.size(300.dp),
             contentAlignment = Alignment.Center,
         ) {
-            // Outer pulsing ring
-            Box(
-                modifier =
-                    Modifier
-                        .size(200.dp)
-                        .scale(scale)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-            )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val center = this.center
+                val buttonRadius = 80.dp.toPx()
+                val maxReach = size.minDimension / 2f - buttonRadius
 
-            // Inner pulsing ring
-            Box(
-                modifier =
-                    Modifier
-                        .size(180.dp)
-                        .scale(scale * 0.9f)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-            )
+                // Soft halo that swells with loudness.
+                drawCircle(
+                    brush =
+                        Brush.radialGradient(
+                            colors =
+                                listOf(
+                                    primary.copy(alpha = 0.10f + 0.25f * level),
+                                    Color.Transparent,
+                                ),
+                            center = center,
+                            radius = buttonRadius + maxReach * (0.45f + 0.55f * level),
+                        ),
+                    radius = buttonRadius + maxReach * (0.45f + 0.55f * level),
+                    center = center,
+                )
 
-            // Main button
+                // Ripples that travel outward; louder sound = brighter, further-reaching rings.
+                val rippleCount = 3
+                for (r in 0 until rippleCount) {
+                    val progress = ((time * 0.6f) + r.toFloat() / rippleCount) % 1f
+                    val radius = buttonRadius + maxReach * progress * (0.55f + 0.45f * level)
+                    val alpha = (1f - progress) * (0.12f + 0.38f * level)
+                    drawCircle(
+                        color = primary.copy(alpha = alpha),
+                        radius = radius,
+                        center = center,
+                        style = Stroke(width = (1.5f + 2.5f * level).dp.toPx()),
+                    )
+                }
+
+                // Radial sound-wave bars around the button; their length follows the mic level.
+                val barCount = 56
+                val barWidth = 3.dp.toPx()
+                val gap = 8.dp.toPx()
+                val minLen = 4.dp.toPx()
+                val maxLen = maxReach - gap - 6.dp.toPx()
+                for (i in 0 until barCount) {
+                    val angle = (i.toFloat() / barCount) * 2f * PI.toFloat()
+                    val wave =
+                        0.5f +
+                            0.30f * sin(time * 5.1f + i * 0.55f) +
+                            0.20f * sin(time * 3.3f - i * 1.27f)
+                    val len = minLen + maxLen * level * wave.coerceIn(0.08f, 1f)
+                    val dirX = cos(angle)
+                    val dirY = sin(angle)
+                    val startR = buttonRadius + gap
+                    val fraction = i.toFloat() / barCount
+                    drawLine(
+                        color = lerp(primary, tertiary, abs(fraction * 2f - 1f)).copy(alpha = 0.55f + 0.45f * level),
+                        start = Offset(center.x + dirX * startR, center.y + dirY * startR),
+                        end = Offset(center.x + dirX * (startR + len), center.y + dirY * (startR + len)),
+                        strokeWidth = barWidth,
+                        cap = StrokeCap.Round,
+                    )
+                }
+            }
+
+            // Main button, gently breathing with the sound.
             Box(
                 modifier =
                     Modifier
                         .size(160.dp)
+                        .scale(1f + 0.06f * level)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(primary)
                         .clickable { onCancel() },
                 contentAlignment = Alignment.Center,
             ) {
