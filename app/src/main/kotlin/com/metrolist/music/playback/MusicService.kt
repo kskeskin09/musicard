@@ -485,6 +485,11 @@ class MusicService :
     @Volatile private var discordIntentionalDisconnect = false
     @Volatile private var isScreenOff = false
     private val screenOffHandler = Handler(Looper.getMainLooper())
+
+    // The early startForeground() placeholder ("Music Player") must not outlive a start that
+    // brings no playback (system media resumption, Bluetooth/Auto/Wear connecting, widget
+    // refresh, opening the app with an empty queue); Media3 never removes it on its own.
+    private val idleForegroundCheck = Runnable { dropForegroundIfIdle() }
     private val screenOffTimeout = Runnable {
         Timber.tag("DiscordSvc").i("screenOffTimeout: isPlaying=%s, isReady=%s",
             player.isPlaying, DiscordRpcManager.isReady())
@@ -766,6 +771,7 @@ class MusicService :
                 stopSelf()
             }
         }, MoreExecutors.directExecutor())
+        scheduleIdleForegroundCheck()
 
         connectivityManager = getSystemService()!!
         connectivityObserver = NetworkConnectivityObserver(this)
@@ -4584,6 +4590,27 @@ class MusicService :
             .build()
     }
 
+    private fun scheduleIdleForegroundCheck() {
+        screenOffHandler.removeCallbacks(idleForegroundCheck)
+        screenOffHandler.postDelayed(idleForegroundCheck, IDLE_FOREGROUND_CHECK_DELAY_MS)
+    }
+
+    private fun dropForegroundIfIdle() {
+        if (!isRunning || taskCleared || !::player.isInitialized) return
+        if (player.playWhenReady || player.isPlaying) return
+        if (castConnectionHandler?.isCasting?.value == true) return
+        if (sessions.isNotEmpty()) {
+            // Let Media3 decide: it removes the notification when there is nothing to show and
+            // otherwise keeps the paused media controls as a normal, swipeable notification.
+            triggerNotificationUpdate()
+        } else {
+            // No session is connected yet, so the only notification can be our placeholder.
+            latestMediaNotification = null
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION_ID)
+        }
+    }
+
     private fun startForegroundSafely(
         notification: Notification,
         deniedMessage: String,
@@ -4648,6 +4675,7 @@ class MusicService :
         }
         screenOffHandler.removeCallbacks(screenOffTimeout)
         screenOffHandler.removeCallbacks(pauseTimeout)
+        screenOffHandler.removeCallbacks(idleForegroundCheck)
         if (DiscordRpcManager.isReady()) {
             Timber.tag("DiscordSvc").i("onDestroy: disconnecting Discord RPC")
             DiscordRpcManager.disconnect()
@@ -4777,10 +4805,22 @@ class MusicService :
         // media control.
         val isNotificationDismissal =
             intent?.getBooleanExtra(MediaNotification.NOTIFICATION_DISMISSED_EVENT_KEY, false) == true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isNotificationDismissal) {
+        // Widget refreshes always arrive via plain startService(), so they never need a
+        // foreground promotion; promoting there posted a notification while nothing played.
+        val isWidgetRefresh =
+            intent?.action == MusicWidgetReceiver.ACTION_UPDATE_WIDGET ||
+                intent?.action == PlaylistWidgetReceiver.ACTION_UPDATE_WIDGET
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isNotificationDismissal && !isWidgetRefresh) {
             if (!ensureForegroundWithLatestNotificationOrStop()) {
                 return START_NOT_STICKY
             }
+        }
+        if (intent?.action == null || isWidgetRefresh) {
+            scheduleIdleForegroundCheck()
+        } else {
+            // A command that may start playback (alarm, widget play, media button): don't
+            // drop the foreground state while its queue is still loading.
+            screenOffHandler.removeCallbacks(idleForegroundCheck)
         }
 
         when (intent?.action) {
@@ -5407,6 +5447,7 @@ class MusicService :
 
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888
+        private const val IDLE_FOREGROUND_CHECK_DELAY_MS = 4_000L
         const val ERROR_CODE_NO_STREAM = 1000001
         const val CHUNK_LENGTH = 512 * 1024L
         const val PERSISTENT_QUEUE_FILE = "persistent_queue.data"
