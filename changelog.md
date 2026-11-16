@@ -4,10 +4,13 @@
 ## Highlights
 - First-run setup: pick your theme, player look, lyrics style and favorite artists over a live preview
 - Reset options under Import or Export: clear your contents, your settings, or everything
+- New search screen: Recent contents you opened, up to 5 suggestions and 5 recommendations while typing, and the Music filter shows songs and videos together in one list ranked by how well they match
+- The artist page follows the page background setting (Classic or Glass) with the artist picture, and artist pictures are rounded squares like albums and playlists
 
 ## New features
 - Long-press the playing song (mini player or the big cover) to open its menu; long-press the Top result in search to open its options
 - When a list, album or Quick picks song runs out, suggested songs keep the queue going (follows the Auto load more setting)
+- Tap to recognize shows sound waves that grow with how loud the music is
 - Up next: swipe an upcoming song to the left to remove it from the queue
 - Playlists go on with suggested songs when they end, and "Playing from" then shows the playlist's name followed by Mix
 - Artist songs use the same sort row as playlists: Name, Date added (newest / oldest), where Date added is when you added the song to your library
@@ -27,6 +30,12 @@
 - Slider style defaults to Classic, and Home order is no longer shuffled by default
 - The navigation and status bars stay visible by default, and Moods and genres on Home snaps one column at a time
 - No more stray "Music Player" notification when nothing is playing
+- Lyrics of the next 2 songs load ahead of time by default
+- Home has more room at the bottom, so the last section is not hidden behind the mini player
+- Glass background shows more of the cover instead of a zoomed-in crop
+- Mood chips on Home slide away when refreshing
+- Page colors stay when the app goes to the background, so the mini player no longer flashes the default color
+- The search bar no longer flashes when Settings opens from Profile
 
 ---v13.11.0
 # Musicard 13.11.0
