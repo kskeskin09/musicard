@@ -36,6 +36,10 @@
 - Mood chips on Home slide away when refreshing
 - Page colors stay when the app goes to the background, so the mini player no longer flashes the default color
 - The search bar no longer flashes when Settings opens from Profile
+- Coming back to a scrolled page no longer shows its search bar for a moment
+- Leaving a playlist or album, the mini player changes color together with the page instead of before it
+- Search: the keyboard no longer closes by itself after you clear what you typed, Recent searches come after Recent contents, and the top result picks a better match
+- The artist Subscribe button is always readable: in the accent color before you subscribe, white with "Subscribed" after
 
 ---v13.11.0
 # Musicard 13.11.0
