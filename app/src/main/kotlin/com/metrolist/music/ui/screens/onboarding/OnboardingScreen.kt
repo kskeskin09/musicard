@@ -25,6 +25,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -87,6 +88,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -204,9 +206,13 @@ fun OnboardingScreen(
     val chosen = remember { mutableStateMapOf<OnboardingStep, Boolean>() }
     val markChosen: () -> Unit = { chosen[step] = true }
 
+    // Ending shows a short "You're ready" first, then the setup fades away into Home.
+    var finishing by rememberSaveable { mutableStateOf(false) }
     val finish: (Boolean) -> Unit = { save ->
-        viewModel.finish(saveArtists = save)
-        onFinished()
+        if (!finishing) {
+            viewModel.finish(saveArtists = save)
+            finishing = true
+        }
     }
     val goBack: () -> Unit = {
         if (step != OnboardingStep.WELCOME) step = OnboardingStep.entries[step.ordinal - 1]
@@ -214,7 +220,7 @@ fun OnboardingScreen(
     val goNext: () -> Unit = {
         if (step == OnboardingStep.ARTISTS) finish(true) else step = OnboardingStep.entries[step.ordinal + 1]
     }
-    BackHandler(enabled = step != OnboardingStep.WELCOME, onBack = goBack)
+    BackHandler(enabled = step != OnboardingStep.WELCOME || finishing) { if (!finishing) goBack() }
 
     LaunchedEffect(step) {
         if (step >= OnboardingStep.PAGE) viewModel.loadSuggestions()
@@ -580,6 +586,81 @@ fun OnboardingScreen(
                     }
                 }
             }
+        }
+
+        AnimatedVisibility(
+            visible = finishing,
+            enter = fadeIn(tween(250)),
+            exit = fadeOut(tween(150)),
+        ) {
+            ReadyOverlay(onDone = onFinished)
+        }
+    }
+}
+
+/**
+ * The end of the setup: two dots circle each other, meet in the middle and swell a little while
+ * "You're ready" fades in. About a second, then [onDone].
+ */
+@Composable
+private fun ReadyOverlay(onDone: () -> Unit) {
+    val orbit = remember { Animatable(0f) }
+    val grow = remember { Animatable(0f) }
+    val text = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        launch {
+            delay(150)
+            text.animateTo(1f, tween(450, easing = FastOutSlowInEasing))
+        }
+        orbit.animateTo(1f, tween(750, easing = FastOutSlowInEasing))
+        grow.animateTo(1f, tween(260, easing = FastOutSlowInEasing))
+        delay(220)
+        onDone()
+    }
+    val primary = MaterialTheme.colorScheme.primary
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Canvas(Modifier.size(96.dp)) {
+                val p = orbit.value
+                val g = grow.value
+                val distance = 20.dp.toPx() * (1f - p)
+                val angle = p * 2.5f * Math.PI.toFloat()
+                val dot = 7.dp.toPx() * (1f + 0.2f * p) * (1f + 0.45f * g)
+                if (g > 0f) {
+                    drawCircle(primary.copy(alpha = 0.18f * g), radius = dot * (1f + 1.2f * g), center = center)
+                }
+                for (i in 0..1) {
+                    val a = angle + i * Math.PI.toFloat()
+                    drawCircle(
+                        color = primary,
+                        radius = dot,
+                        center = Offset(center.x + kotlin.math.cos(a) * distance, center.y + kotlin.math.sin(a) * distance),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.onboarding_ready),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier =
+                    Modifier.graphicsLayer {
+                        alpha = text.value
+                        translationY = (1f - text.value) * 12.dp.toPx()
+                    },
+            )
         }
     }
 }

@@ -1855,7 +1855,13 @@ class MainActivity : FragmentActivity() {
                     androidx.compose.animation.AnimatedVisibility(
                         visible = showOnboarding.value,
                         enter = androidx.compose.animation.fadeIn(),
-                        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(500)),
+                        // Home comes in softly: the setup fades and lifts away a little.
+                        exit =
+                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(650)) +
+                                androidx.compose.animation.scaleOut(
+                                    androidx.compose.animation.core.tween(650),
+                                    targetScale = 1.04f,
+                                ),
                     ) {
                         com.metrolist.music.ui.screens.onboarding.OnboardingScreen(
                             onFinished = {

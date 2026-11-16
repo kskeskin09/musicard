@@ -57,7 +57,7 @@ import com.metrolist.music.utils.rememberPreference
 @Composable
 fun HomeLayoutSettings(navController: NavController) {
     val (orderRaw, onOrderChange) = rememberPreference(HomeSectionOrderKey, "")
-    val (randomize, onRandomizeChange) = rememberPreference(RandomizeHomeOrderKey, defaultValue = true)
+    val (randomize, onRandomizeChange) = rememberPreference(RandomizeHomeOrderKey, defaultValue = false)
     val order = HomeLayout.parse(orderRaw)
 
     val titles =
