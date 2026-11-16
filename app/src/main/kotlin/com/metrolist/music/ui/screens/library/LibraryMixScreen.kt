@@ -673,7 +673,6 @@ fun LibraryMixScreen(
                             is Artist -> {
                                 ArtistListItem(
                                     artist = item,
-                                    squareThumbnail = true,
                                     trailingContent = {
                                         IconButton(
                                             onClick = {
@@ -983,7 +982,6 @@ fun LibraryMixScreen(
                                 ArtistGridItem(
                                     artist = item,
                                     fillMaxWidth = true,
-                                    squareThumbnail = true,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()

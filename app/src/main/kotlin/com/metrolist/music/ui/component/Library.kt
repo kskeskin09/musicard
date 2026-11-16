@@ -36,7 +36,6 @@ fun LibraryArtistListItem(
     val navController = LocalNavController.current
     ArtistListItem(
         artist = artist,
-        squareThumbnail = true,
         trailingContent = {
             androidx.compose.material3.IconButton(
                 onClick = {
@@ -75,7 +74,6 @@ fun LibraryArtistGridItem(
     ArtistGridItem(
         artist = artist,
         fillMaxWidth = true,
-        squareThumbnail = true,
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(

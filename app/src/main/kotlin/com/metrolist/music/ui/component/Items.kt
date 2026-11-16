@@ -664,8 +664,6 @@ fun ArtistListItem(
         }
     },
     trailingContent: @Composable RowScope.() -> Unit = {},
-    // Library lists show the artist as a rounded square, like albums and playlists.
-    squareThumbnail: Boolean = false,
 ) = ListItem(
     title = artist.artist.name,
     subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else null,
@@ -681,7 +679,7 @@ fun ArtistListItem(
             contentDescription = null,
             modifier = Modifier
                 .size(ListThumbnailSize)
-                .clip(if (squareThumbnail) RoundedCornerShape(ThumbnailCornerRadius) else CircleShape),
+                .clip(RoundedCornerShape(ThumbnailCornerRadius)),
         )
     },
     trailingContent = trailingContent,
@@ -698,8 +696,6 @@ fun ArtistGridItem(
         }
     },
     fillMaxWidth: Boolean = false,
-    // Library grids show the artist as a rounded square, like albums and playlists.
-    squareThumbnail: Boolean = false,
 ) = GridItem(
     title = artist.artist.name,
     subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else "",
@@ -716,7 +712,7 @@ fun ArtistGridItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .clip(if (squareThumbnail) RoundedCornerShape(GridThumbnailCornerRadius) else CircleShape)
+                .clip(RoundedCornerShape(GridThumbnailCornerRadius))
         )
     },
     fillMaxWidth = fillMaxWidth,
@@ -1220,7 +1216,7 @@ fun YouTubeListItem(
                     isSelected = isSelected,
                     isActive = isActive,
                     isPlaying = isPlaying,
-                    shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
+                    shape = RoundedCornerShape(ThumbnailCornerRadius),
                     modifier = Modifier.size(ListThumbnailSize)
                 )
             },
@@ -1319,7 +1315,7 @@ fun YouTubeGridItem(
             thumbnailUrl = item.thumbnail,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(GridThumbnailCornerRadius),
+            shape = RoundedCornerShape(GridThumbnailCornerRadius),
         )
 
         if (item is SongItem && !isActive) {
@@ -1427,7 +1423,7 @@ fun LocalArtistsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = false,
             isPlaying = false,
-            shape = CircleShape,
+            shape = RoundedCornerShape(GridThumbnailCornerRadius),
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = false,
             playButtonVisible = false

@@ -977,8 +977,8 @@ fun HomeScreen(
                                     }
                                 },
                             ),
-                ) { size, _ ->
-                    HomeItemCover(it.thumbnailUrl, size, CircleShape, isActive = false, isPlaying = false)
+                ) { size, shape ->
+                    HomeItemCover(it.thumbnailUrl, size, shape, isActive = false, isPlaying = false)
                 }
             }
 
@@ -1123,7 +1123,7 @@ fun HomeScreen(
             HomeItemCover(
                 item.thumbnail,
                 size,
-                if (item is ArtistItem) CircleShape else shape,
+                shape,
                 isActive = item.id in listOf(mediaMetadata?.album?.id, mediaMetadata?.id),
                 isPlaying = isPlaying,
             )
@@ -1432,13 +1432,9 @@ fun HomeScreen(
                                         sectionData.thumbnail?.let { thumbnailUrl ->
                                             {
                                                 val shape =
-                                                    if (sectionData.endpoint?.isArtistEndpoint == true) {
-                                                        CircleShape
-                                                    } else {
-                                                        RoundedCornerShape(
+                                                    RoundedCornerShape(
                                                             ThumbnailCornerRadius,
                                                         )
-                                                    }
                                                 AsyncImage(
                                                     model = thumbnailUrl,
                                                     contentDescription = null,
@@ -2267,13 +2263,9 @@ fun HomeScreen(
                                             recommendation.title.thumbnailUrl?.let { thumbnailUrl ->
                                                 {
                                                     val shape =
-                                                        if (recommendation.title is Artist) {
-                                                            CircleShape
-                                                        } else {
-                                                            RoundedCornerShape(
+                                                        RoundedCornerShape(
                                                                 ThumbnailCornerRadius,
                                                             )
-                                                        }
                                                     AsyncImage(
                                                         model = thumbnailUrl,
                                                         contentDescription = null,
@@ -2342,13 +2334,9 @@ fun HomeScreen(
                                             sectionData.thumbnail?.let { thumbnailUrl ->
                                                 {
                                                     val shape =
-                                                        if (sectionData.endpoint?.isArtistEndpoint == true) {
-                                                            CircleShape
-                                                        } else {
-                                                            RoundedCornerShape(
+                                                        RoundedCornerShape(
                                                                 ThumbnailCornerRadius,
                                                             )
-                                                        }
                                                     AsyncImage(
                                                         model = thumbnailUrl,
                                                         contentDescription = null,
