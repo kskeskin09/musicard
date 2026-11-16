@@ -681,6 +681,7 @@ fun HomeScreen(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     val quickPicks by viewModel.quickPicks.collectAsStateWithLifecycle()
+    val quickPicksOnline by viewModel.quickPicksOnline.collectAsStateWithLifecycle()
     val forgottenFavorites by viewModel.forgottenFavorites.collectAsStateWithLifecycle()
     val albumsForYou by viewModel.albumsForYou.collectAsStateWithLifecycle()
     val keepListening by viewModel.keepListening.collectAsStateWithLifecycle()
@@ -723,7 +724,7 @@ fun HomeScreen(
     val recentsLazyGridState = com.metrolist.music.ui.utils.TabStates.grid("home/recentsLazyGridState")
     // Quick Picks: the speed dial's songs, topped up with the other picks.
     val quickPickSongs =
-        remember(speedDialItems, quickPicks, homePage?.sections) {
+        remember(speedDialItems, quickPicks, quickPicksOnline, homePage?.sections) {
             (
                 speedDialItems.filterIsInstance<SongItem>() +
                     quickPicks.orEmpty().map { song ->
@@ -734,6 +735,7 @@ fun HomeScreen(
                             thumbnail = song.thumbnailUrl ?: "",
                         )
                     } +
+                    quickPicksOnline +
                     homePage?.sections.orEmpty().flatMap { it.items }.filterIsInstance<SongItem>()
             ).distinctBy { it.id }.take(HomeRowsCount)
         }

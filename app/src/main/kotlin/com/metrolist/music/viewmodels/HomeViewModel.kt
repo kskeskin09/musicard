@@ -49,6 +49,7 @@ import com.metrolist.music.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -99,6 +100,11 @@ class HomeViewModel @Inject constructor(
     val isRandomizing = MutableStateFlow(false)
 
     val quickPicks = MutableStateFlow<List<Song>?>(null)
+
+    // Online songs that fill Quick picks while there is little or no listening history
+    // (fresh install or after a reset). Kept between refreshes so the section doesn't vanish
+    // when a single request comes back without songs.
+    val quickPicksOnline = MutableStateFlow<List<SongItem>>(emptyList())
     val dailyDiscover = MutableStateFlow<List<DailyDiscoverItem>?>(null)
     val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
 
@@ -311,6 +317,44 @@ class HomeViewModel @Inject constructor(
         dailyDiscover.value = items.toList().distinctBy { it.recommendation.id }.shuffled()
     }
 
+    private suspend fun getQuickPicksOnline() {
+        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+        val songs = mutableListOf<SongItem>()
+
+        // 1) Top songs of the artists the user follows (e.g. picked in the first-run setup).
+        val followedArtists = database.artistsBookmarkedByCreateDateAsc().first()
+            .filter { it.artist.isYouTubeArtist && !it.artist.isPodcastChannel }
+            .shuffled()
+            .take(3)
+        coroutineScope {
+            followedArtists.map { artist ->
+                async(Dispatchers.IO) {
+                    YouTube.artist(artist.id).getOrNull()?.sections.orEmpty()
+                        .flatMap { it.items }
+                        .filterIsInstance<SongItem>()
+                        .take(8)
+                }
+            }.forEach { songs += it.await() }
+        }
+
+        // 2) Otherwise (or to top up) the trending / top songs from the charts.
+        if (songs.size < 20) {
+            YouTube.getChartsPage().onSuccess { page ->
+                songs += page.sections.flatMap { it.items }.filterIsInstance<SongItem>().take(40)
+            }
+        }
+
+        val result = songs
+            .filterExplicit(hideExplicit)
+            .filterVideoSongs(hideVideoSongs)
+            .distinctBy { it.id }
+            .shuffled()
+            .take(20)
+        // Keep the previous list if this attempt found nothing (network hiccup, empty response).
+        if (result.isNotEmpty()) quickPicksOnline.value = result
+    }
+
     private suspend fun getQuickPicks() {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
@@ -343,6 +387,13 @@ class HomeViewModel @Inject constructor(
             .take(20)
 
         quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
+
+        // Little or no history yet: fill up from online sources so the section is always there.
+        if (quickPicks.value.orEmpty().size < 20) {
+            getQuickPicksOnline()
+        } else {
+            quickPicksOnline.value = emptyList()
+        }
     }
 
     private suspend fun getCommunityPlaylists() {
