@@ -258,6 +258,7 @@ fun Thumbnail(
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
     val layoutDirection = LocalLayoutDirection.current
+    val swipeScope = androidx.compose.runtime.rememberCoroutineScope()
 
     // Collect states
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
@@ -364,9 +365,9 @@ fun Thumbnail(
             val current = latestCurrentMediaIndex
             if (current < 0) return@collect
             if (settled > current && latestCanSkipNext) {
-                playerConnection.player.seekToNext()
+                swipeScope.swipeToSong(playerConnection.player, next = true)
             } else if (settled < current && latestCanSkipPrevious) {
-                playerConnection.player.seekToPreviousMediaItem()
+                swipeScope.swipeToSong(playerConnection.player, next = false)
             }
         }
     }
@@ -515,9 +516,9 @@ fun Thumbnail(
                                     val forward = if (layoutDirection == LayoutDirection.Rtl) dragged > 0 else dragged < 0
                                     if (abs(dragged) > threshold) {
                                         if (forward && latestCanSkipNext) {
-                                            playerConnection.player.seekToNext()
+                                            swipeScope.swipeToSong(playerConnection.player, next = true)
                                         } else if (!forward && latestCanSkipPrevious) {
-                                            playerConnection.player.seekToPreviousMediaItem()
+                                            swipeScope.swipeToSong(playerConnection.player, next = false)
                                         }
                                     }
                                 },
@@ -823,4 +824,25 @@ private fun SeekEffectOverlay(
             .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
             .padding(8.dp)
     )
+}
+
+/**
+ * Swiping the art changes the song but not whether it plays, like the mini player: a paused
+ * player stays paused on the new song, which starts from the beginning.
+ */
+private fun kotlinx.coroutines.CoroutineScope.swipeToSong(player: Player, next: Boolean) {
+    val wasPlaying = player.playWhenReady
+    if (next) player.seekToNext() else player.seekToPreviousMediaItem()
+    if (player.playWhenReady != wasPlaying) player.playWhenReady = wasPlaying
+    if (wasPlaying) return
+    // Playback can be started again while the new song loads; keep it paused for that moment.
+    val target = player.currentMediaItemIndex
+    launch {
+        val until = System.currentTimeMillis() + 500
+        while (System.currentTimeMillis() < until) {
+            if (player.currentMediaItemIndex != target) return@launch
+            if (player.playWhenReady) player.playWhenReady = false
+            delay(50)
+        }
+    }
 }

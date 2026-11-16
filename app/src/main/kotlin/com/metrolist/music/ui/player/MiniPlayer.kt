@@ -225,6 +225,11 @@ private fun NewMiniPlayer(
             }
         }
     val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+    // The song swiped in looks the way the current one does: small, dim and with the play icon
+    // while paused, so it doesn't arrive big and then shrink.
+    val miniIsPlaying by playerConnection.isPlaying.collectAsState()
+    val miniCastIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
+    val swipePreviewPaused = !(if (isCasting) miniCastIsPlaying else miniIsPlaying) || playbackState == Player.STATE_ENDED
 
     // Swipe settings
     val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
@@ -518,6 +523,7 @@ private fun NewMiniPlayer(
                     MiniSwipePreview(
                         metadata = previousMetadata,
                         onSurfaceColor = onSurfaceColor,
+                        paused = swipePreviewPaused,
                         modifier =
                             Modifier.graphicsLayer {
                                 val offset = swipeOffset()
@@ -528,6 +534,7 @@ private fun NewMiniPlayer(
                     MiniSwipePreview(
                         metadata = nextMetadata,
                         onSurfaceColor = onSurfaceColor,
+                        paused = swipePreviewPaused,
                         modifier =
                             Modifier.graphicsLayer {
                                 val offset = swipeOffset()
@@ -963,6 +970,7 @@ private fun MiniGlassBackground(thumbnailUrl: String?) {
 private fun MiniSwipePreview(
     metadata: MediaMetadata?,
     onSurfaceColor: Color,
+    paused: Boolean,
     modifier: Modifier = Modifier,
 ) {
     if (metadata == null) return
@@ -973,15 +981,34 @@ private fun MiniSwipePreview(
         // Same image (and size) as the mini player's own cover, so the two share one cached copy
         // and the cover doesn't reload when the swiped-in song becomes the current one.
         val thumbnailUrl = remember(metadata.thumbnailUrl) { metadata.thumbnailUrl?.resize(120, 120) }
-        AsyncImage(
-            model = thumbnailUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+        // Same size, scale and paused look as the mini player's own cover.
+        Box(
+            contentAlignment = Alignment.Center,
             modifier =
                 Modifier
                     .size(46.dp)
-                    .clip(RoundedCornerShape(10.dp)),
-        )
+                    .graphicsLayer {
+                        val artScale = if (paused) 0.88f else 1f
+                        scaleX = artScale
+                        scaleY = artScale
+                    }.clip(RoundedCornerShape(10.dp)),
+        ) {
+            AsyncImage(
+                model = thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (paused) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)))
+                Icon(
+                    painter = painterResource(R.drawable.player_play),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
         Spacer(modifier = Modifier.width(12.dp))
         Column(verticalArrangement = Arrangement.Center, modifier = Modifier.weight(1f)) {
             Text(
