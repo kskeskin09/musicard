@@ -931,11 +931,11 @@ class MainActivity : FragmentActivity() {
 
                 val autoHideNavBar by rememberEnumPreference(
                     com.metrolist.music.constants.AutoHideNavBarKey,
-                    defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+                    defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.OFF,
                 )
                 val autoHideStatusBar by rememberEnumPreference(
                     com.metrolist.music.constants.AutoHideStatusBarKey,
-                    defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+                    defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.OFF,
                 )
                 com.metrolist.music.ui.utils.AutoHideNavigationBar(
                     active = playerBottomSheetState.isExpanded,
