@@ -664,6 +664,8 @@ fun ArtistListItem(
         }
     },
     trailingContent: @Composable RowScope.() -> Unit = {},
+    // Library lists show the artist as a rounded square, like albums and playlists.
+    squareThumbnail: Boolean = false,
 ) = ListItem(
     title = artist.artist.name,
     subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else null,
@@ -679,7 +681,7 @@ fun ArtistListItem(
             contentDescription = null,
             modifier = Modifier
                 .size(ListThumbnailSize)
-                .clip(CircleShape),
+                .clip(if (squareThumbnail) RoundedCornerShape(ThumbnailCornerRadius) else CircleShape),
         )
     },
     trailingContent = trailingContent,
@@ -696,6 +698,8 @@ fun ArtistGridItem(
         }
     },
     fillMaxWidth: Boolean = false,
+    // Library grids show the artist as a rounded square, like albums and playlists.
+    squareThumbnail: Boolean = false,
 ) = GridItem(
     title = artist.artist.name,
     subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else "",
@@ -712,7 +716,7 @@ fun ArtistGridItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .clip(CircleShape)
+                .clip(if (squareThumbnail) RoundedCornerShape(GridThumbnailCornerRadius) else CircleShape)
         )
     },
     fillMaxWidth = fillMaxWidth,
