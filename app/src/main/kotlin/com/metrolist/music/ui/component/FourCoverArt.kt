@@ -24,8 +24,8 @@ import coil3.compose.AsyncImage
 fun FourCoverArt(
     covers: List<String?>,
     modifier: Modifier = Modifier,
-    size: Dp = 280.dp,
-    corner: Dp = 16.dp,
+    size: Dp = Dp.Unspecified,
+    corner: Dp = PlayerArtCorner,
 ) {
     // Fills the top of the page edge to edge when that setting is on.
     PageCoverFrame(
