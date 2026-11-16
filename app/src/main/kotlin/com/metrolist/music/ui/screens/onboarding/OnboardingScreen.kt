@@ -296,7 +296,7 @@ fun OnboardingScreen(
     val (darkMode, onDarkModeChange) = rememberEnumPreference(DarkModeKey, DarkMode.AUTO)
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(PlayerCardBackgroundKey, PlayerCardBackground.CLASSIC)
-    val (sliderStyle, onSliderStyleChange) = rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    val (sliderStyle, onSliderStyleChange) = rememberEnumPreference(SliderStyleKey, SliderStyle.SLIM)
     val (edgeArt, onEdgeArtChange) = rememberPreference(EdgeToEdgeAlbumArtKey, false)
     val (lyricStyle, onLyricStyleChange) = rememberEnumPreference(LyricStyleKey, LyricStyle.CLASSIC)
     val (lyricsPosition, onLyricsPositionChange) = rememberEnumPreference(LyricsTextPositionKey, LyricsPosition.CENTER)

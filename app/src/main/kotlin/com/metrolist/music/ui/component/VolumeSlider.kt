@@ -40,7 +40,7 @@ fun VolumeSlider(
     @Suppress("UNUSED_PARAMETER") accentColor: Color = MaterialTheme.colorScheme.primary,
 ) {
     // "Old" slider style: the plain Material slider, like everywhere else in the app.
-    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.SLIM)
     if (sliderStyle == SliderStyle.DEFAULT) {
         Slider(
             value = value.coerceIn(0f, 1f),

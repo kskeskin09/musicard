@@ -38,7 +38,7 @@ fun StyledSlider(
     onValueChangeFinished: (() -> Unit)? = null,
     colors: SliderColors = SliderDefaults.colors(),
 ) {
-    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.SLIM)
     when (sliderStyle) {
         SliderStyle.SLIM -> {
             val sliderState =
