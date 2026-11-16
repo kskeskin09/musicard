@@ -99,6 +99,7 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.utils.markSearchContentOpened
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
@@ -223,6 +224,7 @@ fun OnlineSearchResult(
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val searchFilter by viewModel.filter.collectAsStateWithLifecycle()
     val searchSummary = viewModel.summaryPage
     val rankedResults = viewModel.rankedResults
@@ -245,6 +247,7 @@ fun OnlineSearchResult(
 
     // What tapping a result does: play a song or episode, open an album, artist or playlist.
     val openYtItem: (YTItem) -> Unit = { item ->
+        context.markSearchContentOpened(item)
         when (item) {
                                 is SongItem -> {
                                     if (item.id == mediaMetadata?.id) {
