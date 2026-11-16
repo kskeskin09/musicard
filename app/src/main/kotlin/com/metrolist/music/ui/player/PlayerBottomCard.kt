@@ -1187,7 +1187,7 @@ fun CompactLyrics(
             )
         }
     val preferredBias =
-        when (if (modern) LyricsPosition.LEFT else lyricsTextPosition) {
+        when (lyricsTextPosition) {
             LyricsPosition.LEFT -> -1f
             LyricsPosition.CENTER -> 0f
             LyricsPosition.RIGHT -> 1f
