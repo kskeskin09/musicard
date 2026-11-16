@@ -351,15 +351,17 @@ private fun NewMiniPlayer(
         animationSpec = androidx.compose.animation.core.tween(800),
         label = "miniAlbumColor",
     )
-    val themePillColor by androidx.compose.animation.animateColorAsState(
-        targetValue =
-            com.metrolist.music.ui.theme.PageFadeColors.current
-                ?.takeIf { followPage }
-                ?.let { com.metrolist.music.ui.theme.raisedPageColor(it) }
-                ?: MaterialTheme.colorScheme.surfaceContainer,
-        animationSpec = androidx.compose.animation.core.tween(200),
-        label = "miniThemePill",
-    )
+    // Follows the page change frame by frame, so the pill keeps the page's color while that page
+    // is still on screen and turns into the next page's color as it slides in.
+    val themePillColor =
+        if (followPage) {
+            com.metrolist.music.ui.theme.PageFadeColors.blend(
+                fallback = MaterialTheme.colorScheme.surfaceContainer,
+                map = { com.metrolist.music.ui.theme.raisedPageColor(it) },
+            )
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        }
     val backgroundColor =
         when {
             // On a cover-tinted page (stats, playlists, albums) the pill takes the page's raised color.
