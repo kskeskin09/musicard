@@ -946,7 +946,7 @@ class MusicService :
             lyricsPrefetchQueueVersion,
             dataStore.data
                 .map { prefs ->
-                    val enabled = prefs[com.metrolist.music.constants.PrefetchNextLyricsKey] ?: false
+                    val enabled = prefs[com.metrolist.music.constants.PrefetchNextLyricsKey] ?: true
                     val count = (prefs[com.metrolist.music.constants.PrefetchNextLyricsCountKey]
                         ?: com.metrolist.music.constants.DEFAULT_PREFETCH_NEXT_LYRICS_COUNT)
                         .coerceIn(1, com.metrolist.music.constants.MAX_PREFETCH_NEXT_LYRICS_COUNT)
