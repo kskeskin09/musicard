@@ -397,6 +397,25 @@ fun BottomSheetPlayer(
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val nowPlayingHaptic = LocalHapticFeedback.current
+    // Holding the playing song (mini player or the big cover) opens the song's own menu, the same
+    // one as the three-dot button next to Up next.
+    val openNowPlayingMenu: () -> Unit = openMenu@{
+        val metadata = mediaMetadata ?: return@openMenu
+        nowPlayingHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        menuState.show {
+            PlayerMenu(
+                mediaMetadata = metadata,
+                playerBottomSheetState = state,
+                onShowDetailsDialog = {
+                    bottomSheetPageState.show {
+                        ShowMediaInfo(metadata.id)
+                    }
+                },
+                onDismiss = menuState::dismiss,
+            )
+        }
+    }
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
     val automix by playerConnection.service.automixItems.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
@@ -1215,6 +1234,7 @@ fun BottomSheetPlayer(
                 positionState = positionState,
                 durationState = durationState,
                 onClick = { state.expandSoft() },
+                onLongClick = openNowPlayingMenu,
             )
         },
     ) {
@@ -2295,6 +2315,7 @@ fun BottomSheetPlayer(
                             } else {
                                 Thumbnail(
                                     sliderPositionProvider = sliderPositionProvider,
+                                    onLongPress = openNowPlayingMenu,
                                     modifier = Modifier.animateContentSize(),
                                     isPlayerExpanded = isExpandedProvider,
                                     isLandscape = true,
@@ -2492,6 +2513,7 @@ fun BottomSheetPlayer(
                             ) {
                                 Thumbnail(
                                     sliderPositionProvider = sliderPositionProvider,
+                                    onLongPress = openNowPlayingMenu,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
