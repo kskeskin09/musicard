@@ -2035,12 +2035,13 @@ class MusicService :
             player.shuffleModeEnabled = false
         }
         originalQueueSize = 0
+        loadingQueue = queue
         if (queue.preloadItem != null) {
             player.setMediaItem(queue.preloadItem!!.toMediaItem())
             player.prepare()
             player.playWhenReady = playWhenReady
         }
-        scope.launch(SilentHandler) {
+        val loadJob = scope.launch(SilentHandler) {
             val initialStatus =
                 withContext(Dispatchers.IO) {
                     queue
@@ -2085,6 +2086,14 @@ class MusicService :
             if (player.shuffleModeEnabled) {
                 val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
                 applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst)
+            }
+        }
+        loadJob.invokeOnCompletion {
+            scope.launch {
+                if (loadingQueue === queue) {
+                    loadingQueue = null
+                    ensureUpcomingSongs()
+                }
             }
         }
     }
@@ -2505,6 +2514,114 @@ class MusicService :
         // Sync with YouTube (handles login check internally)
         val setVideoId = if (isCurrentlySaved) database.getSetVideoId(songEntity.id)?.setVideoId else null
         syncUtils.saveEpisode(songEntity.id, shouldBeSaved, setVideoId)
+    }
+
+    // ---- Keep the queue going with suggested songs ----
+    // When the list itself runs out (a song from Quick picks, a playlist or album that ends),
+    // songs suggested from the end of the queue are added, so at least MIN_UPCOMING_SONGS songs
+    // always come after the playing one and playback never just stops.
+
+    /** The queue whose first songs are still loading in playQueue; nothing is added meanwhile. */
+    private var loadingQueue: Queue? = null
+    private var upcomingFillJob: Job? = null
+
+    /** The suggestion radio used for [suggestionsOwner], fetched page by page. */
+    private var suggestionRadio: YouTubeQueue? = null
+    private var suggestionsOwner: Queue? = null
+    private val suggestionSeeds = HashSet<String>()
+
+    /** Number of songs that will play after the current one (in shuffle order when it is on), up to [limit]. */
+    private fun upcomingSongCount(limit: Int): Int {
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty) return 0
+        var index = player.currentMediaItemIndex
+        if (index !in 0 until timeline.windowCount) return 0
+        var count = 0
+        while (count < limit) {
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
+            if (index == C.INDEX_UNSET) break
+            count++
+        }
+        return count
+    }
+
+    private fun isListenTogetherGuest(): Boolean =
+        runCatching {
+            listenTogetherManager.role.value == com.metrolist.music.listentogether.RoomRole.GUEST
+        }.getOrDefault(false)
+
+    private fun ensureUpcomingSongs() {
+        if (taskCleared || !playerInitialized.value) return
+        if (upcomingFillJob?.isActive == true || loadingQueue != null) return
+        if (!cachedAutoLoadMore || player.repeatMode == REPEAT_MODE_ALL) return
+        if (player.mediaItemCount == 0 || player.currentMediaItem == null) return
+        // A list that still has pages of its own loads those first (see onMediaItemTransition).
+        if (currentQueue.hasNextPage()) return
+        if (player.currentMetadata?.isEpisode == true || isListenTogetherGuest()) return
+        val missing = MIN_UPCOMING_SONGS - upcomingSongCount(MIN_UPCOMING_SONGS)
+        if (missing <= 0) return
+
+        val owner = currentQueue
+        if (suggestionsOwner !== owner) {
+            suggestionsOwner = owner
+            suggestionRadio = null
+            suggestionSeeds.clear()
+        }
+
+        upcomingFillJob =
+            scope.launch(SilentHandler) {
+                val known = HashSet<String>()
+                for (i in 0 until player.mediaItemCount) known.add(player.getMediaItemAt(i).mediaId)
+                val found = ArrayList<MediaItem>()
+                var attempts = 0
+                while (found.size < missing && attempts < 4) {
+                    attempts++
+                    val current = suggestionRadio
+                    val page =
+                        try {
+                            if (current != null && current.hasNextPage()) {
+                                withContext(Dispatchers.IO) { current.nextPage() }
+                            } else {
+                                val seed = pickSuggestionSeed() ?: break
+                                suggestionSeeds.add(seed)
+                                val radio = YouTubeQueue(WatchEndpoint(videoId = seed))
+                                suggestionRadio = radio
+                                withContext(Dispatchers.IO) { radio.getInitialStatus().items }
+                            }
+                        } catch (e: Exception) {
+                            Timber.tag(TAG).w(e, "Could not fetch suggested songs")
+                            suggestionRadio = null
+                            emptyList()
+                        }
+                    page
+                        .filterExplicit(cachedHideExplicit)
+                        .filterVideoSongs(cachedHideVideoSongs)
+                        .forEach { item ->
+                            if (item.metadata?.isEpisode != true && known.add(item.mediaId)) found.add(item)
+                        }
+                }
+                if (found.isEmpty() || currentQueue !== owner || player.mediaItemCount == 0) return@launch
+                player.addMediaItems(found)
+                if (player.shuffleModeEnabled) {
+                    applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, cachedShufflePlaylistFirst, keepHistory = true)
+                }
+            }
+    }
+
+    /** The last song in play order that has not been used for suggestions yet. */
+    private fun pickSuggestionSeed(): String? {
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty) return player.currentMetadata?.id
+        val shuffle = player.shuffleModeEnabled
+        var index = timeline.getLastWindowIndex(shuffle)
+        var steps = 0
+        while (index != C.INDEX_UNSET && steps < 50) {
+            val item = player.getMediaItemAt(index)
+            if (item.metadata?.isEpisode != true && item.mediaId !in suggestionSeeds) return item.mediaId
+            index = timeline.getPreviousWindowIndex(index, Player.REPEAT_MODE_OFF, shuffle)
+            steps++
+        }
+        return null
     }
 
     fun toggleStartRadio() {
@@ -3057,6 +3174,15 @@ class MusicService :
         }
         if (events.containsAny(EVENT_TIMELINE_CHANGED, Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED, Player.EVENT_REPEAT_MODE_CHANGED)) {
             lyricsPrefetchQueueVersion.value++
+        }
+        if (events.containsAny(
+                EVENT_TIMELINE_CHANGED,
+                Player.EVENT_MEDIA_ITEM_TRANSITION,
+                Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED,
+                Player.EVENT_REPEAT_MODE_CHANGED,
+            )
+        ) {
+            ensureUpcomingSongs()
         }
 
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
@@ -5401,6 +5527,7 @@ class MusicService :
         private const val INITIAL_BUFFER_RECOVERY_DELAY_MS = 15_000L
         private const val INITIAL_BUFFER_RECOVERY_POSITION_MS = 5_000L
         private const val TAG = "MusicService"
+        private const val MIN_UPCOMING_SONGS = 5
 
         @Volatile
         var isRunning = false
