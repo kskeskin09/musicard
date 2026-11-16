@@ -227,6 +227,7 @@ import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.ui.component.lockSliderDrag
 import com.metrolist.music.ui.component.rememberUnlikeGuard
 import com.metrolist.music.ui.component.rememberCrackShake
+import com.metrolist.music.ui.component.GlassCoverScale
 import com.metrolist.music.ui.component.BottomSheet
 import com.metrolist.music.ui.component.BottomSheetState
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -3478,7 +3479,7 @@ private const val EdgeToEdgePausedScale = 0.93f
 internal val DefaultAlbumBackground = Color(0xFF2B2A30)
 
 /**
- * Glass player background: the whole album cover, stretched to the screen and blurred until only its colors
+ * Glass player background: the album cover, filling the screen and blurred until only its colors
  * are left, darkened a little so white text stays readable. It sits behind the whole player, so
  * the lyrics and up-next views share it.
  */
@@ -3509,9 +3510,8 @@ internal fun GlassCoverBackground(
                             .allowHardware(false)
                             .build(),
                     contentDescription = null,
-                    // The whole cover is stretched to the background's size instead of cropped and zoomed,
-                    // so all of its colors show; the blur clamps at the edges, so nothing fades or runs out.
-                    contentScale = ContentScale.FillBounds,
+                    // Fills the background with the cover only slightly stretched instead of zoomed in.
+                    contentScale = GlassCoverScale,
                     modifier =
                         Modifier
                             .fillMaxSize()

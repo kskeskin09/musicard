@@ -107,6 +107,7 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import com.metrolist.music.ui.component.GlassCoverScale
 import com.metrolist.music.ui.component.Icon as MIcon
 import androidx.compose.ui.draw.blur
 import com.metrolist.music.constants.MiniPlayerBackgroundStyle
@@ -954,9 +955,8 @@ private fun MiniGlassBackground(thumbnailUrl: String?) {
                             .allowHardware(false)
                             .build(),
                     contentDescription = null,
-                    // The whole cover is stretched to the background's size instead of cropped and zoomed,
-                    // so all of its colors show; the blur clamps at the edges, so nothing fades or runs out.
-                    contentScale = ContentScale.FillBounds,
+                    // Fills the background with the cover only slightly stretched instead of zoomed in.
+                    contentScale = GlassCoverScale,
                     modifier =
                         Modifier
                             .fillMaxSize()

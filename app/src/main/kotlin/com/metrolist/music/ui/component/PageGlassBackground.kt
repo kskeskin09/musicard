@@ -26,7 +26,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.ScaleFactor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -37,6 +39,30 @@ import com.metrolist.music.constants.PageBackgroundKey
 import com.metrolist.music.constants.PlayerCardBackground
 import com.metrolist.music.utils.LocalBatterySaver
 import com.metrolist.music.utils.rememberEnumPreference
+
+/**
+ * How the cover fills a glass background: like [ContentScale.Crop], but the cover may also be
+ * stretched up to [GlassMaxStretch] times along the longer side, so a square cover on a tall
+ * screen is cut off much less and its colors show. It always covers the whole area, so there
+ * are no gaps at the edges.
+ */
+val GlassCoverScale: ContentScale =
+    object : ContentScale {
+        override fun computeScaleFactor(
+            srcSize: Size,
+            dstSize: Size,
+        ): ScaleFactor {
+            val sx = dstSize.width / srcSize.width
+            val sy = dstSize.height / srcSize.height
+            return if (sy >= sx) {
+                ScaleFactor(maxOf(sx, sy / GlassMaxStretch), sy)
+            } else {
+                ScaleFactor(sx, maxOf(sy, sx / GlassMaxStretch))
+            }
+        }
+    }
+
+private const val GlassMaxStretch = 1.5f
 
 /**
  * Whether album and playlist pages show the blurred cover ("Glass") instead of an even color
@@ -107,9 +133,8 @@ fun PageGlassBackground(
                         .allowHardware(false)
                         .build(),
                 contentDescription = null,
-                // The whole cover is stretched to the background's size instead of cropped and zoomed,
-                // so all of its colors show; the blur clamps at the edges, so nothing fades or runs out.
-                contentScale = ContentScale.FillBounds,
+                // Fills the background with the cover only slightly stretched instead of zoomed in.
+                contentScale = GlassCoverScale,
                 modifier =
                     Modifier
                         .fillMaxSize()
