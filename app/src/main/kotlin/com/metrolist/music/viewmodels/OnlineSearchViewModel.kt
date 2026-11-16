@@ -14,6 +14,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SearchRelevance
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
@@ -51,6 +52,13 @@ constructor(
     var summaryPage by mutableStateOf<SearchSummaryPage?>(null)
     val viewStateMap = mutableStateMapOf<String, ItemsPage?>()
 
+    /**
+     * Everything found for the query in one list, best match first (see [SearchRelevance]). Shown
+     * under the top result instead of YouTube Music's shelves, which are filled even with items that
+     * have little to do with the query.
+     */
+    var rankedResults by mutableStateOf<List<YTItem>?>(null)
+
     // The "Music" chip shows everything playable: official songs and videos together. They come
     // from two separate searches, so each keeps its own "load more" token.
     private var musicSongContinuation: String? = null
@@ -82,9 +90,9 @@ constructor(
             .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
     }
 
-    private suspend fun loadMusicFilter(): Unit =
+    private suspend fun loadMusicFilter(record: Boolean = recordHistory): Unit =
         coroutineScope {
-            val songs = async { YouTube.search(query, YouTube.SearchFilter.FILTER_SONG, recordSearchHistory = recordHistory) }
+            val songs = async { YouTube.search(query, YouTube.SearchFilter.FILTER_SONG, recordSearchHistory = record) }
             // Only the first request records the search in the account history.
             // Skipped when the user hides video songs: they would all be filtered out anyway.
             val videos =
@@ -194,6 +202,31 @@ constructor(
             }
         }
 
+    /**
+     * The "All" view: YouTube's summary (for the top result card) and the first pages of the songs
+     * and videos searches (the same ones the Music chip shows) load together, then everything is
+     * ranked by how well it matches the query.
+     */
+    private suspend fun loadAllResults() {
+        if (rankedResults != null) return
+        coroutineScope {
+            launch { loadSummaryPage() }
+            launch {
+                if (viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] == null) {
+                    // The summary request already records the search in the account history.
+                    loadMusicFilter(record = false)
+                }
+            }
+        }
+        val summaryItems = summaryPage?.summaries.orEmpty().flatMap { it.items }
+        val musicItems = viewStateMap[YouTube.SearchFilter.FILTER_SONG.value]?.items.orEmpty()
+        if (summaryPage == null && musicItems.isEmpty()) return
+        rankedResults =
+            SearchRelevance
+                .rank(query, summaryItems + musicItems)
+                .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
+    }
+
     private suspend fun loadSummaryPage() {
         if (summaryPage == null) {
             YouTube
@@ -228,7 +261,7 @@ constructor(
         viewModelScope.launch {
             filter.collect { filter ->
                 if (filter == null) {
-                    loadSummaryPage()
+                    loadAllResults()
                 } else if (filter == YouTube.SearchFilter.FILTER_EPISODE) {
                     // The FILTER_EPISODE API returns episodes in a format that differs from the
                     // summary search: playlistItemData is absent and the subtitle structure is
