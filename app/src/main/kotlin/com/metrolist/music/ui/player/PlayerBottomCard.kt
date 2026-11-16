@@ -84,6 +84,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Rect
@@ -1668,8 +1669,7 @@ private fun SweepingWordsLine(
                     val lifted = if (liftSungPart) liftedLetters(textLayout, words, built.second, positionSec) else emptyList()
                     val liftedPath = Path()
                     lifted.forEach { liftedPath.addRect(it.box) }
-                    // Same for the lifted letters: only cut them out when there are any.
-                    clipPath(if (liftedPath.isEmpty) FarAwayPath else liftedPath, clipOp = ClipOp.Difference) {
+                    val drawSweep: DrawScope.() -> Unit = {
                     this@drawWithContent.drawContent()
                     val sungPath = Path()
                     words.forEachIndexed { index, word ->
@@ -1698,37 +1698,44 @@ private fun SweepingWordsLine(
                             val bottom = textLayout.getLineBottom(firstLine)
                             // Only the part already sung lights up: fully bright behind a soft edge
                             // that trails the fill point, so nothing ahead of it brightens early.
-                            val edgeStart = (fillX - edgeWidthPx).coerceAtLeast(left)
-                            // Clips thinner than a pixel are skipped (nothing to show, and a clip that
-                            // rounds to nothing is not reliable everywhere).
-                            if (edgeStart - left >= 1f) {
-                                clipRect(left, top, edgeStart, bottom) {
-                                    drawText(textLayout, color = bright)
-                                }
-                            }
-                            if (fillX - edgeStart >= 1f) {
-                                val strips = 8
-                                val stripWidth = (fillX - edgeStart) / strips
-                                for (i in 0 until strips) {
-                                    // From bright (at the sung side) down to the line's dim color at the fill point.
-                                    val t = (i + 0.5f) / strips
-                                    val stripAlpha = 1f - t
-                                    clipRect(edgeStart + stripWidth * i, top, edgeStart + stripWidth * (i + 1), bottom) {
-                                        drawText(textLayout, color = color.copy(alpha = stripAlpha * sung))
-                                    }
+                            // The whole word is one clip and the soft edge is a gradient. Thin
+                            // clips (the edge used to be cut into eight strips, each under a pixel
+                            // wide while a word was just starting) are not reliable on every
+                            // phone: some ignore them and draw the whole line bright for a moment.
+                            if (fillX - left >= 1f && right - left >= 1f) {
+                                val edgeEnd = fillX
+                                val edgeStart = (fillX - edgeWidthPx).coerceAtLeast(left).coerceAtMost(edgeEnd - 0.5f)
+                                clipRect(left, top, right, bottom) {
+                                    drawText(
+                                        textLayoutResult = textLayout,
+                                        brush =
+                                            Brush.horizontalGradient(
+                                                0f to bright,
+                                                1f to color.copy(alpha = 0f),
+                                                startX = edgeStart,
+                                                endX = edgeEnd,
+                                            ),
+                                    )
                                 }
                             }
                         }
                     }
-                    // Never clip to an empty path: some phones ignore an empty clip, and the text
-                    // view then draws its first row in full (the lines it thinks are in view),
-                    // which showed as the whole first row lighting up for a moment, mostly while
-                    // the first word of a line was being sung (nothing fully sung yet).
-                    if (!sungPath.isEmpty) {
+                    // Never clip to an empty (or too small) path: some phones ignore such a clip,
+                    // and the text then draws its first row in full, which showed as the whole
+                    // row lighting up for a moment.
+                    val sungBounds = if (sungPath.isEmpty) Rect.Zero else sungPath.getBounds()
+                    if (sungBounds.width >= 1f && sungBounds.height >= 1f) {
                         clipPath(sungPath) {
                             drawText(textLayoutResult = textLayout, color = bright)
                         }
                     }
+                    }
+                    // Only cut the lifted letters out when there are any (classic style has none,
+                    // and then nothing is clipped at all).
+                    if (liftedPath.isEmpty) {
+                        drawSweep()
+                    } else {
+                        clipPath(liftedPath, clipOp = ClipOp.Difference) { drawSweep() }
                     }
                     // The lifted letters are drawn on their own: dim first, then the sung part.
                     lifted.forEach { letter ->
@@ -1744,25 +1751,20 @@ private fun SweepingWordsLine(
                             clipRect(box.left, box.top, box.right, box.bottom)
                         }) {
                             drawText(textLayout, color = color.copy(alpha = dimAlpha))
-                            val edgeStart = (letter.fillX - edgeWidthPx).coerceAtLeast(letter.wordLeft)
-                            val brightEnd = edgeStart.coerceAtMost(box.right)
-                            if (brightEnd > box.left) {
-                                clipRect(box.left, box.top, brightEnd, box.bottom) {
-                                    drawText(textLayout, color = bright)
-                                }
-                            }
+                            // The sung part of the letter: one gradient, never thin strips (see above).
                             val edgeEnd = letter.fillX.coerceAtMost(letter.wordRight)
-                            if (edgeEnd > edgeStart && edgeStart < box.right && edgeEnd > box.left) {
-                                val strips = 8
-                                val stripWidth = (edgeEnd - edgeStart) / strips
-                                for (i in 0 until strips) {
-                                    val stripLeft = (edgeStart + stripWidth * i).coerceAtLeast(box.left)
-                                    val stripRight = (edgeStart + stripWidth * (i + 1)).coerceAtMost(box.right)
-                                    if (stripRight <= stripLeft) continue
-                                    clipRect(stripLeft, box.top, stripRight, box.bottom) {
-                                        drawText(textLayout, color = color.copy(alpha = (1f - (i + 0.5f) / strips) * sung))
-                                    }
-                                }
+                            if (edgeEnd - box.left >= 1f) {
+                                val edgeStart = (letter.fillX - edgeWidthPx).coerceAtLeast(letter.wordLeft).coerceAtMost(edgeEnd - 0.5f)
+                                drawText(
+                                    textLayoutResult = textLayout,
+                                    brush =
+                                        Brush.horizontalGradient(
+                                            0f to bright,
+                                            1f to color.copy(alpha = 0f),
+                                            startX = edgeStart,
+                                            endX = edgeEnd,
+                                        ),
+                                )
                             }
                         }
                     }
@@ -1783,8 +1785,6 @@ private class LiftedLetter(
 
 private const val LiftGrow = 0.12f
 
-// A tiny rectangle far outside any text, cut out instead of an empty path (see SweepingWordsLine).
-private val FarAwayPath = Path().apply { addRect(Rect(-100_000f, -100_000f, -99_999f, -99_999f)) }
 private const val LiftRise = 0.05f
 
 /**
