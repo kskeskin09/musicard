@@ -224,6 +224,7 @@ import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.listentogether.RoomRole
 import com.metrolist.music.models.MediaMetadata
+import com.metrolist.music.ui.component.lockSliderDrag
 import com.metrolist.music.ui.component.rememberUnlikeGuard
 import com.metrolist.music.ui.component.rememberCrackShake
 import com.metrolist.music.ui.component.BottomSheet
@@ -1778,7 +1779,7 @@ fun BottomSheetPlayer(
                             },
                             enabled = !isListenTogetherGuest,
                             colors = PlayerSliderColors.getSliderColors(textButtonColor, playerBackground, useDarkTheme),
-                            modifier = Modifier.padding(horizontal = PlayerHorizontalPadding),
+                            modifier = Modifier.padding(horizontal = PlayerHorizontalPadding).lockSliderDrag(!isListenTogetherGuest),
                         )
                     }
 
@@ -1818,7 +1819,7 @@ fun BottomSheetPlayer(
                                     colors = PlayerSliderColors.getSliderColors(textButtonColor, playerBackground, useDarkTheme),
                                 )
                             },
-                            modifier = Modifier.padding(horizontal = PlayerHorizontalPadding),
+                            modifier = Modifier.padding(horizontal = PlayerHorizontalPadding).lockSliderDrag(!isListenTogetherGuest),
                         )
                     }
                 }
