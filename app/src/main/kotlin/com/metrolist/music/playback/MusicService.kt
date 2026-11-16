@@ -2615,9 +2615,11 @@ class MusicService :
                         }
                 }
                 if (found.isEmpty() || currentQueue !== owner || player.mediaItemCount == 0) return@launch
+                found.forEach { automixSongIds.add(it.mediaId) }
+                val played = shuffleKeep()
                 player.addMediaItems(found)
                 if (player.shuffleModeEnabled) {
-                    applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, cachedShufflePlaylistFirst, keepHistory = true)
+                    applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, cachedShufflePlaylistFirst, played)
                 }
             }
     }

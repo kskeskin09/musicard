@@ -7,6 +7,7 @@
 
 ## New features
 - Long-press the playing song (mini player or the big cover) to open its menu; long-press the Top result in search to open its options
+- When a list, album or Quick picks song runs out, suggested songs keep the queue going (follows the Auto load more setting)
 - Up next: swipe an upcoming song to the left to remove it from the queue
 - Playlists go on with suggested songs when they end, and "Playing from" then shows the playlist's name followed by Mix
 - Artist songs use the same sort row as playlists: Name, Date added (newest / oldest), where Date added is when you added the song to your library
@@ -24,6 +25,8 @@
 - Lyrics: the line no longer flashes bright while a word starts
 - Settings regrouped: one Music player group, lyrics settings under Lyrics, a new Display group, and Auto download on like moved to Downloads
 - Slider style defaults to Classic, and Home order is no longer shuffled by default
+- The navigation and status bars stay visible by default, and Moods and genres on Home snaps one column at a time
+- No more stray "Music Player" notification when nothing is playing
 
 ---v13.11.0
 # Musicard 13.11.0
