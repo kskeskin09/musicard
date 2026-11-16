@@ -1251,6 +1251,10 @@ class MainActivity : FragmentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 200)),
                                 exit = ExitTransition.None,
                             ) {
+                                // While it goes away, the header would still be drawn for a frame
+                                // with the new page's values (no title, with a search bar), so a
+                                // search bar flashed when Settings opened from the Profile tab.
+                                if (!shouldShowTopBar) return@AnimatedVisibility
                                 // Main tabs: large page name, profile picture and a search pill, on the
                                 // page background (below the status bar).
                                 // Header buttons: round, on the same gray as the search bar.
