@@ -159,6 +159,7 @@ fun MiniPlayer(
     durationState: MutableLongState,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
 ) {
     // Create stable progress state - doesn't cause recomposition on position changes
     val progressState = remember { ProgressState(positionState, durationState) }
@@ -167,6 +168,7 @@ fun MiniPlayer(
         progressState = progressState,
         modifier = modifier,
         onClick = onClick,
+        onLongClick = onLongClick,
     )
 }
 
@@ -179,6 +181,7 @@ private fun NewMiniPlayer(
     progressState: ProgressState,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
 
@@ -454,10 +457,11 @@ private fun NewMiniPlayer(
                     .clip(RoundedCornerShape(32.dp))
                     .background(color = backgroundColor)
                     .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
-                    .clickable(
+                    .combinedClickable(
                         interactionSource = interactionSource,
                         indication = LocalIndication.current,
-                        onClick = onClick
+                        onLongClick = onLongClick,
+                        onClick = onClick,
                     )
                     // Thin, display-only progress line hugging the bottom edge of the pill. No track
                     // is drawn, so at 0 the pill looks plain. Progress is read while drawing only.
