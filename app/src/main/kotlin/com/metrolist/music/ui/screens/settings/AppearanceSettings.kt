@@ -371,13 +371,13 @@ fun AppearanceSettings(
     val (autoHideNavBar, onAutoHideNavBarChange) =
         rememberEnumPreference(
             com.metrolist.music.constants.AutoHideNavBarKey,
-            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.OFF,
         )
     var showAutoHideNavBarDialog by rememberSaveable { mutableStateOf(false) }
     val (autoHideStatusBar, onAutoHideStatusBarChange) =
         rememberEnumPreference(
             com.metrolist.music.constants.AutoHideStatusBarKey,
-            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.SECONDS_3,
+            defaultValue = com.metrolist.music.constants.AutoHideNavBarDelay.OFF,
         )
     var showAutoHideStatusBarDialog by rememberSaveable { mutableStateOf(false) }
     val autoHideNavBarText: @Composable (com.metrolist.music.constants.AutoHideNavBarDelay) -> String = {
