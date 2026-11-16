@@ -954,14 +954,13 @@ private fun MiniGlassBackground(thumbnailUrl: String?) {
                             .allowHardware(false)
                             .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    // The whole cover is stretched to the background's size instead of cropped and zoomed,
+                    // so all of its colors show; the blur clamps at the edges, so nothing fades or runs out.
+                    contentScale = ContentScale.FillBounds,
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = 1.35f
-                                scaleY = 1.35f
-                            }.blur(40.dp),
+                            .blur(40.dp),
                 )
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.36f)))
             }
