@@ -972,8 +972,20 @@ class MainActivity : FragmentActivity() {
                 // its whole header, search bar and all, and then jumped to where it should be.)
                 // It also follows changes a page makes itself, such as bringing the header back
                 // when its list is at the top (see HeaderFollowsList).
+                // The page the header was last shown for. While the header goes away it keeps that
+                // page's look (title, search bar, how far it was scrolled), instead of picking up the
+                // values of the page that is opening.
+                val headerRouteHolder = remember { arrayOfNulls<String>(1) }
+                if (shouldShowTopBar) headerRouteHolder[0] = currentRoute
+                val headerRoute = headerRouteHolder[0]
+                val headerOnHome = headerRoute == Screens.Home.route
+                val headerOnProfile = headerRoute == Screens.Profile.route
                 fun headerCollapsePx(): Float =
-                    currentRoute?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] } ?: 0f
+                    headerRoute?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] } ?: 0f
+                // Going to another tab of the bottom bar (such as Search), the header fades out
+                // together with the page, so the Home title doesn't vanish at once with a dark band
+                // over the status bar. Other pages still drop it at once.
+                val headerFadesOut = !shouldShowTopBar && currentRoute in navigationItemRoutes
                 val latestRoute = androidx.compose.runtime.rememberUpdatedState(currentRoute)
                 val headerCollapseConnection =
                     remember(headerMaxPx) {
@@ -1146,17 +1158,15 @@ class MainActivity : FragmentActivity() {
                     onDispose { removeOnNewIntentListener(listener) }
                 }
 
-                val currentTitleRes =
-                    remember(navBackStackEntry) {
-                        when (navBackStackEntry?.destination?.route) {
-                            Screens.Home.route -> R.string.home
-                            Screens.Explore.route -> R.string.explore
-                            Screens.Profile.route -> R.string.profile_tab
-                            Screens.Search.route -> R.string.search
-                            Screens.Library.route -> R.string.filter_library
-                            Screens.ListenTogether.route -> R.string.together
-                            else -> null
-                        }
+                fun headerTitleRes(route: String?): Int? =
+                    when (route) {
+                        Screens.Home.route -> R.string.home
+                        Screens.Explore.route -> R.string.explore
+                        Screens.Profile.route -> R.string.profile_tab
+                        Screens.Search.route -> R.string.search
+                        Screens.Library.route -> R.string.filter_library
+                        Screens.ListenTogether.route -> R.string.together
+                        else -> null
                     }
 
                 var showAccountDialog by remember { mutableStateOf(false) }
@@ -1233,7 +1243,7 @@ class MainActivity : FragmentActivity() {
                                 animationSpec = if (shouldShowTopBar) androidx.compose.animation.core.snap() else tween(320),
                                 label = "statusScrim",
                             )
-                            if (!shouldShowTopBar && statusScrimAlpha > 0f) {
+                            if (!shouldShowTopBar && !headerFadesOut && statusScrimAlpha > 0f) {
                                 Box(
                                     Modifier
                                         .fillMaxWidth()
@@ -1245,12 +1255,8 @@ class MainActivity : FragmentActivity() {
                             AnimatedVisibility(
                                 visible = shouldShowTopBar,
                                 enter = fadeIn(animationSpec = tween(durationMillis = 200)),
-                                exit = ExitTransition.None,
+                                exit = if (headerFadesOut) fadeOut(animationSpec = tween(durationMillis = 200)) else ExitTransition.None,
                             ) {
-                                // While it goes away, the header would still be drawn for a frame
-                                // with the new page's values (no title, with a search bar), so a
-                                // search bar flashed when Settings opened from the Profile tab.
-                                if (!shouldShowTopBar) return@AnimatedVisibility
                                 // Main tabs: large page name, profile picture and a search pill, on the
                                 // page background (below the status bar).
                                 // Header buttons: round, on the same gray as the search bar.
@@ -1260,7 +1266,7 @@ class MainActivity : FragmentActivity() {
                                         contentColor = MaterialTheme.colorScheme.onSurface,
                                     )
                                 TopLevelHeader(
-                                    title = currentTitleRes?.let { stringResource(it) } ?: "",
+                                    title = headerTitleRes(headerRoute)?.let { stringResource(it) } ?: "",
                                     profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
                                     profileCrop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
                                     showBadge = latestVersionName != BuildConfig.BASE_VERSION_NAME,
@@ -1277,7 +1283,7 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onProfileLongClick = { showProfilePictureDialog = true },
                                     showProfile = false,
-                                    showSearch = !onProfileTab && !onHomeTab,
+                                    showSearch = !headerOnProfile && !headerOnHome,
                                     // Tapping the page name works like tapping its tab again.
                                     onTitleClick = {
                                         navController.currentBackStackEntry?.savedStateHandle?.set("scrollToTop", true)
@@ -1293,7 +1299,7 @@ class MainActivity : FragmentActivity() {
                                     modifier =
                                         Modifier
                                             .background(
-                                                if (onHomeTab) {
+                                                if (headerOnHome) {
                                                     // The page shows through toward the bottom of the header.
                                                     val pageColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
                                                     Brush.verticalGradient(
@@ -1311,7 +1317,7 @@ class MainActivity : FragmentActivity() {
                                                 // Shorter by how far the page has scrolled, with the
                                                 // content moved up so its top part goes first.
                                                 val placeable = measurable.measure(constraints)
-                                                val cut = if (onHomeTab) 0 else headerCollapsePx().roundToInt().coerceAtMost(placeable.height)
+                                                val cut = if (headerOnHome) 0 else headerCollapsePx().roundToInt().coerceAtMost(placeable.height)
                                                 layout(placeable.width, placeable.height - cut) {
                                                     placeable.place(0, -cut)
                                                 }
