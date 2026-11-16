@@ -47,7 +47,7 @@ fun VolumeSlider(
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
             enabled = enabled,
-            modifier = modifier.fillMaxWidth(),
+            modifier = Modifier.lockSliderDrag(enabled).then(modifier).fillMaxWidth(),
         )
         return
     }
@@ -57,7 +57,9 @@ fun VolumeSlider(
     val rest = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
     Canvas(
         modifier =
-            modifier
+            Modifier
+                .lockSliderDrag(enabled)
+                .then(modifier)
                 .fillMaxWidth()
                 .height(28.dp)
                 .then(
