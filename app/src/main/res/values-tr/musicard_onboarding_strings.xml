@@ -22,4 +22,5 @@
     <string name="onboarding_similar">Benzer</string>
     <string name="onboarding_finish">Bitir</string>
     <string name="onboarding_no_artists">Sanatçı bulunamadı</string>
+    <string name="onboarding_ready">Hazırsın</string>
 </resources>

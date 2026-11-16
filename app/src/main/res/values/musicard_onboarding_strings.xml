@@ -22,4 +22,5 @@
     <string name="onboarding_similar">Similar</string>
     <string name="onboarding_finish">Finish</string>
     <string name="onboarding_no_artists">No artists found</string>
+    <string name="onboarding_ready">You\'re ready</string>
 </resources>

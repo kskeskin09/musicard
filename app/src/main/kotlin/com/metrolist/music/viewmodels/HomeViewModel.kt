@@ -132,8 +132,8 @@ class HomeViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.Eagerly, "")
     val randomizeHomeOrder =
         context.dataStore.data
-            .map { it[RandomizeHomeOrderKey] ?: true }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+            .map { it[RandomizeHomeOrderKey] ?: false }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()
