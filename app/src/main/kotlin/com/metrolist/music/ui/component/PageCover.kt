@@ -10,6 +10,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
@@ -79,14 +82,14 @@ val PlayerArtCorner: Dp = 20.dp
 fun rememberPlayerArtSize(): Dp {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val window = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize
-    val insets = androidx.compose.foundation.layout.WindowInsets.systemBars
+    val insets = WindowInsets.systemBars
     val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
     return with(density) {
         // Same as the player: width without the side system bars, full height minus the status bar.
         val sides = (insets.getLeft(density, layoutDirection) + insets.getRight(density, layoutDirection)).toDp()
         val width = window.width.toDp() - sides
         val height = window.height.toDp()
-        val top = androidx.compose.foundation.layout.WindowInsets.statusBars.getTop(density).toDp()
+        val top = WindowInsets.statusBars.getTop(density).toDp()
         maxOf(minOf(width - PlayerHorizontalPadding * 2, height - top - 500.dp), 120.dp)
     }
 }
