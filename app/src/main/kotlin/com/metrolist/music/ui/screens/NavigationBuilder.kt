@@ -422,6 +422,10 @@ fun NavGraphBuilder.navigationBuilder(
         ImportFromServicesScreen(navController)
     }
 
+    composable("settings/reset") {
+        com.metrolist.music.ui.screens.settings.ResetScreen(navController)
+    }
+
     composable("settings/integrations") {
         IntegrationScreen(navController)
     }

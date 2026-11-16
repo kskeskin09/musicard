@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reset_app">Sıfırla</string>
+    <string name="reset_app_desc">İçeriklerini, ayarlarını ya da her şeyi temizle</string>
+    <string name="reset_warning_title">Tehlikeli bölgeye giriyorsun</string>
+    <string name="reset_warning_message">İleride verileri kalıcı olarak silen ve geri alınamayan seçenekler var. Devam etmeden önce bir kez daha düşünmeni öneririz.</string>
+    <string name="reset_warning_continue">Devam et</string>
+    <string name="reset_warning_back">Geri dön</string>
+    <string name="reset_contents">İçerikleri sıfırla</string>
+    <string name="reset_contents_desc">Şarkıları, çalma listelerini, indirilenleri, kitaplığını, geçmişi ve önbelleği siler. Ayarlar ve girişler kalır.</string>
+    <string name="reset_settings">Ayarları sıfırla</string>
+    <string name="reset_settings_desc">Tüm ayarları varsayılana döndürür. İçeriklerin ve girişlerin kalır.</string>
+    <string name="reset_everything">Her şeyi sıfırla</string>
+    <string name="reset_everything_desc">Uygulama yeni yüklenmiş gibi tüm verileri temizler. Uygulama kapanır.</string>
+    <string name="reset_contents_confirm">İçerikler sıfırlansın mı?</string>
+    <string name="reset_settings_confirm">Ayarlar sıfırlansın mı?</string>
+    <string name="reset_everything_confirm">Her şey sıfırlansın mı?</string>
+    <string name="reset_action">Sıfırla</string>
+    <string name="reset_in_progress">Sıfırlanıyor…</string>
+    <string name="reset_failed">Sıfırlanamadı. Hiçbir şey değişmedi.</string>
+</resources>
