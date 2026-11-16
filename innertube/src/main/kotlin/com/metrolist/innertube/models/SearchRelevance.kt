@@ -20,11 +20,15 @@ object SearchRelevance {
     private val nonAlnum = Regex("""[^\p{L}\p{N}]+""")
     private val spaces = Regex("""\s+""")
 
+    // "can't" must read as "cant", not "can t", or typing "cant" would not match it.
+    private val apostrophes = Regex("""['’`´]""")
+
     fun normalize(text: String): String =
         Normalizer
             .normalize(text.lowercase(Locale.ROOT), Normalizer.Form.NFD)
             .replace(combiningMarks, "")
             .replace('ı', 'i')
+            .replace(apostrophes, "")
             .replace(nonAlnum, " ")
             .trim()
             .replace(spaces, " ")
@@ -75,7 +79,7 @@ object SearchRelevance {
 
         if (cover > 0) {
             // The name without "(Official Video)", "[Lyrics]" and similar extras.
-            val coreTitle = OfficialSongMatcher.normalize(item.title)
+            val coreTitle = OfficialSongMatcher.normalize(item.title.replace(apostrophes, ""))
             val title = normalize(item.title)
             val artist = normalize(artistText(item))
             val exact =
@@ -127,5 +131,20 @@ object SearchRelevance {
             .filter { !dropUnrelated || coverages[it.index] > 0.0 }
             .sortedByDescending { score(query, it.value, it.index) }
             .map { it.value }
+    }
+
+    /**
+     * The large "Top result" card. YouTube's pick stays unless it matches the query clearly worse
+     * than the best ranked item (e.g. "thanatos if i cant be yours" → an unrelated song that only
+     * shares the album), in which case the best ranked item takes its place.
+     */
+    fun pickTop(
+        query: String,
+        youtubeTop: YTItem?,
+        ranked: List<YTItem>,
+    ): YTItem? {
+        val best = ranked.firstOrNull() ?: return youtubeTop
+        if (youtubeTop == null) return best
+        return if (coverage(query, youtubeTop) + 0.25 >= coverage(query, best)) youtubeTop else best
     }
 }

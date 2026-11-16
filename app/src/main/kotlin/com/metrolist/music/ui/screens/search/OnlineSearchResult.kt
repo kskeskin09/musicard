@@ -226,7 +226,6 @@ fun OnlineSearchResult(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val searchFilter by viewModel.filter.collectAsStateWithLifecycle()
-    val searchSummary = viewModel.summaryPage
     val rankedResults = viewModel.rankedResults
     val itemsPage by remember(searchFilter) {
         derivedStateOf {
@@ -503,8 +502,9 @@ fun OnlineSearchResult(
                 ) {
                     if (searchFilter == null) {
                         // The first result gets a large card (YouTube's top result, official song
-                        // preferred), then one list of everything else, best match first.
-                        val topItem = searchSummary?.summaries?.firstOrNull()?.items?.firstOrNull()
+                        // preferred, replaced by the best match when it doesn't fit the query), then
+                        // one list of everything else, best match first.
+                        val topItem = viewModel.topResult
                         if (topItem != null) {
                             item(key = "top_title") {
                                 NavigationTitle(stringResource(R.string.search_top_result))

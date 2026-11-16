@@ -85,7 +85,6 @@ import com.metrolist.music.viewmodels.OnlineSearchSuggestionViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.drop
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -114,12 +113,14 @@ fun OnlineSearchScreen(
 
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { lazyListState.firstVisibleItemScrollOffset }
-            .drop(1)
-            .collect {
+    // Hide the keyboard only when the user drags the list. Watching the scroll offset also fired
+    // when new suggestions arrived and moved the rows, closing the keyboard mid-typing.
+    LaunchedEffect(lazyListState) {
+        lazyListState.interactionSource.interactions.collect { interaction ->
+            if (interaction is androidx.compose.foundation.interaction.DragInteraction.Start) {
                 keyboardController?.hide()
             }
+        }
     }
 
     LaunchedEffect(query) {
@@ -607,6 +608,15 @@ fun OnlineSearchScreen(
             }
             items(viewState.recentContents, key = { "recent_${it.id}" }) { item ->
                 itemRow(item)
+            }
+        }
+
+        if (query.isEmpty() && viewState.history.isNotEmpty()) {
+            item(key = "recent_searches_title") {
+                NavigationTitle(
+                    title = stringResource(R.string.search_recent_searches),
+                    modifier = Modifier.animateItem(),
+                )
             }
         }
 
