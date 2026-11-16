@@ -305,10 +305,10 @@ fun AlbumScreen(
                                 ListPlayButton(
                                     onPlay = {
                                         if (!isListenTogetherGuest) {
-                                            playerConnection.service.getAutomix(playlistId)
                                             playerConnection.playQueue(
                                                 LocalAlbumRadio(albumWithSongs),
                                             )
+                                            playerConnection.service.getAutomix(playlistId)
                                         }
                                     },
                                 )
@@ -444,10 +444,10 @@ fun AlbumScreen(
                                                     if (song.id == mediaMetadata?.id) {
                                                         playerConnection.togglePlayPause()
                                                     } else {
-                                                        playerConnection.service.getAutomix(playlistId)
                                                         playerConnection.playQueue(
                                                             LocalAlbumRadio(albumWithSongs, startIndex = index),
                                                         )
+                                                        playerConnection.service.getAutomix(playlistId)
                                                     }
                                                 }
                                             },
