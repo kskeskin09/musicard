@@ -254,6 +254,8 @@ fun Thumbnail(
     // Overrides the art's corner radius frame by frame (read only while drawing).
     cornerRadiusProvider: (() -> Dp)? = null,
     carousel: ThumbnailCarousel? = null,
+    // Holding the cover (the playing song's menu).
+    onLongPress: (() -> Unit)? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -549,6 +551,7 @@ fun Thumbnail(
                                 currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
                                 shrink = compact && !isPlaying && item.mediaId == mediaMetadata?.id,
                                 cornerRadiusProvider = cornerRadiusProvider,
+                                onLongPress = onLongPress,
                             )
                         }
                     }
@@ -633,6 +636,7 @@ private fun ThumbnailItem(
     currentMediaThumbnail: String? = null,
     shrink: Boolean = false,
     cornerRadiusProvider: (() -> Dp)? = null,
+    onLongPress: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val artScale by animateFloatAsState(
@@ -648,6 +652,9 @@ private fun ThumbnailItem(
     val showCastButtonOnArt by rememberPreference(com.metrolist.music.constants.ShowCastButtonOnArtKey, defaultValue = false)
     var skipMultiplier by remember { mutableIntStateOf(1) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
+    // Read through state so a new lambda doesn't restart the tap detection.
+    val hasLongPress = onLongPress != null
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
 
     Box(
         modifier = modifier
@@ -665,15 +672,16 @@ private fun ThumbnailItem(
                 // Render entire thumbnail item on separate hardware layer for smooth animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
-            .pointerInput(doubleTapSeek) {
+            .pointerInput(doubleTapSeek, hasLongPress) {
                 // Double-tap seek can be turned off in the settings; then no taps are waited for.
-                if (!doubleTapSeek) return@pointerInput
+                if (!doubleTapSeek && !hasLongPress) return@pointerInput
                 detectTapGestures(
-                    onDoubleTap = { offset ->
-                        if (isListenTogetherGuest) return@detectTapGestures
+                    onLongPress = if (hasLongPress) { _ -> currentOnLongPress?.invoke() } else null,
+                    onDoubleTap = if (!doubleTapSeek) null else doubleTap@{ offset ->
+                        if (isListenTogetherGuest) return@doubleTap
                         // Only the outer thirds seek; taps near the middle do nothing.
                         val third = size.width / 3f
-                        if (offset.x > third && offset.x < size.width - third) return@detectTapGestures
+                        if (offset.x > third && offset.x < size.width - third) return@doubleTap
 
                         val currentPosition = playerConnection.player.currentPosition
                         val duration = playerConnection.player.duration

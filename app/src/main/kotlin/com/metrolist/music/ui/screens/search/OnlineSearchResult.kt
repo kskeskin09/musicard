@@ -297,57 +297,60 @@ fun OnlineSearchResult(
                             }
     }
 
-    val ytItemContent: @Composable LazyItemScope.(YTItem) -> Unit = { item: YTItem ->
-        val longClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            menuState.show {
-                when (item) {
-                    is SongItem -> {
-                        YouTubeSongMenu(
-                            song = item,
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
+    // Opens the same options sheet as an item's three-dot button.
+    val openItemMenu: (YTItem) -> Unit = { item: YTItem ->
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        menuState.show {
+            when (item) {
+                is SongItem -> {
+                    YouTubeSongMenu(
+                        song = item,
+                        onDismiss = menuState::dismiss,
+                    )
+                }
 
-                    is AlbumItem -> {
-                        YouTubeAlbumMenu(
-                            albumItem = item,
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
+                is AlbumItem -> {
+                    YouTubeAlbumMenu(
+                        albumItem = item,
+                        onDismiss = menuState::dismiss,
+                    )
+                }
 
-                    is ArtistItem -> {
-                        YouTubeArtistMenu(
-                            artist = item,
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
+                is ArtistItem -> {
+                    YouTubeArtistMenu(
+                        artist = item,
+                        onDismiss = menuState::dismiss,
+                    )
+                }
 
-                    is PlaylistItem -> {
-                        YouTubePlaylistMenu(
-                            playlist = item,
-                            coroutineScope = coroutineScope,
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
+                is PlaylistItem -> {
+                    YouTubePlaylistMenu(
+                        playlist = item,
+                        coroutineScope = coroutineScope,
+                        onDismiss = menuState::dismiss,
+                    )
+                }
 
-                    is PodcastItem -> {
-                        YouTubePlaylistMenu(
-                            playlist = item.asPlaylistItem(),
-                            coroutineScope = coroutineScope,
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
+                is PodcastItem -> {
+                    YouTubePlaylistMenu(
+                        playlist = item.asPlaylistItem(),
+                        coroutineScope = coroutineScope,
+                        onDismiss = menuState::dismiss,
+                    )
+                }
 
-                    is EpisodeItem -> {
-                        YouTubeSongMenu(
-                            song = item.asSongItem(),
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
+                is EpisodeItem -> {
+                    YouTubeSongMenu(
+                        song = item.asSongItem(),
+                        onDismiss = menuState::dismiss,
+                    )
                 }
             }
         }
+    }
+
+    val ytItemContent: @Composable LazyItemScope.(YTItem) -> Unit = { item: YTItem ->
+        val longClick = { openItemMenu(item) }
         YouTubeListItem(
             item = item,
             isActive =
@@ -518,10 +521,7 @@ fun OnlineSearchResult(
                                     isActive = topItem is SongItem && topItem.id == mediaMetadata?.id,
                                     isPlaying = isPlaying,
                                     onClick = { openYtItem(topItem) },
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        openYtItem(topItem)
-                                    },
+                                    onLongClick = { openItemMenu(topItem) },
                                 )
                             }
                         }
