@@ -231,12 +231,6 @@ fun SearchScreen(
     ) {
         if (searchActive) {
             val historyListState = androidx.compose.foundation.lazy.rememberLazyListState()
-            // The "Search history" heading hides once the list is scrolled down, and comes back at the top.
-            val historyAtTop by remember {
-                derivedStateOf {
-                    historyListState.firstVisibleItemIndex == 0 && historyListState.firstVisibleItemScrollOffset < 8
-                }
-            }
             Column(Modifier.fillMaxSize()) {
                 // The page title stays while searching.
                 Text(
@@ -257,19 +251,6 @@ fun SearchScreen(
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = query.text.isEmpty() && historyAtTop,
-                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
-                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
-                ) {
-                    Text(
-                        text = stringResource(R.string.search_history),
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
-                    )
-                }
                 Box(Modifier.weight(1f)) {
                     OnlineSearchScreen(
                         query = query.text,

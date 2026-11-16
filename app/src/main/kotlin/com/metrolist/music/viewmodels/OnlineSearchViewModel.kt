@@ -59,6 +59,9 @@ constructor(
      */
     var rankedResults by mutableStateOf<List<YTItem>?>(null)
 
+    /** The large card on top: YouTube's top result, unless it clearly matches the query worse. */
+    var topResult by mutableStateOf<YTItem?>(null)
+
     // The "Music" chip shows everything playable: official songs and videos together. They come
     // from two separate searches, so each keeps its own "load more" token.
     private var musicSongContinuation: String? = null
@@ -221,10 +224,12 @@ constructor(
         val summaryItems = summaryPage?.summaries.orEmpty().flatMap { it.items }
         val musicItems = viewStateMap[YouTube.SearchFilter.FILTER_SONG.value]?.items.orEmpty()
         if (summaryPage == null && musicItems.isEmpty()) return
-        rankedResults =
+        val ranked =
             SearchRelevance
                 .rank(query, summaryItems + musicItems)
                 .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
+        topResult = SearchRelevance.pickTop(query, summaryPage?.summaries?.firstOrNull()?.items?.firstOrNull(), ranked)
+        rankedResults = ranked
     }
 
     private suspend fun loadSummaryPage() {
