@@ -66,6 +66,13 @@ class App :
     @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        // Reset → Reset contents deletes the files here, before content providers,
+        // Room, the caches or SharedPreferences open any of them.
+        if (isMainProcess()) com.metrolist.music.utils.AppReset.runPendingContentReset(this)
+    }
+
     override fun onCreate() {
         super.onCreate()
 
