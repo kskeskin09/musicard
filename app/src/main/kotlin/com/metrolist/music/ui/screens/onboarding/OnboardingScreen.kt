@@ -1675,30 +1675,38 @@ private fun ArtistTile(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            AnimatedVisibility(
-                visible = selected,
-                enter = fadeIn(tween(200)),
-                exit = fadeOut(tween(200)),
+            val tint by animateFloatAsState(if (selected) 1f else 0f, tween(200), label = "artistTint")
+            val badge by animateFloatAsState(
+                if (selected) 1f else 0f,
+                spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium),
+                label = "artistBadge",
+            )
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = tint }
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+            )
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .graphicsLayer {
+                            alpha = badge.coerceIn(0f, 1f)
+                            scaleX = badge
+                            scaleY = badge
+                        }.size(26.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
             ) {
-                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)))
-            }
-            AnimatedVisibility(
-                visible = selected,
-                enter = scaleIn(spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium)) + fadeIn(),
-                exit = scaleOut() + fadeOut(),
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.check),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+                Icon(
+                    painter = painterResource(R.drawable.check),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(18.dp),
+                )
             }
             if (artist.similarTo != null && !selected) {
                 Text(
