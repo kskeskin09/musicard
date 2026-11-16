@@ -251,6 +251,15 @@ private fun NewMiniPlayer(
     // Width of the sliding part, and the songs on either side shown while swiping.
     var swipeWidthPx by remember { mutableFloatStateOf(0f) }
     val currentMediaId by rememberUpdatedState(mediaMetadata?.id)
+    // Set while a swipe lands: the id of the song we swiped away from. Once the current song is no
+    // longer that one, everything is drawn at offset 0 in the very same frame. Otherwise the side
+    // previews (already moved on to the song after the new one) would flash for a frame before the
+    // offset is reset.
+    var landingFromId by remember { mutableStateOf<String?>(null) }
+    fun swipeOffset(): Float {
+        val from = landingFromId
+        return if (from != null && currentMediaId != from) 0f else offsetXAnimatable.value
+    }
     val previousMetadata =
         remember(mediaMetadata?.id) {
             runCatching {
@@ -418,6 +427,7 @@ private fun NewMiniPlayer(
                                             // The other song slides all the way in, then becomes the current
                                             // one; the offset goes back to 0 once it is showing, so nothing jumps.
                                             val oldId = currentMediaId
+                                            landingFromId = oldId
                                             offsetXAnimatable.animateTo(
                                                 if (goPrevious) swipeWidthPx else -swipeWidthPx,
                                                 androidx.compose.animation.core.tween(160),
@@ -431,6 +441,7 @@ private fun NewMiniPlayer(
                                                 androidx.compose.runtime.snapshotFlow { currentMediaId }.first { it != oldId }
                                             }
                                             offsetXAnimatable.snapTo(0f)
+                                            landingFromId = null
                                         } else {
                                             if (goPrevious) playerConnection.player.seekToPreviousMediaItem()
                                             if (goNext) playerConnection.player.seekToNext()
@@ -509,7 +520,7 @@ private fun NewMiniPlayer(
                         onSurfaceColor = onSurfaceColor,
                         modifier =
                             Modifier.graphicsLayer {
-                                val offset = offsetXAnimatable.value
+                                val offset = swipeOffset()
                                 translationX = offset - size.width
                                 alpha = if (offset > 0f) 1f else 0f
                             },
@@ -519,7 +530,7 @@ private fun NewMiniPlayer(
                         onSurfaceColor = onSurfaceColor,
                         modifier =
                             Modifier.graphicsLayer {
-                                val offset = offsetXAnimatable.value
+                                val offset = swipeOffset()
                                 translationX = offset + size.width
                                 alpha = if (offset < 0f) 1f else 0f
                             },
@@ -529,7 +540,7 @@ private fun NewMiniPlayer(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .graphicsLayer { translationX = offsetXAnimatable.value },
+                            .graphicsLayer { translationX = swipeOffset() },
                 ) {
                 // Album art: tap to play / pause - isolated composable
                 NewMiniPlayerPlayButton(
