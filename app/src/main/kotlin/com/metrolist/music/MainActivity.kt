@@ -23,7 +23,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import kotlin.math.roundToInt
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -967,7 +966,14 @@ class MainActivity : FragmentActivity() {
                 // The main tabs' header scrolls away with the page: first the page name, then the
                 // search bar; scrolling back brings it back the same way.
                 val headerMaxPx = with(density) { TopLevelHeaderHeight.toPx() }
-                var headerCollapsePx by remember { mutableFloatStateOf(0f) }
+                // Each tab keeps how far its header is scrolled away (TabStates.headerCollapse), and
+                // the header reads it for the page that is open in the same frame the page opens.
+                // (It used to be copied over a frame later, so a page you came back to first showed
+                // its whole header, search bar and all, and then jumped to where it should be.)
+                // It also follows changes a page makes itself, such as bringing the header back
+                // when its list is at the top (see HeaderFollowsList).
+                fun headerCollapsePx(): Float =
+                    currentRoute?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] } ?: 0f
                 val latestRoute = androidx.compose.runtime.rememberUpdatedState(currentRoute)
                 val headerCollapseConnection =
                     remember(headerMaxPx) {
@@ -977,26 +983,16 @@ class MainActivity : FragmentActivity() {
                                 available: Offset,
                                 source: NestedScrollSource,
                             ): Offset {
-                                if (consumed.y != 0f) {
-                                    headerCollapsePx = (headerCollapsePx - consumed.y).coerceIn(0f, headerMaxPx)
-                                    latestRoute.value?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] = headerCollapsePx }
+                                val route = latestRoute.value
+                                if (consumed.y != 0f && route != null) {
+                                    val collapse = com.metrolist.music.ui.utils.TabStates.headerCollapse[route] ?: 0f
+                                    com.metrolist.music.ui.utils.TabStates.headerCollapse[route] =
+                                        (collapse - consumed.y).coerceIn(0f, headerMaxPx)
                                 }
                                 return Offset.Zero
                             }
                         }
                     }
-                // Each tab's header comes back as far scrolled away as its page was.
-                // It also follows changes a page makes itself, such as bringing the header back
-                // when its list is at the top (see HeaderFollowsList).
-                LaunchedEffect(currentRoute) {
-                    val route = currentRoute
-                    if (route == null) {
-                        headerCollapsePx = 0f
-                    } else {
-                        androidx.compose.runtime.snapshotFlow { com.metrolist.music.ui.utils.TabStates.headerCollapse[route] ?: 0f }
-                            .collect { headerCollapsePx = it }
-                    }
-                }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -1315,7 +1311,7 @@ class MainActivity : FragmentActivity() {
                                                 // Shorter by how far the page has scrolled, with the
                                                 // content moved up so its top part goes first.
                                                 val placeable = measurable.measure(constraints)
-                                                val cut = if (onHomeTab) 0 else headerCollapsePx.roundToInt().coerceAtMost(placeable.height)
+                                                val cut = if (onHomeTab) 0 else headerCollapsePx().roundToInt().coerceAtMost(placeable.height)
                                                 layout(placeable.width, placeable.height - cut) {
                                                     placeable.place(0, -cut)
                                                 }
@@ -1375,7 +1371,6 @@ class MainActivity : FragmentActivity() {
                                                 // Tapping the tab again starts it over: back to the top with the
                                                 // header (and its search bar) shown and the filters cleared.
                                                 com.metrolist.music.ui.utils.TabStates.reset(screen.route)
-                                                headerCollapsePx = 0f
                                             } else {
                                                 targetEntry?.savedStateHandle?.set("scrollToTop", true)
                                             }
