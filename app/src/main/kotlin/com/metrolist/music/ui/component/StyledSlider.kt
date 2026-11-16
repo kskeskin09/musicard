@@ -51,7 +51,7 @@ fun StyledSlider(
                 // Snap to the steps ourselves, since this track draws no tick marks.
                 onValueChange = { onValueChange(snapToSteps(it, valueRange, steps)) },
                 onValueChangeFinished = onValueChangeFinished,
-                modifier = modifier,
+                modifier = Modifier.lockSliderDrag(enabled).then(modifier),
                 enabled = enabled,
                 colors = colors,
                 thumb = { Spacer(Modifier.size(0.dp)) },
@@ -69,7 +69,7 @@ fun StyledSlider(
             Slider(
                 value = value,
                 onValueChange = onValueChange,
-                modifier = modifier,
+                modifier = Modifier.lockSliderDrag(enabled).then(modifier),
                 enabled = enabled,
                 valueRange = valueRange,
                 steps = steps,
