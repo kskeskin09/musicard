@@ -54,6 +54,7 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AutoDownloadWifiOnlyKey
 import com.metrolist.music.constants.AutoDownloadLibraryKey
+import com.metrolist.music.constants.AutoDownloadOnLikeKey
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.DownloadQuality
 import com.metrolist.music.constants.DownloadQualityKey
@@ -114,6 +115,9 @@ fun StorageSettings(
     var showDownloadQualityDialog by remember { mutableStateOf(false) }
     val (autoDownloadLibrary, onAutoDownloadLibraryChange) =
         rememberPreference(AutoDownloadLibraryKey, defaultValue = false)
+    // Moved here from Player and audio; same key and default as before.
+    val (autoDownloadOnLike, onAutoDownloadOnLikeChange) =
+        rememberPreference(AutoDownloadOnLikeKey, defaultValue = false)
     val (autoDownloadWifiOnly, onAutoDownloadWifiOnlyChange) =
         rememberPreference(AutoDownloadWifiOnlyKey, defaultValue = true)
     // "Same as playing quality (Auto)": only the name of the playing setting, without the Auto hint.
@@ -401,6 +405,37 @@ fun StorageSettings(
                     } else {
                         null
                     },
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.download),
+                        // The library download already covers liked songs, so show it on and locked
+                        // while that is on. The stored choice is kept for when it is turned off.
+                        enabled = !autoDownloadLibrary,
+                        title = { Text(stringResource(R.string.auto_download_on_like)) },
+                        description = {
+                            Text(
+                                stringResource(
+                                    if (autoDownloadLibrary) R.string.auto_download_on_like_covered else R.string.auto_download_on_like_desc,
+                                ),
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = autoDownloadOnLike || autoDownloadLibrary,
+                                enabled = !autoDownloadLibrary,
+                                onCheckedChange = onAutoDownloadOnLikeChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (autoDownloadOnLike || autoDownloadLibrary) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onAutoDownloadOnLikeChange(!autoDownloadOnLike) }
+                    ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.clear_all),
                         title = { Text(stringResource(R.string.clear_all_downloads)) },

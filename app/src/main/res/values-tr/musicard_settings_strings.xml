@@ -26,4 +26,6 @@
     <string name="system_language">Sistem dili</string>
     <string name="playlist_position_custom_only">Sadece liste Özel (Custom) sıralamadayken geçerli. Diğer sıralamalar (ad, sanatçı, tarih…) şarkıları kendi kuralına göre dizer.</string>
     <string name="sort_most_played">En çok dinlenen</string>
+    <string name="display_group">Ekran</string>
+    <string name="auto_download_on_like_covered">Kütüphaneyi otomatik indir açık olduğu için açık: beğendiğin şarkılar zaten kütüphanende.</string>
 </resources>

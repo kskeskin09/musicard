@@ -27,4 +27,6 @@
     <string name="about_made_by">Made by</string>
     <string name="playlist_position_custom_only">Only used when the playlist is sorted by Custom. Other sort orders (name, artist, date…) arrange songs by their own rule.</string>
     <string name="sort_most_played">Most played</string>
+    <string name="display_group">Display</string>
+    <string name="auto_download_on_like_covered">On because Automatically download library is on: liked songs are part of your library.</string>
 </resources>
