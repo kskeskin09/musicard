@@ -165,6 +165,8 @@ import com.metrolist.music.constants.EnableLandscapeScalingKey
 import com.metrolist.music.constants.ExperimentalLyricsKey
 import com.metrolist.music.constants.ForceBottomNavBarKey
 import com.metrolist.music.constants.LastSeenVersionKey
+import com.metrolist.music.constants.OnboardingDoneKey
+import com.metrolist.music.constants.OnboardingPendingKey
 import com.metrolist.music.constants.ListenTogetherInTopBarKey
 import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.constants.LyricsProviderOrderKey
@@ -246,6 +248,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -416,6 +419,9 @@ class MainActivity : FragmentActivity() {
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
+    // The first-run setup is on screen.
+    private val showOnboarding = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Opened fresh (not a rotation or theme change): Home, Library and Search start at the
@@ -450,6 +456,19 @@ class MainActivity : FragmentActivity() {
                         window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     }
                 }
+        }
+
+        // First-run setup: shown on a fresh install (nothing seen yet), and again if the app was
+        // closed before it ended. People updating from an older version never see it.
+        val onboardingPrefs = runBlocking(Dispatchers.IO) { dataStore.data.first() }
+        when {
+            onboardingPrefs[OnboardingDoneKey] == true -> Unit
+            onboardingPrefs[OnboardingPendingKey] == true -> showOnboarding.value = true
+            onboardingPrefs[LastSeenVersionKey].isNullOrEmpty() -> {
+                showOnboarding.value = true
+                lifecycleScope.launch(Dispatchers.IO) { safeDataStoreEdit { it[OnboardingPendingKey] = true } }
+            }
+            else -> lifecycleScope.launch(Dispatchers.IO) { safeDataStoreEdit { it[OnboardingDoneKey] = true } }
         }
 
         // Defer migration and version tracking to avoid blocking first frame
@@ -766,7 +785,7 @@ class MainActivity : FragmentActivity() {
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
                     val currentVersion = BuildConfig.BASE_VERSION_NAME
-                    if (lastSeenVersion != currentVersion) {
+                    if (lastSeenVersion != currentVersion && !showOnboarding.value) {
                         showChangelog.value = true
                     }
                 }
@@ -1748,7 +1767,7 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
-                    if (!showChangelog.value) {
+                    if (!showChangelog.value && !showOnboarding.value) {
                         availableUpdate?.let { update ->
                             val dismissUpdate: () -> Unit = {
                                 availableUpdate = null
@@ -1831,6 +1850,29 @@ class MainActivity : FragmentActivity() {
                                 },
                             )
                         }
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showOnboarding.value,
+                        enter = androidx.compose.animation.fadeIn(),
+                        // Home comes in softly: the setup fades and lifts away a little.
+                        exit =
+                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(650)) +
+                                androidx.compose.animation.scaleOut(
+                                    androidx.compose.animation.core.tween(650),
+                                    targetScale = 1.04f,
+                                ),
+                    ) {
+                        com.metrolist.music.ui.screens.onboarding.OnboardingScreen(
+                            onFinished = {
+                                showOnboarding.value = false
+                                // Once the picked artists are saved, Home is built again from them.
+                                lifecycleScope.launch {
+                                    kotlinx.coroutines.delay(1500)
+                                    homeViewModel.refresh()
+                                }
+                            },
+                        )
                     }
                 }
             }

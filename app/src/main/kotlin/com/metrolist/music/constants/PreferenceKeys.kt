@@ -324,6 +324,12 @@ val VideoThumbnailMigrationDoneKey = booleanPreferencesKey("videoThumbnailMigrat
 val QueueEditLockKey = booleanPreferencesKey("queueEditLock")
 val WrappedSeenKey = booleanPreferencesKey("wrapped_seen")
 val LastSeenVersionKey = stringPreferencesKey("lastSeenVersion")
+
+/** The first-run setup (look and favorite artists) was finished or skipped. */
+val OnboardingDoneKey = booleanPreferencesKey("onboardingDone")
+
+/** Set on a fresh install until the first-run setup ends, so it comes back if the app is closed midway. */
+val OnboardingPendingKey = booleanPreferencesKey("onboardingPending")
 val RandomizeHomeOrderKey = booleanPreferencesKey("randomizeHomeOrder")
 
 val ShowLikedPlaylistKey = booleanPreferencesKey("show_liked_playlist")

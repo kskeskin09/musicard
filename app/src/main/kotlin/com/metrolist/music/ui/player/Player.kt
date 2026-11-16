@@ -424,7 +424,7 @@ fun BottomSheetPlayer(
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
 
-    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.SLIM)
 
     // Listen Together state (reactive)
     val listenTogetherManager = LocalListenTogetherManager.current
@@ -3483,7 +3483,7 @@ internal val DefaultAlbumBackground = Color(0xFF2B2A30)
  * the lyrics and up-next views share it.
  */
 @Composable
-private fun GlassCoverBackground(
+internal fun GlassCoverBackground(
     thumbnailUrl: String?,
     modifier: Modifier = Modifier,
 ) {

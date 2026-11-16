@@ -132,8 +132,8 @@ class HomeViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.Eagerly, "")
     val randomizeHomeOrder =
         context.dataStore.data
-            .map { it[RandomizeHomeOrderKey] ?: true }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+            .map { it[RandomizeHomeOrderKey] ?: false }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()
@@ -349,6 +349,7 @@ class HomeViewModel @Inject constructor(
         val fromTimeStamp = LocalDateTime.now().minusWeeks(4)
         val artistSeeds = database.mostPlayedArtists(fromTimeStamp, limit = 10).first()
             .filter { it.artist.isYouTubeArtist }
+            .ifEmpty { database.artistsBookmarkedByCreateDateAsc().first().filter { it.artist.isYouTubeArtist && !it.artist.isPodcastChannel } }
             .shuffled().take(3)
         val songSeeds = database.mostPlayedSongs(fromTimeStamp = fromTimeStamp, limit = 5, offset = 0, toTimeStamp = LocalDateTime.now()).first()
             .shuffled().take(2)
@@ -504,9 +505,23 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val artistRecommendations = database.mostPlayedArtists(fromTimeStamp, limit = 15).first()
+            val listenedArtists = database.mostPlayedArtists(fromTimeStamp, limit = 15).first()
                 .filter { it.artist.isYouTubeArtist }
                 .shuffled().take(4)
+            // Without much listening yet, the artists picked in the first-run setup (or followed
+            // later) fill in, so Home has suggestions from the start.
+            val artistSeeds =
+                if (listenedArtists.size >= 4) {
+                    listenedArtists
+                } else {
+                    val listenedIds = listenedArtists.map { it.id }.toSet()
+                    listenedArtists +
+                        database.artistsBookmarkedByCreateDateAsc().first()
+                            .filter { it.artist.isYouTubeArtist && !it.artist.isPodcastChannel && it.id !in listenedIds }
+                            .shuffled()
+                            .take(4 - listenedArtists.size)
+                }
+            val artistRecommendations = artistSeeds
                 .mapNotNull {
                     val items = mutableListOf<YTItem>()
                     YouTube.artist(it.id).onSuccess { page ->
