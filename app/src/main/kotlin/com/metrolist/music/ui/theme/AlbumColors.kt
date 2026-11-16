@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.palette.graphics.Palette
@@ -313,13 +314,30 @@ object PageFadeColors {
             entry.glassUrl = glassUrl
         }
         val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-        DisposableEffect(entry, lifecycle) {
+        // The whole app's lifecycle. The page also pauses when the app goes to the background
+        // (home, recents), and that must not count as leaving the page: the mini player and the
+        // bottom fade would flash the plain theme color while the app slides away and back.
+        val appLifecycle =
+            androidx.compose.ui.platform.LocalView.current
+                .findViewTreeLifecycleOwner()
+                ?.lifecycle
+        DisposableEffect(entry, lifecycle, appLifecycle) {
             entries.add(entry)
             val observer =
                 androidx.lifecycle.LifecycleEventObserver { _, event ->
                     when (event) {
                         androidx.lifecycle.Lifecycle.Event.ON_RESUME -> entry.leaving = false
-                        androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> entry.leaving = true
+                        // The app is already out of RESUMED when its own pause reaches the page,
+                        // so only a pause while the app stays on screen is a page change.
+                        androidx.lifecycle.Lifecycle.Event.ON_PAUSE ->
+                            if (appLifecycle == null ||
+                                (
+                                    appLifecycle !== lifecycle &&
+                                        appLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+                                )
+                            ) {
+                                entry.leaving = true
+                            }
                         else -> Unit
                     }
                 }
