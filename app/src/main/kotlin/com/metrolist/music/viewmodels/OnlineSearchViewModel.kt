@@ -51,6 +51,112 @@ constructor(
     var summaryPage by mutableStateOf<SearchSummaryPage?>(null)
     val viewStateMap = mutableStateMapOf<String, ItemsPage?>()
 
+    // The "Music" chip shows everything playable: official songs and videos together. They come
+    // from two separate searches, so each keeps its own "load more" token.
+    private var musicSongContinuation: String? = null
+    private var musicVideoContinuation: String? = null
+
+    private val recordHistory get() = !context.dataStore.get(PauseSearchHistoryKey, false)
+
+    private fun List<YTItem>.applyContentFilters(): List<YTItem> =
+        filterExplicit(context.dataStore.get(HideExplicitKey, false))
+            .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+            .filterYoutubeShorts(context.dataStore.get(HideYoutubeShortsKey, false))
+
+    /**
+     * Mixes the song results and the video results one by one, a song first, so neither kind is
+     * pushed to the end. With "Prefer songs over videos" on, an official song is also moved in front
+     * of a video of the same song.
+     */
+    private fun mixSongsAndVideos(
+        songs: List<YTItem>,
+        videos: List<YTItem>,
+    ): List<YTItem> {
+        val mixed = ArrayList<YTItem>(songs.size + videos.size)
+        for (i in 0 until maxOf(songs.size, videos.size)) {
+            songs.getOrNull(i)?.let(mixed::add)
+            videos.getOrNull(i)?.let(mixed::add)
+        }
+        return mixed
+            .distinctBy { it.id }
+            .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
+    }
+
+    private suspend fun loadMusicFilter(): Unit =
+        coroutineScope {
+            val songs = async { YouTube.search(query, YouTube.SearchFilter.FILTER_SONG, recordSearchHistory = recordHistory) }
+            // Only the first request records the search in the account history.
+            // Skipped when the user hides video songs: they would all be filtered out anyway.
+            val videos =
+                async {
+                    if (context.dataStore.get(HideVideoSongsKey, false)) {
+                        null
+                    } else {
+                        YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO)
+                    }
+                }
+            val songResult = songs.await().onFailure { reportException(it) }.getOrNull()
+            val videoResult = videos.await()?.onFailure { reportException(it) }?.getOrNull()
+            if (songResult == null && videoResult == null) return@coroutineScope
+            musicSongContinuation = songResult?.continuation
+            musicVideoContinuation = videoResult?.continuation
+            val resolved =
+                resolveSearchMetadata(songResult?.items.orEmpty() + videoResult?.items.orEmpty())
+            val songCount = songResult?.items?.size ?: 0
+            viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] =
+                ItemsPage(
+                    mixSongsAndVideos(
+                        resolved.take(songCount).applyContentFilters(),
+                        resolved.drop(songCount).applyContentFilters(),
+                    ),
+                    musicSongContinuation ?: musicVideoContinuation,
+                )
+        }
+
+    private var musicLoadingMore = false
+
+    private suspend fun loadMoreMusicFilter() {
+        if (musicLoadingMore) return
+        musicLoadingMore = true
+        try {
+            loadMoreMusicFilterPage()
+        } finally {
+            musicLoadingMore = false
+        }
+    }
+
+    private suspend fun loadMoreMusicFilterPage(): Unit =
+        coroutineScope {
+            val filterValue = YouTube.SearchFilter.FILTER_SONG.value
+            val viewState = viewStateMap[filterValue] ?: return@coroutineScope
+            val songs = async { musicSongContinuation?.let { YouTube.searchContinuation(it).getOrNull() } }
+            val videos = async { musicVideoContinuation?.let { YouTube.searchContinuation(it).getOrNull() } }
+            val songResult = songs.await()
+            val videoResult = videos.await()
+            if (songResult == null && videoResult == null) {
+                // Both ended (or failed): stop showing the loading row.
+                musicSongContinuation = null
+                musicVideoContinuation = null
+                viewStateMap[filterValue] = viewState.copy(continuation = null)
+                return@coroutineScope
+            }
+            musicSongContinuation = songResult?.continuation
+            musicVideoContinuation = videoResult?.continuation
+            val resolved =
+                resolveSearchMetadata(songResult?.items.orEmpty() + videoResult?.items.orEmpty())
+            val songCount = songResult?.items?.size ?: 0
+            val newItems =
+                mixSongsAndVideos(
+                    resolved.take(songCount).applyContentFilters(),
+                    resolved.drop(songCount).applyContentFilters(),
+                )
+            viewStateMap[filterValue] =
+                ItemsPage(
+                    (viewState.items + newItems).distinctBy { it.id },
+                    musicSongContinuation ?: musicVideoContinuation,
+                )
+        }
+
     private suspend fun resolveSearchMetadata(items: List<YTItem>): List<YTItem> =
         coroutineScope {
             val knownDurations =
@@ -140,6 +246,10 @@ constructor(
                             viewStateMap[filter.value] = ItemsPage(episodes, null)
                         }
                     }
+                } else if (filter == YouTube.SearchFilter.FILTER_SONG) {
+                    if (viewStateMap[filter.value] == null) {
+                        loadMusicFilter()
+                    }
                 } else {
                     if (viewStateMap[filter.value] == null) {
                         YouTube
@@ -171,6 +281,10 @@ constructor(
         val currentFilter = filter.value
         val filterValue = currentFilter?.value ?: return
         viewModelScope.launch {
+            if (currentFilter == YouTube.SearchFilter.FILTER_SONG) {
+                loadMoreMusicFilter()
+                return@launch
+            }
             val viewState = viewStateMap[filterValue] ?: return@launch
             val continuation = viewState.continuation ?: return@launch
             val searchResult =
