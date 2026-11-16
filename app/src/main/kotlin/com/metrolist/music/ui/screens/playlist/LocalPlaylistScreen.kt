@@ -1158,7 +1158,6 @@ fun LocalPlaylistHeader(
             when {
                 ownCover == null && coverThumbnails.isEmpty() -> {
                     com.metrolist.music.ui.component.PageCoverFrame(
-                        size = PlaylistCoverSize,
                         shadow = 16.dp,
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         pullUp = 16.dp,
@@ -1179,7 +1178,6 @@ fun LocalPlaylistHeader(
 
                 ownCover != null -> {
                     com.metrolist.music.ui.component.PageCoverFrame(
-                        size = PlaylistCoverSize,
                         color = MaterialTheme.colorScheme.surface,
                         pullUp = 16.dp,
                     ) {
@@ -1194,7 +1192,6 @@ fun LocalPlaylistHeader(
 
                 else -> {
                     com.metrolist.music.ui.component.PageCoverFrame(
-                        size = PlaylistCoverSize,
                         color = androidx.compose.ui.graphics.Color.Black,
                         pullUp = 16.dp,
                     ) {
@@ -1403,4 +1400,3 @@ fun uriToByteArray(
     }
 
 
-private val PlaylistCoverSize = 280.dp

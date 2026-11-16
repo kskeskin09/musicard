@@ -10,6 +10,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
@@ -36,6 +39,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.constants.PageEdgeToEdgeCoverKey
+import com.metrolist.music.constants.PlayerHorizontalPadding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.utils.dataStore
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -66,6 +70,30 @@ fun rememberPageEdgeToEdgeCover(): Boolean {
 @Volatile
 private var lastEdgeToEdgeCover: Boolean? = null
 
+/** Corner of the album art in the music player (without edge-to-edge art). */
+val PlayerArtCorner: Dp = 20.dp
+
+/**
+ * The size of the album art in the music player when its edge-to-edge art is off: the screen
+ * width minus the player margins, made smaller on short screens so the controls still fit.
+ * Page covers use it, so a cover is just as big on its page as in the player.
+ */
+@Composable
+fun rememberPlayerArtSize(): Dp {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val window = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize
+    val insets = WindowInsets.systemBars
+    val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
+    return with(density) {
+        // Same as the player: width without the side system bars, full height minus the status bar.
+        val sides = (insets.getLeft(density, layoutDirection) + insets.getRight(density, layoutDirection)).toDp()
+        val width = window.width.toDp() - sides
+        val height = window.height.toDp()
+        val top = WindowInsets.statusBars.getTop(density).toDp()
+        maxOf(minOf(width - PlayerHorizontalPadding * 2, height - top - 500.dp), 120.dp)
+    }
+}
+
 /**
  * The frame of the big cover at the top of an album or playlist page.
  *
@@ -80,14 +108,17 @@ fun PageCoverFrame(
     // Only for the card-sized cover: an edge-to-edge cover doesn't grow out of the card it was
     // opened from (it would show square first, then jump to full width), it simply fades in.
     sharedElement: Modifier = Modifier,
-    size: Dp = 280.dp,
-    corner: Dp = 16.dp,
+    // By default as big and as round as the album art in the music player.
+    size: Dp = Dp.Unspecified,
+    corner: Dp = PlayerArtCorner,
     shadow: Dp = 24.dp,
     color: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     pullUp: Dp = 8.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
     if (!rememberPageEdgeToEdgeCover()) {
+        val playerArt = rememberPlayerArtSize()
+        val size = if (size == Dp.Unspecified) playerArt else size
         val shape = RoundedCornerShape(corner)
         Surface(
             modifier =
