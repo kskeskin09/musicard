@@ -14,6 +14,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SearchRelevance
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
@@ -50,6 +51,119 @@ constructor(
     val filter = MutableStateFlow<YouTube.SearchFilter?>(null)
     var summaryPage by mutableStateOf<SearchSummaryPage?>(null)
     val viewStateMap = mutableStateMapOf<String, ItemsPage?>()
+
+    /**
+     * Everything found for the query in one list, best match first (see [SearchRelevance]). Shown
+     * under the top result instead of YouTube Music's shelves, which are filled even with items that
+     * have little to do with the query.
+     */
+    var rankedResults by mutableStateOf<List<YTItem>?>(null)
+
+    // The "Music" chip shows everything playable: official songs and videos together. They come
+    // from two separate searches, so each keeps its own "load more" token.
+    private var musicSongContinuation: String? = null
+    private var musicVideoContinuation: String? = null
+
+    private val recordHistory get() = !context.dataStore.get(PauseSearchHistoryKey, false)
+
+    private fun List<YTItem>.applyContentFilters(): List<YTItem> =
+        filterExplicit(context.dataStore.get(HideExplicitKey, false))
+            .filterVideoSongs(context.dataStore.get(HideVideoSongsKey, false))
+            .filterYoutubeShorts(context.dataStore.get(HideYoutubeShortsKey, false))
+
+    /**
+     * Mixes the song results and the video results one by one, a song first, so neither kind is
+     * pushed to the end. With "Prefer songs over videos" on, an official song is also moved in front
+     * of a video of the same song.
+     */
+    private fun mixSongsAndVideos(
+        songs: List<YTItem>,
+        videos: List<YTItem>,
+    ): List<YTItem> {
+        val mixed = ArrayList<YTItem>(songs.size + videos.size)
+        for (i in 0 until maxOf(songs.size, videos.size)) {
+            songs.getOrNull(i)?.let(mixed::add)
+            videos.getOrNull(i)?.let(mixed::add)
+        }
+        return mixed
+            .distinctBy { it.id }
+            .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
+    }
+
+    private suspend fun loadMusicFilter(record: Boolean = recordHistory): Unit =
+        coroutineScope {
+            val songs = async { YouTube.search(query, YouTube.SearchFilter.FILTER_SONG, recordSearchHistory = record) }
+            // Only the first request records the search in the account history.
+            // Skipped when the user hides video songs: they would all be filtered out anyway.
+            val videos =
+                async {
+                    if (context.dataStore.get(HideVideoSongsKey, false)) {
+                        null
+                    } else {
+                        YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO)
+                    }
+                }
+            val songResult = songs.await().onFailure { reportException(it) }.getOrNull()
+            val videoResult = videos.await()?.onFailure { reportException(it) }?.getOrNull()
+            if (songResult == null && videoResult == null) return@coroutineScope
+            musicSongContinuation = songResult?.continuation
+            musicVideoContinuation = videoResult?.continuation
+            val resolved =
+                resolveSearchMetadata(songResult?.items.orEmpty() + videoResult?.items.orEmpty())
+            val songCount = songResult?.items?.size ?: 0
+            viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] =
+                ItemsPage(
+                    mixSongsAndVideos(
+                        resolved.take(songCount).applyContentFilters(),
+                        resolved.drop(songCount).applyContentFilters(),
+                    ),
+                    musicSongContinuation ?: musicVideoContinuation,
+                )
+        }
+
+    private var musicLoadingMore = false
+
+    private suspend fun loadMoreMusicFilter() {
+        if (musicLoadingMore) return
+        musicLoadingMore = true
+        try {
+            loadMoreMusicFilterPage()
+        } finally {
+            musicLoadingMore = false
+        }
+    }
+
+    private suspend fun loadMoreMusicFilterPage(): Unit =
+        coroutineScope {
+            val filterValue = YouTube.SearchFilter.FILTER_SONG.value
+            val viewState = viewStateMap[filterValue] ?: return@coroutineScope
+            val songs = async { musicSongContinuation?.let { YouTube.searchContinuation(it).getOrNull() } }
+            val videos = async { musicVideoContinuation?.let { YouTube.searchContinuation(it).getOrNull() } }
+            val songResult = songs.await()
+            val videoResult = videos.await()
+            if (songResult == null && videoResult == null) {
+                // Both ended (or failed): stop showing the loading row.
+                musicSongContinuation = null
+                musicVideoContinuation = null
+                viewStateMap[filterValue] = viewState.copy(continuation = null)
+                return@coroutineScope
+            }
+            musicSongContinuation = songResult?.continuation
+            musicVideoContinuation = videoResult?.continuation
+            val resolved =
+                resolveSearchMetadata(songResult?.items.orEmpty() + videoResult?.items.orEmpty())
+            val songCount = songResult?.items?.size ?: 0
+            val newItems =
+                mixSongsAndVideos(
+                    resolved.take(songCount).applyContentFilters(),
+                    resolved.drop(songCount).applyContentFilters(),
+                )
+            viewStateMap[filterValue] =
+                ItemsPage(
+                    (viewState.items + newItems).distinctBy { it.id },
+                    musicSongContinuation ?: musicVideoContinuation,
+                )
+        }
 
     private suspend fun resolveSearchMetadata(items: List<YTItem>): List<YTItem> =
         coroutineScope {
@@ -88,6 +202,31 @@ constructor(
             }
         }
 
+    /**
+     * The "All" view: YouTube's summary (for the top result card) and the first pages of the songs
+     * and videos searches (the same ones the Music chip shows) load together, then everything is
+     * ranked by how well it matches the query.
+     */
+    private suspend fun loadAllResults() {
+        if (rankedResults != null) return
+        coroutineScope {
+            launch { loadSummaryPage() }
+            launch {
+                if (viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] == null) {
+                    // The summary request already records the search in the account history.
+                    loadMusicFilter(record = false)
+                }
+            }
+        }
+        val summaryItems = summaryPage?.summaries.orEmpty().flatMap { it.items }
+        val musicItems = viewStateMap[YouTube.SearchFilter.FILTER_SONG.value]?.items.orEmpty()
+        if (summaryPage == null && musicItems.isEmpty()) return
+        rankedResults =
+            SearchRelevance
+                .rank(query, summaryItems + musicItems)
+                .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
+    }
+
     private suspend fun loadSummaryPage() {
         if (summaryPage == null) {
             YouTube
@@ -122,7 +261,7 @@ constructor(
         viewModelScope.launch {
             filter.collect { filter ->
                 if (filter == null) {
-                    loadSummaryPage()
+                    loadAllResults()
                 } else if (filter == YouTube.SearchFilter.FILTER_EPISODE) {
                     // The FILTER_EPISODE API returns episodes in a format that differs from the
                     // summary search: playlistItemData is absent and the subtitle structure is
@@ -139,6 +278,10 @@ constructor(
                                 .orEmpty()
                             viewStateMap[filter.value] = ItemsPage(episodes, null)
                         }
+                    }
+                } else if (filter == YouTube.SearchFilter.FILTER_SONG) {
+                    if (viewStateMap[filter.value] == null) {
+                        loadMusicFilter()
                     }
                 } else {
                     if (viewStateMap[filter.value] == null) {
@@ -171,6 +314,10 @@ constructor(
         val currentFilter = filter.value
         val filterValue = currentFilter?.value ?: return
         viewModelScope.launch {
+            if (currentFilter == YouTube.SearchFilter.FILTER_SONG) {
+                loadMoreMusicFilter()
+                return@launch
+            }
             val viewState = viewStateMap[filterValue] ?: return@launch
             val continuation = viewState.continuation ?: return@launch
             val searchResult =
