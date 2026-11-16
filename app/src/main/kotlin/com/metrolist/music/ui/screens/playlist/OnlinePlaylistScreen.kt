@@ -305,6 +305,7 @@ fun OnlinePlaylistScreen(
                                                         startIndex = index,
                                                     ),
                                                 )
+                                                playerConnection.service.getAutomix(playlist.id, songItem.id)
                                             }
                                         },
                                         onLongClick = {
@@ -623,6 +624,7 @@ private fun OnlinePlaylistHeader(
                                 initialContinuation = continuation,
                             ),
                         )
+                        playerConnection.service.getAutomix(playlist.id, songs.firstOrNull()?.id)
                     }
                 },
             )
