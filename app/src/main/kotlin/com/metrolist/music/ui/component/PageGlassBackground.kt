@@ -25,7 +25,6 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -108,14 +107,13 @@ fun PageGlassBackground(
                         .allowHardware(false)
                         .build(),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                // The whole cover is stretched to the background's size instead of cropped and zoomed,
+                // so all of its colors show; the blur clamps at the edges, so nothing fades or runs out.
+                contentScale = ContentScale.FillBounds,
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = 1.35f
-                            scaleY = 1.35f
-                        }.blur(90.dp),
+                        .blur(90.dp),
             )
             Box(
                 Modifier

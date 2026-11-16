@@ -3478,7 +3478,7 @@ private const val EdgeToEdgePausedScale = 0.93f
 internal val DefaultAlbumBackground = Color(0xFF2B2A30)
 
 /**
- * Glass player background: the album cover, centered, enlarged and blurred until only its colors
+ * Glass player background: the whole album cover, stretched to the screen and blurred until only its colors
  * are left, darkened a little so white text stays readable. It sits behind the whole player, so
  * the lyrics and up-next views share it.
  */
@@ -3509,14 +3509,13 @@ internal fun GlassCoverBackground(
                             .allowHardware(false)
                             .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    // The whole cover is stretched to the background's size instead of cropped and zoomed,
+                    // so all of its colors show; the blur clamps at the edges, so nothing fades or runs out.
+                    contentScale = ContentScale.FillBounds,
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = 1.35f
-                                scaleY = 1.35f
-                            }.blur(90.dp),
+                            .blur(90.dp),
                 )
                 Box(
                     Modifier
