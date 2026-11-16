@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reset_app">Reset</string>
+    <string name="reset_app_desc">Clear your content, settings or everything</string>
+    <string name="reset_warning_title">You\'re entering the danger zone</string>
+    <string name="reset_warning_message">The options ahead permanently delete data and can\'t be undone. We\'d recommend thinking it over once more before you go on.</string>
+    <string name="reset_warning_continue">Continue</string>
+    <string name="reset_warning_back">Go back</string>
+    <string name="reset_contents">Reset contents</string>
+    <string name="reset_contents_desc">Deletes songs, playlists, downloads, your library, history and cache. Settings and sign-ins stay.</string>
+    <string name="reset_settings">Reset settings</string>
+    <string name="reset_settings_desc">Puts every setting back to its default. Your content and sign-ins stay.</string>
+    <string name="reset_everything">Reset everything</string>
+    <string name="reset_everything_desc">Clears all app data, as if the app was just installed. The app will close.</string>
+    <string name="reset_contents_confirm">Reset contents?</string>
+    <string name="reset_settings_confirm">Reset settings?</string>
+    <string name="reset_everything_confirm">Reset everything?</string>
+    <string name="reset_action">Reset</string>
+    <string name="reset_in_progress">Resetting…</string>
+    <string name="reset_failed">Couldn\'t reset. Nothing was changed.</string>
+</resources>

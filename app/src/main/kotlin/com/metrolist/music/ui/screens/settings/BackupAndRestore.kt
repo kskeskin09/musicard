@@ -107,6 +107,8 @@ fun BackupAndRestore(
     var isLoadingAccountInfo by remember { mutableStateOf(false) }
     var accountCheckFailed by remember { mutableStateOf(false) }
 
+    var showResetWarning by rememberSaveable { mutableStateOf(false) }
+
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     // "m3u" or "csv" while the playlist picker for exporting is open.
@@ -239,6 +241,38 @@ fun BackupAndRestore(
                 ),
         )
         Spacer(Modifier.height(16.dp))
+        // Kept apart at the bottom: the reset options delete data.
+        Material3SettingsGroup(
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        leadingContent = {
+                            Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(R.drawable.warning),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                        },
+                        title = { Text(stringResource(R.string.reset_app), color = MaterialTheme.colorScheme.error) },
+                        description = { Text(stringResource(R.string.reset_app_desc)) },
+                        onClick = { showResetWarning = true },
+                    ),
+                ),
+        )
+        Spacer(Modifier.height(16.dp))
+    }
+
+    if (showResetWarning) {
+        ResetWarningDialog(
+            onDismiss = { showResetWarning = false },
+            onContinue = {
+                showResetWarning = false
+                navController.navigate("settings/reset")
+            },
+        )
     }
 
     TopAppBar(
