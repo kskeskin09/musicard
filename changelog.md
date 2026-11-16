@@ -1,7 +1,12 @@
 ---v13.12.0
 # Musicard 13.12.0
 
+## Highlights
+- First-run setup: pick your theme, player look, lyrics style and favorite artists over a live preview
+- Reset options under Import or Export: clear your contents, your settings, or everything
+
 ## New features
+- Long-press the playing song (mini player or the big cover) to open its menu; long-press the Top result in search to open its options
 - Up next: swipe an upcoming song to the left to remove it from the queue
 - Playlists go on with suggested songs when they end, and "Playing from" then shows the playlist's name followed by Mix
 - Artist songs use the same sort row as playlists: Name, Date added (newest / oldest), where Date added is when you added the song to your library
@@ -12,6 +17,13 @@
 - Starting a radio from a song no longer leaves its playlist's Play button on Pause
 - The blur under the mini player grows smoothly instead of in layers, and no longer flickers while scrolling
 - Sliders in sheets can be dragged without moving the sheet
+- Swiping songs in the player keeps it paused if it was paused, and the mini player no longer flashes another song when a swipe lands
+- YouTube song sections on Home snap column by column like Quick picks
+- Quick picks stay on Home after a reset or a fresh install, filled from your favorite artists and the charts
+- Album and playlist covers are as big and round as the player's album art
+- Lyrics: the line no longer flashes bright while a word starts
+- Settings regrouped: one Music player group, lyrics settings under Lyrics, a new Display group, and Auto download on like moved to Downloads
+- Slider style defaults to Classic, and Home order is no longer shuffled by default
 
 ---v13.11.0
 # Musicard 13.11.0
