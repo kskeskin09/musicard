@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_title">Let\'s personalize your experience</string>
+    <string name="onboarding_subtitle">Choose how Musicard looks and pick the artists you love. It only takes a minute.</string>
+    <string name="onboarding_start">Let\'s start</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_skip_note">You can change all of these later in Settings.</string>
+    <string name="onboarding_choose_theme">Choose a theme</string>
+    <string name="onboarding_theme_system">System</string>
+    <string name="onboarding_theme_light">Light</string>
+    <string name="onboarding_theme_dark">Dark</string>
+    <string name="onboarding_player_background">Choose a player background</string>
+    <string name="onboarding_slider_style">Choose a slider style</string>
+    <string name="onboarding_album_pages">Album pages</string>
+    <string name="onboarding_mini_player">Mini player</string>
+    <string name="onboarding_mini_theme">Theme</string>
+    <string name="onboarding_mini_music">Music</string>
+    <string name="onboarding_mini_page">Page</string>
+    <string name="onboarding_artists_title">Pick your favorite artists</string>
+    <string name="onboarding_artists_subtitle">Your Home is tuned to them. Picking one shows artists like them.</string>
+    <string name="onboarding_search_artists">Search artists</string>
+    <string name="onboarding_similar">Similar</string>
+    <string name="onboarding_finish">Finish</string>
+    <string name="onboarding_no_artists">No artists found</string>
+</resources>

@@ -3460,7 +3460,7 @@ internal val DefaultAlbumBackground = Color(0xFF2B2A30)
  * the lyrics and up-next views share it.
  */
 @Composable
-private fun GlassCoverBackground(
+internal fun GlassCoverBackground(
     thumbnailUrl: String?,
     modifier: Modifier = Modifier,
 ) {
