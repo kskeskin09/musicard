@@ -648,7 +648,7 @@ private fun TopResultCard(
             modifier =
                 Modifier
                     .size(120.dp)
-                    .clip(if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(12.dp)),
         ) {
             AsyncImage(
                 model = item.thumbnail,

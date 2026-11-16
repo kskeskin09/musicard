@@ -103,7 +103,7 @@ fun WrappedTop5ArtistsScreen(topArtists: List<Artist>, isVisible: Boolean) {
                                 contentDescription = "Artist image",
                                 modifier = Modifier
                                     .size(64.dp)
-                                    .clip(CircleShape),
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.width(16.dp))
