@@ -350,6 +350,16 @@ class MusicService :
     private var currentQueue: Queue = EmptyQueue
     var queueTitle: String? = null
 
+    // Ids of the suggested songs that were added after the list itself ran out.
+    private val automixSongIds = HashSet<String>()
+
+    /** The list's name, or "<name> Mix" while one of the songs suggested after its end is playing. */
+    val displayQueueTitle: String?
+        get() {
+            val title = queueTitle?.takeIf { it.isNotBlank() } ?: return queueTitle
+            return if (player.currentMediaItem?.mediaId in automixSongIds) getString(R.string.queue_mix_title, title) else title
+        }
+
     val currentMediaMetadata = MutableStateFlow<com.metrolist.music.models.MediaMetadata?>(null)
 
     /** Bumped when the queue order changes, so the lyrics prefetch looks at the new upcoming songs. */
@@ -2025,6 +2035,12 @@ class MusicService :
         currentQueue = queue
         queueTitle = null
         playedLog.clear()
+        automixSongIds.clear()
+        if (!restoringQueue) {
+            // Suggestions belong to the list they were fetched for.
+            automixJob?.cancel()
+            automixItems.value = emptyList()
+        }
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
         if (!persistShuffleAcrossQueues && !restoringQueue) {
             player.shuffleModeEnabled = false
@@ -2100,6 +2116,9 @@ class MusicService :
 
         val currentIndex = player.currentMediaItemIndex
         val currentMediaId = currentMediaMetadata.id
+        automixJob?.cancel()
+        automixItems.value = emptyList()
+        automixSongIds.clear()
 
         scope.launch(SilentHandler) {
             // Use simple videoId to let YouTube personalize recommendations
@@ -2188,70 +2207,57 @@ class MusicService :
         }
     }
 
-    fun getAutomix(playlistId: String) {
-        if (dataStore.get(SimilarContent, true) &&
-            !(dataStore.get(DisableLoadMoreWhenRepeatAllKey, false) && player.repeatMode == REPEAT_MODE_ALL)
+    private var automixJob: Job? = null
+
+    /**
+     * Fetches the songs to go on with when the list ends: YouTube's mix for [playlistId], or,
+     * without one (or when that fails), songs similar to [seedSongId] / the current song.
+     * Call it after playQueue, which drops the suggestions of the list before.
+     */
+    fun getAutomix(
+        playlistId: String?,
+        seedSongId: String? = null,
+    ) {
+        if (!dataStore.get(SimilarContent, true) ||
+            (dataStore.get(DisableLoadMoreWhenRepeatAllKey, false) && player.repeatMode == REPEAT_MODE_ALL)
         ) {
+            return
+        }
+        automixJob?.cancel()
+        automixJob =
             scope.launch(SilentHandler) {
-                try {
-                    YouTube
-                        .next(WatchEndpoint(playlistId = playlistId))
-                        .onSuccess { firstResult ->
-                            YouTube
-                                .next(WatchEndpoint(playlistId = firstResult.endpoint.playlistId))
-                                .onSuccess { secondResult ->
-                                    automixItems.value =
-                                        secondResult.items.map { song ->
-                                            song.toMediaItem()
-                                        }
-                                }.onFailure {
-                                    if (firstResult.items.isNotEmpty()) {
-                                        automixItems.value =
-                                            firstResult.items.map { song ->
-                                                song.toMediaItem()
-                                            }
-                                    }
+                val items =
+                    withContext(Dispatchers.IO) {
+                        val fromPlaylist =
+                            playlistId?.let { id ->
+                                YouTube.next(WatchEndpoint(playlistId = id)).getOrNull()?.let { first ->
+                                    YouTube
+                                        .next(WatchEndpoint(playlistId = first.endpoint.playlistId))
+                                        .getOrNull()
+                                        ?.items
+                                        ?.takeIf { it.isNotEmpty() }
+                                        ?: first.items
                                 }
-                        }.onFailure {
-                            val currentSong = player.currentMetadata
-                            if (currentSong != null) {
-                                // Use simple videoId for better personalized recommendations
-                                YouTube
-                                    .next(
-                                        WatchEndpoint(
-                                            videoId = currentSong.id,
-                                        ),
-                                    ).onSuccess { radioResult ->
-                                        val filteredItems =
-                                            radioResult.items
-                                                .filter { it.id != currentSong.id }
-                                                .map { it.toMediaItem() }
-                                        if (filteredItems.isNotEmpty()) {
-                                            automixItems.value = filteredItems
-                                        }
-                                    }.onFailure {
-                                        YouTube
-                                            .next(WatchEndpoint(videoId = currentSong.id))
-                                            .getOrNull()
-                                            ?.relatedEndpoint
-                                            ?.let { relatedEndpoint ->
-                                                YouTube.related(relatedEndpoint).onSuccess { relatedPage ->
-                                                    val relatedItems =
-                                                        relatedPage.songs
-                                                            .filter { it.id != currentSong.id }
-                                                            .map { it.toMediaItem() }
-                                                    if (relatedItems.isNotEmpty()) {
-                                                        automixItems.value = relatedItems
-                                                    }
-                                                }
-                                            }
-                                    }
                             }
-                        }
-                } catch (_: Exception) {
+                        if (!fromPlaylist.isNullOrEmpty()) return@withContext fromPlaylist
+                        val seedId =
+                            seedSongId
+                                ?: withContext(Dispatchers.Main) { player.currentMetadata?.id }
+                                ?: return@withContext emptyList()
+                        val radio = YouTube.next(WatchEndpoint(videoId = seedId)).getOrNull()
+                        radio?.items?.filter { it.id != seedId }?.takeIf { it.isNotEmpty() }
+                            ?: radio?.relatedEndpoint?.let { related ->
+                                YouTube.related(related).getOrNull()?.songs?.filter { it.id != seedId }
+                            }.orEmpty()
+                    }
+                if (items.isNotEmpty()) {
+                    automixItems.value =
+                        items
+                            .map { it.toMediaItem() }
+                            .filterExplicit(cachedHideExplicit)
+                            .filterVideoSongs(cachedHideVideoSongs)
                 }
             }
-        }
     }
 
     fun addToQueueAutomix(
@@ -2262,6 +2268,9 @@ class MusicService :
             automixItems.value.toMutableList().apply {
                 removeAt(position)
             }
+        // Suggested songs the list already holds are skipped.
+        if ((0 until player.mediaItemCount).any { player.getMediaItemAt(it).mediaId == item.mediaId }) return
+        automixSongIds.add(item.mediaId)
         addToQueue(listOf(item))
     }
 
@@ -2273,6 +2282,7 @@ class MusicService :
             automixItems.value.toMutableList().apply {
                 removeAt(position)
             }
+        automixSongIds.add(item.mediaId)
         playNext(listOf(item))
     }
 
