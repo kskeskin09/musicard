@@ -51,7 +51,7 @@ import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.SongListItem
-import com.metrolist.music.ui.component.SortHeader
+import com.metrolist.music.ui.component.ListSortRow
 import com.metrolist.music.ui.menu.SongMenu
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberEnumPreference
@@ -81,6 +81,15 @@ fun ArtistSongsScreen(
             ArtistSongSortDescendingKey,
             true,
         )
+    // Orders the row no longer offers (Most played, Z to A) fall back to one it does.
+    androidx.compose.runtime.LaunchedEffect(sortType, sortDescending) {
+        if (sortType == ArtistSongSortType.PLAY_TIME) {
+            onSortTypeChange(ArtistSongSortType.CREATE_DATE)
+            onSortDescendingChange(true)
+        } else if (sortType == ArtistSongSortType.NAME && sortDescending) {
+            onSortDescendingChange(false)
+        }
+    }
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
     val artist by viewModel.artist.collectAsStateWithLifecycle()
     val songs by viewModel.songs.collectAsStateWithLifecycle()
@@ -101,21 +110,15 @@ fun ArtistSongsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
-                    SortHeader(
+                    // The playlist pages' sort row, without Custom and Date modified. Date added is
+                    // when the song was added to the library.
+                    ArtistSongSortRow(
                         sortType = sortType,
                         sortDescending = sortDescending,
                         onSortTypeChange = onSortTypeChange,
                         onSortDescendingChange = onSortDescendingChange,
-                        sortTypeText = { sortType ->
-                            when (sortType) {
-                                ArtistSongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                ArtistSongSortType.NAME -> R.string.sort_by_name
-                                ArtistSongSortType.PLAY_TIME -> R.string.sort_by_play_time
-                            }
-                        },
+                        modifier = Modifier.weight(1f),
                     )
-
-                    Spacer(Modifier.weight(1f))
 
                     Text(
                         text = pluralStringResource(R.plurals.n_song, songs.size, songs.size),
@@ -210,4 +213,36 @@ fun ArtistSongsScreen(
             },
         )
     }
+}
+
+private enum class ArtistSongSortChoice(val type: ArtistSongSortType, val descending: Boolean, val labelRes: Int) {
+    NAME(ArtistSongSortType.NAME, false, R.string.library_sort_name),
+    ADDED_NEWEST(ArtistSongSortType.CREATE_DATE, true, R.string.library_sort_added_newest),
+    ADDED_OLDEST(ArtistSongSortType.CREATE_DATE, false, R.string.library_sort_added_oldest),
+}
+
+@Composable
+private fun ArtistSongSortRow(
+    sortType: ArtistSongSortType,
+    sortDescending: Boolean,
+    onSortTypeChange: (ArtistSongSortType) -> Unit,
+    onSortDescendingChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selected =
+        when {
+            sortType == ArtistSongSortType.NAME -> ArtistSongSortChoice.NAME
+            sortType == ArtistSongSortType.CREATE_DATE && !sortDescending -> ArtistSongSortChoice.ADDED_OLDEST
+            else -> ArtistSongSortChoice.ADDED_NEWEST
+        }
+    ListSortRow(
+        options = ArtistSongSortChoice.entries,
+        selected = selected,
+        label = { stringResource(it.labelRes) },
+        onSelect = {
+            onSortTypeChange(it.type)
+            onSortDescendingChange(it.descending)
+        },
+        modifier = modifier,
+    )
 }

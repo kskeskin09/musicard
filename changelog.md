@@ -1,3 +1,18 @@
+---v13.12.0
+# Musicard 13.12.0
+
+## New features
+- Up next: swipe an upcoming song to the left to remove it from the queue
+- Playlists go on with suggested songs when they end, and "Playing from" then shows the playlist's name followed by Mix
+- Artist songs use the same sort row as playlists: Name, Date added (newest / oldest), where Date added is when you added the song to your library
+
+## Fixes and improvements
+- Shuffle only mixes the songs still to come: the songs you already played keep their order, also when more songs load
+- Up next always shows the next song to play, also right after turning shuffle on or off
+- Starting a radio from a song no longer leaves its playlist's Play button on Pause
+- The blur under the mini player grows smoothly instead of in layers, and no longer flickers while scrolling
+- Sliders in sheets can be dragged without moving the sheet
+
 ---v13.11.0
 # Musicard 13.11.0
 
