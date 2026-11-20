@@ -39,15 +39,24 @@ constructor(
     init {
         viewModelScope.launch {
             // YouTube's Home chips are its own pick of moods/genres for this account, best first.
+            // Home has usually loaded them already; only load Home here when it hasn't.
             val chipsJob =
                 async(Dispatchers.IO) {
-                    withTimeoutOrNull(8_000) { YouTube.home().getOrNull()?.chips?.map { it.title } }.orEmpty()
+                    homeChipTitles.value
+                        ?: withTimeoutOrNull(8_000) { YouTube.home().getOrNull()?.chips?.map { it.title } }
+                            ?.also { homeChipTitles.value = it }
+                        ?: emptyList()
                 }
             YouTube
                 .moodAndGenres()
                 .onSuccess { sections ->
+                    // Show For You together with Genres: wait a little for the chips if they
+                    // aren't here yet, then fall back to listening history alone.
+                    val chips = withTimeoutOrNull(CHIPS_WAIT_MS) { chipsJob.await() }
+                    forYou.value = pickForYou(sections, chips.orEmpty())
                     moodAndGenres.value = sections
-                    forYou.value = pickForYou(sections, chipsJob.await())
+                    // Chips that come later are kept for the next time the page opens;
+                    // the tiles on screen don't move.
                 }.onFailure {
                     chipsJob.cancel()
                     reportException(it)
@@ -108,7 +117,11 @@ constructor(
             .split(Regex("[^\\p{L}\\p{N}]+"))
             .filter { it.isNotBlank() }
 
-    private companion object {
-        val StopWords = setOf("and", "the", "music", "ve", "müzik", "for", "with")
+    companion object {
+        /** The latest Home chip titles, filled by HomeViewModel when Home loads. */
+        val homeChipTitles = MutableStateFlow<List<String>?>(null)
+
+        private const val CHIPS_WAIT_MS = 1_500L
+        private val StopWords = setOf("and", "the", "music", "ve", "müzik", "for", "with")
     }
 }
