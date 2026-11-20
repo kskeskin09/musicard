@@ -436,6 +436,11 @@ private fun SearchBrowsePage(
     val countryTitle = stringResource(R.string.search_popular_in_country, popularViewModel.countryName)
     val worldTitle = stringResource(R.string.search_popular_in_world)
     val popularHeading = stringResource(R.string.search_popular)
+    // The page appears in one go: Popular gets up to 2.5 s to load alongside Genres and For You.
+    val popularWaitOver by androidx.compose.runtime.produceState(false) {
+        kotlinx.coroutines.delay(2_500)
+        value = true
+    }
     val navController = LocalNavController.current
     val rawSections by viewModel.moodAndGenres.collectAsStateWithLifecycle()
     val forYou by viewModel.forYou.collectAsStateWithLifecycle()
@@ -497,7 +502,8 @@ private fun SearchBrowsePage(
                 )
             }
         }
-        if (sections == null) {
+        val pageReady = sections != null && ((countrySongs != null && worldSongs != null) || popularWaitOver)
+        if (!pageReady) {
             item(key = "genres_loading") {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
@@ -505,7 +511,7 @@ private fun SearchBrowsePage(
             }
         }
         // "For You": up to 4 moods/genres picked from this listener's taste (always 0, 2 or 4).
-        if (sections != null && forYou.isNotEmpty()) {
+        if (pageReady && forYou.isNotEmpty()) {
             item(key = "for_you_title") {
                 Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp)) {
                     Text(
@@ -539,9 +545,51 @@ private fun SearchBrowsePage(
                 }
             }
         }
-        sections?.forEachIndexed { index, section ->
+        // Popular (under For You, above Genres): the content country's top songs, then the world's, as rows of four.
+        val popularLists =
+            listOf(
+                Triple("country", countryTitle, countrySongs),
+                Triple("world", worldTitle, worldSongs),
+            ).mapNotNull { (key, title, songs) -> songs?.takeIf { it.isNotEmpty() }?.let { Triple(key, title, it) } }
+        val showsPopular = pageReady && popularLists.isNotEmpty()
+        if (showsPopular) {
+            item(key = "popular_title") {
+                val popularTop = if (forYou.isEmpty()) 0.dp else 20.dp
+                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = popularTop, bottom = 4.dp)) {
+                    Text(
+                        text = popularHeading,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                }
+            }
+            popularLists.forEach { (key, title, songs) ->
+                item(key = "popular_${key}_title") {
+                    Text(
+                        text = title,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp),
+                    )
+                }
+                item(key = "popular_${key}_songs") {
+                    com.metrolist.music.ui.screens.YouTubeSongRows(
+                        songs = songs,
+                        queueTitle = title,
+                        state = com.metrolist.music.ui.utils.TabStates.grid("search/popular_$key"),
+                    )
+                }
+            }
+        }
+        if (pageReady) sections?.forEachIndexed { index, section ->
             item(key = "genres_title_$index") {
-                val topPadding = if (index == 0 && forYou.isEmpty()) 0.dp else 20.dp
+                val topPadding = if (index == 0 && forYou.isEmpty() && !showsPopular) 0.dp else 20.dp
                 Column(Modifier.padding(start = 20.dp, end = 20.dp, top = topPadding, bottom = 16.dp)) {
                     Text(
                         text = section.title,
@@ -572,46 +620,6 @@ private fun SearchBrowsePage(
                         }
                         if (row.size < 2) Spacer(Modifier.weight(1f))
                     }
-                }
-            }
-        }
-        // Popular: the content country's top songs, then the world's, as rows of four.
-        val popularLists =
-            listOf(
-                Triple("country", countryTitle, countrySongs),
-                Triple("world", worldTitle, worldSongs),
-            ).mapNotNull { (key, title, songs) -> songs?.takeIf { it.isNotEmpty() }?.let { Triple(key, title, it) } }
-        if (sections != null && popularLists.isNotEmpty()) {
-            item(key = "popular_title") {
-                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp)) {
-                    Text(
-                        text = popularHeading,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-                }
-            }
-            popularLists.forEach { (key, title, songs) ->
-                item(key = "popular_${key}_title") {
-                    Text(
-                        text = title,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp),
-                    )
-                }
-                item(key = "popular_${key}_songs") {
-                    com.metrolist.music.ui.screens.YouTubeSongRows(
-                        songs = songs,
-                        queueTitle = title,
-                        state = com.metrolist.music.ui.utils.TabStates.grid("search/popular_$key"),
-                    )
                 }
             }
         }
