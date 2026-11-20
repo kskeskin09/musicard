@@ -59,13 +59,13 @@ data class SearchSummaryPage(
         }
 
     fun filterYoutubeShorts(enabled: Boolean = false) =
-        if (enabled) {
+        if (enabled || com.metrolist.innertube.models.NonMusicalVideos.hide) {
             SearchSummaryPage(
                 summaries.mapNotNull { s ->
                     SearchSummary(
                         title = s.title,
                         items =
-                            s.items.filterYoutubeShorts(true).ifEmpty {
+                            s.items.filterYoutubeShorts(enabled).ifEmpty {
                                 return@mapNotNull null
                             },
                     )

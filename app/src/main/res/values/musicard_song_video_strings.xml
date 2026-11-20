@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="songs_and_videos">Songs and videos</string>
+    <string name="prefer_official_songs_playback_desc">Plays the song version from YouTube Music instead of the music video when there is one, and shows it first in search. Nothing is removed from results, and videos without a song version play as usual.</string>
+    <string name="hide_non_musical_videos">Hide non-musical videos</string>
+    <string name="hide_non_musical_videos_desc">Hides vlogs, trailers, interviews and fan uploads in search, home and artist pages. Official music videos stay. Some songs only exist as fan uploads, so turn this off if results go missing.</string>
+    <string name="hide_video_songs_all_desc">Hides every video, official music videos too, in search, lists and the queue</string>
+</resources>
