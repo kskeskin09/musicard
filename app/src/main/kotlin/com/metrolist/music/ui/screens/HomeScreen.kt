@@ -61,6 +61,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -104,6 +106,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.LocalNavController
@@ -219,6 +222,14 @@ sealed class HomeSection(
     ) : HomeSection("home_page_section_$index", 10)
 
     data object MoodAndGenres : HomeSection("mood_and_genres", 5)
+
+    data object NewForYou : HomeSection("new_for_you", 85)
+
+    data object ArtistSpotlight : HomeSection("artist_spotlight", 60)
+
+    data object NewFromArtists : HomeSection("new_from_artists", 45)
+
+    data object MoodSongs : HomeSection("mood_songs", 35)
 
     /** The id of the row under Content > Edit home screen that moves this section. */
     val layoutId: String
@@ -693,6 +704,11 @@ fun HomeScreen(
     val explorePage by viewModel.explorePage.collectAsStateWithLifecycle()
     val dailyDiscover by viewModel.dailyDiscover.collectAsStateWithLifecycle()
     val communityPlaylists by viewModel.communityPlaylists.collectAsStateWithLifecycle()
+    val newForYou by viewModel.newForYou.collectAsStateWithLifecycle()
+    val artistSpotlights by viewModel.artistSpotlights.collectAsStateWithLifecycle()
+    val newFromArtists by viewModel.newFromArtists.collectAsStateWithLifecycle()
+    val selectedMood by viewModel.selectedMood.collectAsStateWithLifecycle()
+    val moodSongs by viewModel.moodSongs.collectAsStateWithLifecycle()
 
     val allLocalItems by viewModel.allLocalItems.collectAsStateWithLifecycle()
     val allYtItems by viewModel.allYtItems.collectAsStateWithLifecycle()
@@ -1034,6 +1050,10 @@ fun HomeScreen(
             similarRecommendations,
             homePage?.sections,
             explorePage?.moodAndGenres,
+            newForYou,
+            artistSpotlights,
+            newFromArtists,
+            selectedMood,
         ) {
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
@@ -1049,6 +1069,10 @@ fun HomeScreen(
             if (!chipActive && dailyDiscover?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
             if (!chipActive && keepListening?.isNotEmpty() == true) list.add(HomeSection.KeepListening)
             if (!chipActive && accountPlaylists?.isNotEmpty() == true) list.add(HomeSection.AccountPlaylists)
+            if (!chipActive && newForYou?.isNotEmpty() == true) list.add(HomeSection.NewForYou)
+            if (!chipActive && artistSpotlights?.isNotEmpty() == true) list.add(HomeSection.ArtistSpotlight)
+            if (!chipActive && newFromArtists?.isNotEmpty() == true) list.add(HomeSection.NewFromArtists)
+            if (!chipActive && selectedMood != null) list.add(HomeSection.MoodSongs)
 
             if (!chipActive) {
                 similarRecommendations?.indices?.forEach { i ->
@@ -1078,6 +1102,7 @@ fun HomeScreen(
                             HomeSection.SpeedDial,
                             HomeSection.QuickPicks,
                             HomeSection.DailyDiscover,
+                            HomeSection.NewForYou,
                             -> 500
 
                             // Top tier starts equal
@@ -1088,6 +1113,9 @@ fun HomeScreen(
                             HomeSection.FromTheCommunity,
                             HomeSection.AlbumsForYou,
                             HomeSection.Recents,
+                            HomeSection.ArtistSpotlight,
+                            HomeSection.NewFromArtists,
+                            HomeSection.MoodSongs,
                             -> 300
 
                             // Middle tier starts equal
@@ -1102,6 +1130,7 @@ fun HomeScreen(
                             HomeSection.SpeedDial,
                             HomeSection.QuickPicks,
                             HomeSection.DailyDiscover,
+                            HomeSection.NewForYou,
                             -> sectionRandom.nextInt(-200, 400)
 
                             // Middle tier: Can jump up to challenge top tier, or drop lower
@@ -1113,6 +1142,9 @@ fun HomeScreen(
                             HomeSection.FromTheCommunity,
                             HomeSection.AlbumsForYou,
                             HomeSection.Recents,
+                            HomeSection.ArtistSpotlight,
+                            HomeSection.NewFromArtists,
+                            HomeSection.MoodSongs,
                             -> sectionRandom.nextInt(-100, 400)
 
                             // Bottom tier: Standard variance
@@ -1759,6 +1791,134 @@ fun HomeScreen(
                                 }
                             }
                         }
+                        HomeSection.NewForYou -> {
+                            val songs = newForYou.orEmpty()
+                            if (selectedChip == null && songs.isNotEmpty()) {
+                                item(key = "new_for_you_title") {
+                                    NavigationTitle(
+                                        title = stringResource(R.string.home_new_for_you),
+                                        label = stringResource(R.string.home_new_for_you_label),
+                                    )
+                                }
+                                item(key = "new_for_you_rows") {
+                                    YouTubeSongRows(
+                                        songs = songs,
+                                        queueTitle = stringResource(R.string.home_new_for_you),
+                                        state = com.metrolist.music.ui.utils.TabStates.grid("home/new_for_you_rows"),
+                                    )
+                                }
+                            }
+                        }
+                        HomeSection.ArtistSpotlight -> {
+                            val spotlights = artistSpotlights.orEmpty()
+                            if (selectedChip == null && spotlights.isNotEmpty()) {
+                                item(key = "artist_spotlight_title") {
+                                    NavigationTitle(title = stringResource(R.string.home_artist_spotlight))
+                                }
+                                item(key = "artist_spotlight_row") {
+                                    HomeSnapRow(
+                                        stateKey = "home/artist_spotlight_row",
+                                        contentPadding = HomeRowPadding,
+                                        horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
+                                    ) {
+                                        items(spotlights, key = { "home_spotlight_${it.artist.id}" }) { spotlight ->
+                                            ArtistSpotlightCard(
+                                                spotlight = spotlight,
+                                                onOpen = { navController.navigate("artist/${spotlight.artist.id}") },
+                                                onPlay = {
+                                                    if (!isListenTogetherGuest) {
+                                                        val endpoint = spotlight.artist.radioEndpoint ?: spotlight.artist.shuffleEndpoint
+                                                        if (endpoint != null) {
+                                                            playerConnection.playQueue(YouTubeQueue(endpoint))
+                                                        } else {
+                                                            playerConnection.playQueue(
+                                                                ListQueue(
+                                                                    title = spotlight.artist.title,
+                                                                    items = spotlight.songs.map { it.toMediaItem() },
+                                                                ),
+                                                            )
+                                                        }
+                                                    }
+                                                },
+                                                onSongClick = { song ->
+                                                    if (!isListenTogetherGuest) {
+                                                        playerConnection.playQueue(
+                                                            ListQueue(
+                                                                title = spotlight.artist.title,
+                                                                items = spotlight.songs.map { it.toMediaItem() },
+                                                                startIndex = spotlight.songs.indexOf(song),
+                                                            ),
+                                                        )
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        HomeSection.NewFromArtists -> {
+                            val albums = newFromArtists.orEmpty()
+                            if (selectedChip == null && albums.isNotEmpty()) {
+                                item(key = "new_from_artists_title") {
+                                    NavigationTitle(title = stringResource(R.string.home_new_from_artists))
+                                }
+                                item(key = "new_from_artists_row") {
+                                    HomeSnapRow(
+                                        stateKey = "home/new_from_artists_row",
+                                        contentPadding = HomeRowPadding,
+                                        horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
+                                    ) {
+                                        items(albums, key = { "home_new_from_${it.id}" }) { album ->
+                                            ytGridItem(album)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        HomeSection.MoodSongs -> {
+                            val moods = explorePage?.moodAndGenres.orEmpty().take(10)
+                            if (selectedChip == null && moods.isNotEmpty()) {
+                                item(key = "mood_songs_title") {
+                                    NavigationTitle(title = stringResource(R.string.home_todays_vibe))
+                                }
+                                item(key = "mood_songs_chips") {
+                                    HomeSnapRow(
+                                        stateKey = "home/mood_songs_chips",
+                                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        items(moods, key = { "home_mood_${it.title}_${it.endpoint.params}" }) { mood ->
+                                            FilterChip(
+                                                selected = mood == selectedMood,
+                                                onClick = { viewModel.selectMood(mood) },
+                                                label = { Text(mood.title) },
+                                                shape = RoundedCornerShape(50),
+                                            )
+                                        }
+                                    }
+                                }
+                                item(key = "mood_songs_rows") {
+                                    val songs = moodSongs
+                                    when {
+                                        songs == null ->
+                                            Box(
+                                                contentAlignment = Alignment.Center,
+                                                modifier = Modifier.fillMaxWidth().height(ListItemHeight * 4),
+                                            ) {
+                                                CircularProgressIndicator()
+                                            }
+                                        songs.isNotEmpty() ->
+                                            YouTubeSongRows(
+                                                songs = songs,
+                                                queueTitle = selectedMood?.title ?: stringResource(R.string.home_todays_vibe),
+                                                state = com.metrolist.music.ui.utils.TabStates.grid("home/mood_songs_rows"),
+                                            )
+                                        else -> {}
+                                    }
+                                }
+                            }
+                        }
                         HomeSection.AlbumsForYou -> {
                             // Albums for You: albums of the songs the user plays, mixed with YouTube's suggestions.
                             val forYouAlbums = albumsForYou.orEmpty()
@@ -2290,14 +2450,30 @@ fun HomeScreen(
                                     )
                                 }
 
-                                item(key = "similar_to_list_${section.index}") {
-                                    HomeSnapRow(
-                                        stateKey = "home/similar_to_list_${section.index}",
-                                        contentPadding = HomeRowPadding,
-                                        horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
-                                    ) {
-                                        items(recommendation.items.distinctBy { it.id }, key = { "home_similar_${it.id}" }) { item ->
-                                            ytGridItem(item)
+                                // Songs as playable rows of four; albums, artists and playlists as cards below.
+                                val similarItems = recommendation.items.distinctBy { it.id }
+                                val similarSongs = similarItems.filterIsInstance<SongItem>()
+                                val showSongRows = similarSongs.size >= 4
+                                val similarCards = if (showSongRows) similarItems.filterNot { it is SongItem } else similarItems
+                                if (showSongRows) {
+                                    item(key = "similar_to_songs_${section.index}") {
+                                        YouTubeSongRows(
+                                            songs = similarSongs,
+                                            queueTitle = recommendation.title.title,
+                                            state = com.metrolist.music.ui.utils.TabStates.grid("home/similar_to_songs_${section.index}"),
+                                        )
+                                    }
+                                }
+                                if (similarCards.isNotEmpty()) {
+                                    item(key = "similar_to_list_${section.index}") {
+                                        HomeSnapRow(
+                                            stateKey = "home/similar_to_list_${section.index}",
+                                            contentPadding = HomeRowPadding,
+                                            horizontalArrangement = Arrangement.spacedBy(HomeRowSpacing),
+                                        ) {
+                                            items(similarCards, key = { "home_similar_${it.id}" }) { item ->
+                                                ytGridItem(item)
+                                            }
                                         }
                                     }
                                 }
@@ -2868,7 +3044,7 @@ private fun HomeSnapRow(
 /** Songs in rows of four that scroll sideways and snap by column, as in the Recents section. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun <T : Any> HomeSongRows(
+internal fun <T : Any> HomeSongRows(
     entries: List<T>,
     state: LazyGridState,
     itemWidth: Dp,
@@ -2901,6 +3077,166 @@ private fun <T : Any> HomeSongRows(
     ) {
         items(entries, key = key) { entry ->
             itemContent(entry, Modifier.width(itemWidth))
+        }
+    }
+}
+
+/**
+ * YouTube songs in rows of four that snap by column. Tapping one plays the whole list from it;
+ * long press or the dots open the song menu.
+ */
+@Composable
+internal fun YouTubeSongRows(
+    songs: List<SongItem>,
+    queueTitle: String,
+    state: LazyGridState,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val menuState = LocalMenuState.current
+    val haptic = LocalHapticFeedback.current
+    val listenTogetherManager = LocalListenTogetherManager.current
+    val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
+    val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val widthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
+        HomeSongRows(
+            entries = songs,
+            state = state,
+            itemWidth = maxWidth * widthFactor,
+            itemWidthFactor = widthFactor,
+            key = { "yt_song_rows_${it.id}" },
+        ) { song, itemModifier ->
+            YouTubeListItem(
+                item = song,
+                isActive = song.id == mediaMetadata?.id,
+                isPlaying = isPlaying,
+                isSwipeable = false,
+                trailingContent = {
+                    IconButton(
+                        onClick = {
+                            menuState.show {
+                                YouTubeSongMenu(song = song, onDismiss = menuState::dismiss)
+                            }
+                        },
+                    ) {
+                        Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
+                    }
+                },
+                modifier =
+                    itemModifier.combinedClickable(
+                        onClick = {
+                            if (isListenTogetherGuest) return@combinedClickable
+                            if (song.id == mediaMetadata?.id) {
+                                playerConnection.togglePlayPause()
+                            } else {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = queueTitle,
+                                        items = songs.map { it.toMediaItem() },
+                                        startIndex = songs.indexOf(song),
+                                    ),
+                                )
+                            }
+                        },
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            menuState.show {
+                                YouTubeSongMenu(song = song, onDismiss = menuState::dismiss)
+                            }
+                        },
+                    ),
+            )
+        }
+    }
+}
+
+/** A big card for one artist: their picture, name, a few top songs and a radio play button. */
+@Composable
+private fun ArtistSpotlightCard(
+    spotlight: com.metrolist.music.viewmodels.ArtistSpotlight,
+    onOpen: () -> Unit,
+    onPlay: () -> Unit,
+    onSongClick: (SongItem) -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .width(300.dp)
+                .height(260.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .clickable(onClick = onOpen),
+    ) {
+        AsyncImage(
+            model = spotlight.artist.thumbnail?.resize(600, 600),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        // Dark at the bottom so the name and songs stay readable on any picture.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.35f to Color.Black.copy(alpha = 0.15f),
+                            1f to Color.Black.copy(alpha = 0.85f),
+                        ),
+                    ),
+        )
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = spotlight.artist.title,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .clickable(onClick = onPlay),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = stringResource(R.string.play),
+                        tint = Color.Black,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            spotlight.songs.take(3).forEach { song ->
+                Text(
+                    text = song.title,
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onSongClick(song) }
+                            .padding(vertical = 3.dp),
+                )
+            }
         }
     }
 }

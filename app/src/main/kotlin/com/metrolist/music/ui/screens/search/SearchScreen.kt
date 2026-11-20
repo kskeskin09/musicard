@@ -429,7 +429,13 @@ private fun SearchBrowsePage(
     pageBackground: Color,
     searchBar: @Composable () -> Unit,
     viewModel: MoodAndGenresViewModel = hiltViewModel(),
+    popularViewModel: com.metrolist.music.viewmodels.PopularViewModel = hiltViewModel(),
 ) {
+    val countrySongs by popularViewModel.countrySongs.collectAsStateWithLifecycle()
+    val worldSongs by popularViewModel.worldSongs.collectAsStateWithLifecycle()
+    val countryTitle = stringResource(R.string.search_popular_in_country, popularViewModel.countryName)
+    val worldTitle = stringResource(R.string.search_popular_in_world)
+    val popularHeading = stringResource(R.string.search_popular)
     val navController = LocalNavController.current
     val rawSections by viewModel.moodAndGenres.collectAsStateWithLifecycle()
     // Genres come first, then moods.
@@ -529,6 +535,46 @@ private fun SearchBrowsePage(
                         }
                         if (row.size < 2) Spacer(Modifier.weight(1f))
                     }
+                }
+            }
+        }
+        // Popular: the content country's top songs, then the world's, as rows of four.
+        val popularLists =
+            listOf(
+                Triple("country", countryTitle, countrySongs),
+                Triple("world", worldTitle, worldSongs),
+            ).mapNotNull { (key, title, songs) -> songs?.takeIf { it.isNotEmpty() }?.let { Triple(key, title, it) } }
+        if (sections != null && popularLists.isNotEmpty()) {
+            item(key = "popular_title") {
+                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp)) {
+                    Text(
+                        text = popularHeading,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                }
+            }
+            popularLists.forEach { (key, title, songs) ->
+                item(key = "popular_${key}_title") {
+                    Text(
+                        text = title,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp),
+                    )
+                }
+                item(key = "popular_${key}_songs") {
+                    com.metrolist.music.ui.screens.YouTubeSongRows(
+                        songs = songs,
+                        queueTitle = title,
+                        state = com.metrolist.music.ui.utils.TabStates.grid("search/popular_$key"),
+                    )
                 }
             }
         }
