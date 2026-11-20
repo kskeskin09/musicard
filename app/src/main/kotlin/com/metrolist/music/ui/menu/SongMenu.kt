@@ -396,7 +396,7 @@ fun SongMenu(
                             modifier =
                                 Modifier
                                     .size(ListThumbnailSize)
-                                    .clip(CircleShape),
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(com.metrolist.music.constants.ThumbnailCornerRadius)),
                         )
                     }
                     Text(
