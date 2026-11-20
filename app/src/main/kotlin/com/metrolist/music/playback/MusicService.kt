@@ -2155,6 +2155,7 @@ class MusicService :
                         val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
                         applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst, keepHistory = true)
                     }
+                    showRadioStartedToast()
                 }
 
                 currentQueue = radioQueue
@@ -2191,6 +2192,7 @@ class MusicService :
                                         keepHistory = true,
                                     )
                                 }
+                                showRadioStartedToast()
                             }
                         }
                     }
@@ -2622,6 +2624,10 @@ class MusicService :
             steps++
         }
         return null
+    }
+
+    private fun showRadioStartedToast() {
+        Toast.makeText(this, getString(R.string.radio_started), Toast.LENGTH_SHORT).show()
     }
 
     fun toggleStartRadio() {
