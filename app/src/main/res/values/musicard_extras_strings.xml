@@ -10,4 +10,7 @@
     <!-- AI artists -->
     <string name="block_ai_artists">Hide AI-generated artists</string>
     <string name="block_ai_artists_desc">Hides channels known to publish AI-generated music from Home, Search, artist pages and radio suggestions. Uses the community AiSList (github.com/Override92/AiSList, CC BY-NC 4.0), refreshed daily and kept for offline use. Your own library is not changed.</string>
+    <!-- Unavailable songs -->
+    <string name="song_unavailable_label">Unavailable</string>
+    <string name="song_unavailable_message">This song can\'t be played. It was removed or made private, or it isn\'t available in your country.</string>
 </resources>

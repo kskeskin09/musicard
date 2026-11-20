@@ -61,6 +61,7 @@ import com.metrolist.innertube.pages.NextResult
 import com.metrolist.innertube.pages.PageHelper
 import com.metrolist.innertube.pages.PlaylistContinuationPage
 import com.metrolist.innertube.pages.PlaylistPage
+import com.metrolist.innertube.pages.UnavailableSong
 import com.metrolist.innertube.pages.PodcastPage
 import com.metrolist.innertube.pages.RelatedPage
 import com.metrolist.innertube.pages.SearchPage
@@ -1043,6 +1044,7 @@ object YouTube {
                 ?.avatarViewModel?.image?.sources?.firstOrNull()
                 ?.url
 
+            var parsedUnavailable: List<UnavailableSong> = emptyList()
             PlaylistPage(
                 playlist =
                     PlaylistItem(
@@ -1124,8 +1126,10 @@ object YouTube {
                             ?: singleColShelf?.musicShelfRenderer?.contents
                     (twoColContents ?: singleColContents)
                         ?.getItems()
-                        ?.mapNotNull { PlaylistPage.fromMusicResponsiveListItemRenderer(it) }
-                        ?: emptyList()
+                        .orEmpty()
+                        .let { PlaylistPage.parseRows(it) }
+                        .also { parsedUnavailable = it.second }
+                        .first
                 },
                 songsContinuation = run {
                     val twoColShelf =
@@ -1168,7 +1172,7 @@ object YouTube {
                         ?.sectionListRenderer
                         ?.continuations
                         ?.getContinuation(),
-            )
+            ).copy(unavailableSongs = parsedUnavailable)
         }
 
     suspend fun playlistContinuation(continuation: String): Result<PlaylistContinuationPage> =
@@ -1205,10 +1209,10 @@ object YouTube {
 
             val allContents = mainContents + shelfContents + musicShelfContinuationContents + appendedContents
 
-            val songs =
+            val (songs, unavailableSongs) =
                 allContents
                     .mapNotNull { content: MusicShelfRenderer.Content -> content.musicResponsiveListItemRenderer }
-                    .mapNotNull { renderer -> PlaylistPage.fromMusicResponsiveListItemRenderer(renderer) }
+                    .let { PlaylistPage.parseRows(it) }
 
             val nextContinuation =
                 response.continuationContents
@@ -1228,6 +1232,7 @@ object YouTube {
             PlaylistContinuationPage(
                 songs = songs,
                 continuation = nextContinuation,
+                unavailableSongs = unavailableSongs,
             )
         }
 
