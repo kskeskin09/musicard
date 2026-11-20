@@ -650,7 +650,7 @@ fun AppearanceSettings(
                 onPlayerButtonsStyleChange(it)
                 showPlayerButtonsStyleDialog = false
             },
-            title = stringResource(R.string.player_buttons_style),
+            title = stringResource(R.string.player_colors_style),
             // Two choices: Default, or Background color (the song's color). The old Tertiary
             // choice counts as Background color.
             current = if (playerButtonsStyle == PlayerButtonsStyle.DEFAULT) PlayerButtonsStyle.DEFAULT else PlayerButtonsStyle.PRIMARY,
@@ -1398,7 +1398,7 @@ fun AppearanceSettings(
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
-                            title = { Text(stringResource(R.string.player_buttons_style)) },
+                            title = { Text(stringResource(R.string.player_colors_style)) },
                             description = {
                                 Text(
                                     when (playerButtonsStyle) {

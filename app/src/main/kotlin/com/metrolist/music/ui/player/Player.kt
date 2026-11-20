@@ -553,15 +553,6 @@ fun BottomSheetPlayer(
         }
     }
 
-    val TextBackgroundColor by animateColorAsState(
-        targetValue =
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-                PlayerBackgroundStyle.BLUR -> Color.White
-                PlayerBackgroundStyle.GRADIENT -> Color.White
-            },
-        label = "TextBackgroundColor",
-    )
 
     val icBackgroundColor by animateColorAsState(
         targetValue =
@@ -595,6 +586,22 @@ fun BottomSheetPlayer(
         accentPair?.second ?: Color.Black,
         tween(600),
         label = "buttonAccentDeep",
+    )
+
+    // The player's texts (song title, artist, "Playing from", lyrics, Up next) follow the same
+    // "Player button & text colors" setting: with Background color they take the light / dark
+    // shade of the song's color that the buttons use, otherwise the usual white / theme color.
+    val TextBackgroundColor by animateColorAsState(
+        targetValue =
+            if (accentButtons && accentPair != null) {
+                accentPair.first
+            } else when (playerBackground) {
+                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
+                PlayerBackgroundStyle.BLUR -> Color.White
+                PlayerBackgroundStyle.GRADIENT -> Color.White
+            },
+        animationSpec = tween(600),
+        label = "TextBackgroundColor",
     )
 
     val (textButtonColor, iconButtonColor) =
@@ -2312,6 +2319,7 @@ fun BottomSheetPlayer(
                                     mediaMetadata = mediaMetadata,
                                     showLyrics = showLyrics,
                                     positionProvider = { effectivePosition },
+                                    accentOverride = if (accentButtons) TextBackgroundColor else null,
                                 )
                             } else {
                                 Thumbnail(
@@ -2321,6 +2329,7 @@ fun BottomSheetPlayer(
                                     isPlayerExpanded = isExpandedProvider,
                                     isLandscape = true,
                                     isListenTogetherGuest = isListenTogetherGuest,
+                                    textColor = TextBackgroundColor,
                                 )
                             }
                         }
@@ -2888,6 +2897,8 @@ fun InlineLyricsView(
     expandFraction: () -> Float = { 0f },
     openBottomPadding: Dp = 0.dp,
     followState: LyricsFollowState? = null,
+    // Color of the (non-card) lyrics, e.g. the song's color from the player color setting.
+    accentOverride: Color? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
@@ -3023,6 +3034,7 @@ fun InlineLyricsView(
                         sliderPositionProvider = positionProvider,
                         modifier = Modifier.padding(horizontal = 24.dp),
                         showLyrics = showLyrics,
+                        accentOverride = accentOverride,
                     )
                 }
                 ProvideTextStyle(

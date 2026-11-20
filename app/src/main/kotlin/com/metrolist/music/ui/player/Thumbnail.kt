@@ -256,6 +256,8 @@ fun Thumbnail(
     carousel: ThumbnailCarousel? = null,
     // Holding the cover (the playing song's menu).
     onLongPress: (() -> Unit)? = null,
+    // Color of the header texts; by default white / the theme's text color.
+    textColor: Color? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -281,7 +283,7 @@ fun Thumbnail(
     )
     
     // Pre-calculate text color based on background style
-    val textBackgroundColor = getTextColor(playerBackground)
+    val textBackgroundColor = textColor ?: getTextColor(playerBackground)
     
     // Grid state
     
