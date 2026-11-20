@@ -21,7 +21,9 @@ data class LyricsEntry(
     val romanizedTextFlow: MutableStateFlow<String?> = MutableStateFlow(null),
     val translatedTextFlow: MutableStateFlow<String?> = MutableStateFlow(null),
     val agent: String? = null,
-    val isBackground: Boolean = false
+    val isBackground: Boolean = false,
+    /** When the line stops being sung, in ms, from an end tag like `[00:07.28]Hi[00:08.00]`. */
+    val endTime: Long? = null,
 ) : Comparable<LyricsEntry> {
     override fun compareTo(other: LyricsEntry): Int = (time - other.time).toInt()
 
