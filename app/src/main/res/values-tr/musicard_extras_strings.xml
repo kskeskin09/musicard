@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SponsorBlock -->
+    <string name="sponsorblock">SponsorBlock</string>
+    <string name="sponsorblock_podcasts">Podcast reklamlarını atla</string>
+    <string name="sponsorblock_podcasts_desc">Podcast bölümlerindeki sponsor okumalarını, kendi tanıtımlarını ve \"abone ol\" hatırlatmalarını atlar. Bölümler SponsorBlock topluluğundan gelir (sponsor.ajay.app).</string>
+    <string name="sponsorblock_music">Müzik olmayan kısımları atla</string>
+    <string name="sponsorblock_music_desc">Müzik videolarında topluluğun işaretlediği giriş, konuşma ve skeç kısımlarını atlar. Sadece ses olan şarkılar etkilenmez.</string>
+    <string name="sponsorblock_skipped">SponsorBlock ile atlandı</string>
+</resources>

@@ -201,6 +201,7 @@ import com.metrolist.music.playback.alarm.MusicAlarmScheduler
 import com.metrolist.music.playback.alarm.MusicAlarmStore
 import com.metrolist.music.playback.audio.SilenceDetectorAudioProcessor
 import com.metrolist.music.playback.queues.EmptyQueue
+import com.metrolist.music.playback.sponsorblock.observeSponsorBlockSkipping
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.Queue
 import com.metrolist.music.playback.queues.YouTubeQueue
@@ -1382,6 +1383,22 @@ class MusicService :
                     saveEpisodePosition(currentMetadata.id, player.currentPosition)
                 }
             }
+        }
+
+        scope.launch {
+            observeSponsorBlockSkipping(
+                currentMetadata = currentMediaMetadata,
+                preferences = dataStore.data,
+                currentMediaId = { player.currentMediaItem?.mediaId },
+                isPlaying = { player.isPlaying },
+                positionMs = { player.currentPosition },
+                durationMs = { player.duration },
+                canSeek = { castConnectionHandler?.isCasting?.value != true && !isListenTogetherGuest() },
+                seekTo = { player.seekTo(it) },
+                onSkipped = {
+                    Toast.makeText(this@MusicService, R.string.sponsorblock_skipped, Toast.LENGTH_SHORT).show()
+                },
+            )
         }
     }
 

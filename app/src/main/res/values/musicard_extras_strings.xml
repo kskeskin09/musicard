@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SponsorBlock -->
+    <string name="sponsorblock">SponsorBlock</string>
+    <string name="sponsorblock_podcasts">Skip podcast ads</string>
+    <string name="sponsorblock_podcasts_desc">Skips sponsor reads, self-promotion and \"subscribe\" reminders in podcast episodes. Segments come from the SponsorBlock community (sponsor.ajay.app).</string>
+    <string name="sponsorblock_music">Skip non-music parts</string>
+    <string name="sponsorblock_music_desc">Skips intros, talking and skits in music videos when the community has marked them. Audio-only songs are not affected.</string>
+    <string name="sponsorblock_skipped">Skipped by SponsorBlock</string>
+</resources>

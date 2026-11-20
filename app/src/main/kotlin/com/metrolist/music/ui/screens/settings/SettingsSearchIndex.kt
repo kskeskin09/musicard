@@ -111,6 +111,8 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.history_duration, R.string.player_and_audio, "settings/player"),
     SettingsSearchEntry(R.string.skip_silence, R.string.player_and_audio, "settings/player"),
     SettingsSearchEntry(R.string.skip_silence_instant, R.string.player_and_audio, "settings/player"),
+    SettingsSearchEntry(R.string.sponsorblock_podcasts, R.string.player_and_audio, "settings/player"),
+    SettingsSearchEntry(R.string.sponsorblock_music, R.string.player_and_audio, "settings/player"),
     SettingsSearchEntry(R.string.audio_normalization, R.string.player_and_audio, "settings/player"),
     SettingsSearchEntry(R.string.loudness_level, R.string.player_and_audio, "settings/player"),
     SettingsSearchEntry(R.string.audio_offload, R.string.player_and_audio, "settings/player"),
