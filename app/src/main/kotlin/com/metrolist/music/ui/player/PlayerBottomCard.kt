@@ -8,7 +8,6 @@ package com.metrolist.music.ui.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.Box
@@ -58,6 +57,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.foundation.gestures.horizontalDrag
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
@@ -749,38 +753,58 @@ private fun SwipeToRemoveBox(
     var armed by remember { mutableStateOf(false) }
     val latestOnRemove by rememberUpdatedState(onRemove)
 
-    val dragState =
-        androidx.compose.foundation.gestures.rememberDraggableState { delta ->
-            offset.floatValue = (offset.floatValue + delta).coerceIn(-maxDrag, 0f)
-            val nowArmed = -offset.floatValue >= threshold
-            if (nowArmed != armed) {
-                armed = nowArmed
-                if (nowArmed) view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-            }
+    fun dragBy(delta: Float) {
+        offset.floatValue = (offset.floatValue + delta).coerceIn(-maxDrag, 0f)
+        val nowArmed = -offset.floatValue >= threshold
+        if (nowArmed != armed) {
+            armed = nowArmed
+            if (nowArmed) view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
         }
+    }
+
+    fun settle() {
+        val remove = -offset.floatValue >= threshold
+        armed = false
+        scope.launch {
+            androidx.compose.animation.core.animate(
+                initialValue = offset.floatValue,
+                targetValue = if (remove) -widthPx.intValue.toFloat() else 0f,
+                animationSpec = tween(if (remove) 180 else 300),
+            ) { value, _ -> offset.floatValue = value }
+            if (remove) latestOnRemove()
+        }
+    }
 
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .onSizeChanged { widthPx.intValue = it.width }
-                .draggable(
-                    enabled = enabled,
-                    orientation = androidx.compose.foundation.gestures.Orientation.Horizontal,
-                    state = dragState,
-                    onDragStopped = {
-                        val remove = -offset.floatValue >= threshold
-                        armed = false
-                        scope.launch {
-                            androidx.compose.animation.core.animate(
-                                initialValue = offset.floatValue,
-                                targetValue = if (remove) -widthPx.intValue.toFloat() else 0f,
-                                animationSpec = tween(if (remove) 180 else 300),
-                            ) { value, _ -> offset.floatValue = value }
-                            if (remove) latestOnRemove()
+                // Only a swipe to the left belongs to the row. A swipe to the right is left
+                // untouched so the Lyrics / Up next pager gets it and goes back to the lyrics
+                // (a plain draggable took every sideways swipe on a song, so once on Up next the
+                // only way back was outside the list).
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var started = false
+                        val slop =
+                            awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
+                                if (over < 0f || offset.floatValue < 0f) {
+                                    change.consume()
+                                    started = true
+                                    dragBy(over)
+                                }
+                            }
+                        if (slop == null || !started) return@awaitEachGesture
+                        horizontalDrag(slop.id) { change ->
+                            dragBy(change.positionChange().x)
+                            change.consume()
                         }
-                    },
-                ),
+                        settle()
+                    }
+                },
     ) {
         val value = -offset.floatValue
         if (value > 0f) {
