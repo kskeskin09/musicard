@@ -88,7 +88,11 @@ fun ProfileScreen(
     var showPictureDialog by remember { mutableStateOf(false) }
     val listeningDays by database.listeningDays().collectAsStateWithLifecycle(initialValue = emptyList())
     val streak = remember(listeningDays) { com.metrolist.music.utils.ListeningStreak.from(listeningDays) }
-    val avatarUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl
+    // Signed in with YouTube: the YouTube name and picture are shown and can't be changed here.
+    val innerTubeCookie by rememberPreference(com.metrolist.music.constants.InnerTubeCookieKey, defaultValue = "")
+    val isLoggedIn = remember(innerTubeCookie) { "SAPISID" in com.metrolist.innertube.utils.parseCookieString(innerTubeCookie) }
+    val useOwnPicture = !isLoggedIn && profileImageUrl.isNotBlank()
+    val avatarUrl = if (useOwnPicture) profileImageUrl else accountImageUrl
 
     // Opening another page changes the bottom space (the navigation bar and mini player go away)
     // while this page is still sliding out. That made the page shorter, so a page scrolled to
@@ -147,7 +151,7 @@ fun ProfileScreen(
                 if (avatarUrl != null) {
                     CroppedProfileImage(
                         url = avatarUrl,
-                        crop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                        crop = if (useOwnPicture) profileCrop else ProfileCrop(),
                         contentDescription = stringResource(R.string.profile_picture),
                         modifier = Modifier.size(112.dp),
                     )
@@ -163,7 +167,7 @@ fun ProfileScreen(
             Spacer(Modifier.size(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = profileName.ifBlank { accountName.ifBlank { stringResource(R.string.profile_tab) } },
+                    text = (if (isLoggedIn) accountName else profileName).ifBlank { accountName.ifBlank { stringResource(R.string.profile_tab) } },
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -250,6 +254,8 @@ fun ProfileScreen(
             initialUrl = profileImageUrl,
             initialCrop = profileCrop,
             initialName = profileName,
+            youtubeName = if (isLoggedIn) accountName else null,
+            youtubeImageUrl = accountImageUrl,
             onDismiss = { showPictureDialog = false },
             onSave = { url, crop, name ->
                 setProfileName(name)

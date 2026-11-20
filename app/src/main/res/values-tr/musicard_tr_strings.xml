@@ -95,6 +95,8 @@
     <!-- Profile and stats -->
     <string name="profile_tab">Profil</string>
     <string name="profile_username">Kullanıcı adı</string>
+    <string name="profile_from_youtube">YouTube hesabından</string>
+    <string name="profile_youtube_locked">YouTube kullanıcı bilgilerini buradan değiştiremezsin. Bunun için YouTube\'u kullan.</string>
     <string name="profile_change_photo">Profili düzenle</string>
     <string name="profile_picture">Profil fotoğrafı</string>
     <string name="profile_picture_url_hint">Görsel bağlantısı (https://…)</string>
