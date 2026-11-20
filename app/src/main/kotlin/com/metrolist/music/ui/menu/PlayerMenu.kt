@@ -114,7 +114,6 @@ fun PlayerMenu(
     mediaMetadata ?: return
     val navController = LocalNavController.current
     val context = LocalContext.current
-    val castEnabled by com.metrolist.music.utils.rememberPreference(com.metrolist.music.constants.EnableGoogleCastKey, defaultValue = true)
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val playerVolume = playerConnection.service.playerVolume.collectAsStateWithLifecycle()
@@ -568,8 +567,8 @@ fun PlayerMenu(
                                 onClick = { showListenTogetherDialog = true },
                             ),
                         )
-                        // Cast lives here instead of on the album art (unless that is turned on).
-                        if (com.metrolist.music.BuildConfig.CAST_AVAILABLE && castEnabled) {
+                        // Cast is always in this menu (the album art corner button is optional).
+                        if (com.metrolist.music.BuildConfig.CAST_AVAILABLE) {
                             add(
                                 Material3MenuItemData(
                                     title = { Text(text = stringResource(R.string.google_cast)) },
