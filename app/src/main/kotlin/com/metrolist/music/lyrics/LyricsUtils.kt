@@ -837,7 +837,7 @@ object LyricsUtils {
             parts.add(tagToMillis(tag) to text.substring(tag.range.last + 1, end))
         }
 
-        val cleanText = parts.joinToString("") { it.second }.replace(Regex("\s+"), " ").trim()
+        val cleanText = parts.joinToString("") { it.second }.replace(Regex("\\s+"), " ").trim()
         if (lineTime == null) return InlineTiming(cleanText, null, null)
 
         // A last tag with nothing after it marks where the line ends.
@@ -850,7 +850,7 @@ object LyricsUtils {
             val result = mutableListOf<WordTimestamp>()
             sung.forEachIndexed { i, (start, partText) ->
                 val partEnd = sung.getOrNull(i + 1)?.first ?: endTime ?: (start + 500L)
-                val pieces = partText.trim().split(Regex("\s+"))
+                val pieces = partText.trim().split(Regex("\\s+"))
                 pieces.forEachIndexed { j, piece ->
                     val s = start + (partEnd - start) * j / pieces.size
                     val e = start + (partEnd - start) * (j + 1) / pieces.size
