@@ -79,6 +79,7 @@ val SettingsSearchIndex: List<SettingsSearchEntry> =
     SettingsSearchEntry(R.string.content_country, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.relike_protection, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.hide_explicit, R.string.content, "settings/content"),
+    SettingsSearchEntry(R.string.block_ai_artists, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.hide_video_songs, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.hide_youtube_shorts, R.string.content, "settings/content"),
     SettingsSearchEntry(R.string.add_to_playlist_position, R.string.content, "settings/content"),

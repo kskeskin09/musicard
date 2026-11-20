@@ -1,5 +1,6 @@
 package com.metrolist.innertube.pages
 
+import com.metrolist.innertube.models.ContentBlocker
 import com.metrolist.innertube.models.Album
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -363,9 +364,9 @@ data class HomePage(
     }
 
     fun filterExplicit(enabled: Boolean = true) =
-        if (enabled) {
+        if (enabled || ContentBlocker.active) {
             copy(sections = sections.map {
-                it.copy(items = it.items.filterExplicit())
+                it.copy(items = it.items.filterExplicit(enabled))
             })
         } else this
 

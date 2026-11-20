@@ -577,7 +577,8 @@ fun ContentSettings(
                         )
                     },
                     onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) }
-                )
+                ),
+                aiArtistBlockSettingsItem(),
             )
         )
 

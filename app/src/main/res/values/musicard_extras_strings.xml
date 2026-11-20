@@ -7,4 +7,7 @@
     <string name="sponsorblock_music">Skip non-music parts</string>
     <string name="sponsorblock_music_desc">Skips intros, talking and skits in music videos when the community has marked them. Audio-only songs are not affected.</string>
     <string name="sponsorblock_skipped">Skipped by SponsorBlock</string>
+    <!-- AI artists -->
+    <string name="block_ai_artists">Hide AI-generated artists</string>
+    <string name="block_ai_artists_desc">Hides channels known to publish AI-generated music from Home, Search, artist pages and radio suggestions. Uses the community AiSList (github.com/Override92/AiSList, CC BY-NC 4.0), refreshed daily and kept for offline use. Your own library is not changed.</string>
 </resources>

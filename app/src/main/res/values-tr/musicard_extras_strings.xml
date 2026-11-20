@@ -7,4 +7,7 @@
     <string name="sponsorblock_music">Müzik olmayan kısımları atla</string>
     <string name="sponsorblock_music_desc">Müzik videolarında topluluğun işaretlediği giriş, konuşma ve skeç kısımlarını atlar. Sadece ses olan şarkılar etkilenmez.</string>
     <string name="sponsorblock_skipped">SponsorBlock ile atlandı</string>
+    <!-- AI artists -->
+    <string name="block_ai_artists">AI ile üretilmiş sanatçıları gizle</string>
+    <string name="block_ai_artists_desc">AI ile müzik ürettiği bilinen kanalları Ana sayfa, Arama, sanatçı sayfaları ve radyo önerilerinden gizler. Topluluğun hazırladığı AiSList kullanılır (github.com/Override92/AiSList, CC BY-NC 4.0); her gün güncellenir ve internetsiz de çalışır. Kendi kütüphanen değişmez.</string>
 </resources>
