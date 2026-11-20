@@ -13,4 +13,17 @@
     <!-- Unavailable songs -->
     <string name="song_unavailable_label">Unavailable</string>
     <string name="song_unavailable_message">This song can\'t be played. It was removed or made private, or it isn\'t available in your country.</string>
+    <!-- Import by link -->
+    <string name="import_link_title">Import from a link</string>
+    <string name="import_link_desc">Paste a public playlist or album link from Spotify, Apple Music or Deezer.</string>
+    <string name="import_link_paste">Paste</string>
+    <string name="import_link_button">Get songs</string>
+    <string name="import_link_reading">Reading %1$s… %2$d songs</string>
+    <string name="import_link_how">Only the song names and artists are read from the link (no sign-in). Each song is then found on YouTube Music and saved as a new playlist in your library. Private playlists can\'t be read.</string>
+    <string name="import_link_found">%1$s · %2$d songs</string>
+    <string name="import_link_other">Use another link</string>
+    <string name="import_link_error_unknown">This doesn\'t look like a Spotify, Apple Music or Deezer playlist or album link.</string>
+    <string name="import_link_error_not_found">Couldn\'t read this link. Make sure the playlist is public and try again.</string>
+    <string name="import_link_error_empty">The link was read, but it has no songs.</string>
+    <string name="import_link_error_incomplete">Only part of this playlist could be read. Try again in a minute.</string>
 </resources>
