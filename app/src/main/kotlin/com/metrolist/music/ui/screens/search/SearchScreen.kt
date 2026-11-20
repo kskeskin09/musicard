@@ -432,6 +432,7 @@ private fun SearchBrowsePage(
 ) {
     val navController = LocalNavController.current
     val rawSections by viewModel.moodAndGenres.collectAsStateWithLifecycle()
+    val forYou by viewModel.forYou.collectAsStateWithLifecycle()
     // Genres come first, then moods.
     val sections =
         remember(rawSections) {
@@ -442,7 +443,7 @@ private fun SearchBrowsePage(
                     genreIndex > 0 -> listOf(list[genreIndex]) + list.filterIndexed { i, _ -> i != genreIndex }
                     genreIndex == -1 && list.size == 2 -> list.reversed()
                     else -> list
-                }
+                }.map { it.copy(title = capitalizeAfterAmpersand(it.title)) }
             }
         }
     val bottomPadding =
@@ -497,9 +498,45 @@ private fun SearchBrowsePage(
                 }
             }
         }
+        // "For You": up to 4 moods/genres picked from this listener's taste (always 0, 2 or 4).
+        if (sections != null && forYou.isNotEmpty()) {
+            item(key = "for_you_title") {
+                Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp)) {
+                    Text(
+                        text = stringResource(R.string.genre_filter_for_you),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                }
+            }
+            forYou.chunked(2).forEachIndexed { rowIndex, row ->
+                item(key = "for_you_row_$rowIndex") {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                    ) {
+                        row.forEach { genre ->
+                            GenreTile(
+                                title = genre.title,
+                                stripeColor = Color(genre.stripeColor),
+                                pageBackground = pageBackground,
+                                onClick = {
+                                    navController.navigate("youtube_browse/${genre.endpoint.browseId}?params=${genre.endpoint.params}")
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
         sections?.forEachIndexed { index, section ->
             item(key = "genres_title_$index") {
-                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = if (index == 0) 0.dp else 20.dp, bottom = 16.dp)) {
+                val topPadding = if (index == 0 && forYou.isEmpty()) 0.dp else 20.dp
+                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = topPadding, bottom = 16.dp)) {
                     Text(
                         text = section.title,
                         fontSize = 26.sp,
@@ -534,6 +571,10 @@ private fun SearchBrowsePage(
         }
     }
 }
+
+/** YouTube writes "Moods & moments"; every word after an "&" gets a capital letter ("Moods & Moments"). */
+private fun capitalizeAfterAmpersand(title: String): String =
+    Regex("&(\\s+)(\\p{Ll})").replace(title) { m -> "&" + m.groupValues[1] + m.groupValues[2].uppercase() }
 
 /** A mood or genre: a rounded tile in a calm version of its YouTube color, with its name. */
 @Composable
