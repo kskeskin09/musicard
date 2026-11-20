@@ -78,6 +78,12 @@ data class ArtistSpotlight(
     val songs: List<SongItem>,
 )
 
+/** One mood of "Today's vibe" and songs from its playlists. */
+data class Vibe(
+    val title: String,
+    val songs: List<SongItem>,
+)
+
 data class CommunityPlaylistItem(
     val playlist: PlaylistItem,
     val songs: List<SongItem>
@@ -129,10 +135,8 @@ class HomeViewModel @Inject constructor(
     /** This year's albums and singles of the artists the user listens to or follows. */
     val newFromArtists = MutableStateFlow<List<AlbumItem>?>(null)
 
-    /** "Today's vibe": the chosen mood and its songs (null while loading). */
-    val selectedMood = MutableStateFlow<MoodAndGenres.Item?>(null)
-    val moodSongs = MutableStateFlow<List<SongItem>?>(null)
-    private val moodSongsCache = java.util.concurrent.ConcurrentHashMap<String, List<SongItem>>()
+    /** "Today's vibe": a few moods, each with its songs (the first four show as one column). */
+    val vibes = MutableStateFlow<List<Vibe>?>(null)
     val accountPlaylists = MutableStateFlow<List<PlaylistItem>?>(null)
     val homePage = MutableStateFlow<HomePage?>(null)
     val explorePage = MutableStateFlow<ExplorePage?>(null)
@@ -581,9 +585,9 @@ class HomeViewModel @Inject constructor(
                     newReleaseAlbums = page.newReleaseAlbums.filterOutNulls().filterExplicit(hideExplicit),
                     moodAndGenres = page.moodAndGenres.filterOutNulls()
                 )
-                // A different mood on each refresh, so "Today's vibe" doesn't always start the same.
-                moodSongsCache.clear()
-                page.moodAndGenres.filterOutNulls().shuffled().firstOrNull()?.let { selectMood(it) }
+                // Different moods on each refresh, so "Today's vibe" doesn't always look the same.
+                runCatching { getVibes(page.moodAndGenres.filterOutNulls(), hideExplicit, hideVideoSongs) }
+                    .onFailure { reportException(it) }
             }.onFailure { reportException(it) }
         }
 
@@ -774,40 +778,36 @@ class HomeViewModel @Inject constructor(
                 .take(16)
     }
 
-    /** Picks a mood for "Today's vibe" and loads songs from a few of its playlists. */
-    fun selectMood(mood: MoodAndGenres.Item) {
-        selectedMood.value = mood
-        val key = mood.endpoint.browseId + "|" + mood.endpoint.params.orEmpty()
-        moodSongsCache[key]?.let {
-            moodSongs.value = it
-            return
-        }
-        moodSongs.value = null
-        viewModelScope.launch(Dispatchers.IO) {
-            val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-            val playlists =
-                YouTube.browse(mood.endpoint.browseId, mood.endpoint.params).getOrNull()
-                    ?.items.orEmpty()
-                    .flatMap { it.items }
-                    .filterIsInstance<PlaylistItem>()
-                    .shuffled()
-                    .take(3)
-            val songs =
-                coroutineScope {
-                    playlists.map { playlist ->
-                        async(Dispatchers.IO) {
-                            YouTube.playlist(playlist.id.removePrefix("VL")).getOrNull()?.songs.orEmpty().shuffled().take(10)
-                        }
-                    }.flatMap { it.await() }
-                }.distinctBy { it.id }
-                    .filterExplicit(hideExplicit)
-                    .filterVideoSongs(hideVideoSongs)
-                    .shuffled()
-                    .take(20)
-            moodSongsCache[key] = songs
-            if (selectedMood.value == mood) moodSongs.value = songs
-        }
+    /** Loads songs for six random moods; a mood with fewer than four songs is left out. */
+    private suspend fun getVibes(
+        moods: List<MoodAndGenres.Item>,
+        hideExplicit: Boolean,
+        hideVideoSongs: Boolean,
+    ) {
+        val picked = moods.shuffled().take(6)
+        vibes.value =
+            coroutineScope {
+                picked.map { mood ->
+                    async(Dispatchers.IO) {
+                        val playlists =
+                            YouTube.browse(mood.endpoint.browseId, mood.endpoint.params).getOrNull()
+                                ?.items.orEmpty()
+                                .flatMap { it.items }
+                                .filterIsInstance<PlaylistItem>()
+                                .shuffled()
+                                .take(2)
+                        val songs =
+                            playlists.flatMap { playlist ->
+                                YouTube.playlist(playlist.id.removePrefix("VL")).getOrNull()?.songs.orEmpty().shuffled().take(12)
+                            }.distinctBy { it.id }
+                                .filterExplicit(hideExplicit)
+                                .filterVideoSongs(hideVideoSongs)
+                                .shuffled()
+                                .take(20)
+                        if (songs.size < 4) null else Vibe(mood.title, songs)
+                    }
+                }.mapNotNull { it.await() }
+            }
     }
 
     private suspend fun getAlbumsForYou(hideExplicit: Boolean) {

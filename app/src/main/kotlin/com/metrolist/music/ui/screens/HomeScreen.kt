@@ -61,8 +61,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,6 +77,7 @@ import com.metrolist.music.ui.component.RefreshIndicator
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -707,8 +706,7 @@ fun HomeScreen(
     val newForYou by viewModel.newForYou.collectAsStateWithLifecycle()
     val artistSpotlights by viewModel.artistSpotlights.collectAsStateWithLifecycle()
     val newFromArtists by viewModel.newFromArtists.collectAsStateWithLifecycle()
-    val selectedMood by viewModel.selectedMood.collectAsStateWithLifecycle()
-    val moodSongs by viewModel.moodSongs.collectAsStateWithLifecycle()
+    val vibes by viewModel.vibes.collectAsStateWithLifecycle()
 
     val allLocalItems by viewModel.allLocalItems.collectAsStateWithLifecycle()
     val allYtItems by viewModel.allYtItems.collectAsStateWithLifecycle()
@@ -1053,7 +1051,7 @@ fun HomeScreen(
             newForYou,
             artistSpotlights,
             newFromArtists,
-            selectedMood,
+            vibes,
         ) {
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
@@ -1072,7 +1070,7 @@ fun HomeScreen(
             if (!chipActive && newForYou?.isNotEmpty() == true) list.add(HomeSection.NewForYou)
             if (!chipActive && artistSpotlights?.isNotEmpty() == true) list.add(HomeSection.ArtistSpotlight)
             if (!chipActive && newFromArtists?.isNotEmpty() == true) list.add(HomeSection.NewFromArtists)
-            if (!chipActive && selectedMood != null) list.add(HomeSection.MoodSongs)
+            if (!chipActive && vibes?.isNotEmpty() == true) list.add(HomeSection.MoodSongs)
 
             if (!chipActive) {
                 similarRecommendations?.indices?.forEach { i ->
@@ -1877,44 +1875,34 @@ fun HomeScreen(
                             }
                         }
                         HomeSection.MoodSongs -> {
-                            val moods = explorePage?.moodAndGenres.orEmpty().take(10)
-                            if (selectedChip == null && moods.isNotEmpty()) {
-                                item(key = "mood_songs_title") {
-                                    NavigationTitle(title = stringResource(R.string.home_todays_vibe))
-                                }
-                                item(key = "mood_songs_chips") {
-                                    HomeSnapRow(
-                                        stateKey = "home/mood_songs_chips",
-                                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        items(moods, key = { "home_mood_${it.title}_${it.endpoint.params}" }) { mood ->
-                                            FilterChip(
-                                                selected = mood == selectedMood,
-                                                onClick = { viewModel.selectMood(mood) },
-                                                label = { Text(mood.title) },
-                                                shape = RoundedCornerShape(50),
-                                            )
+                            // One column of four songs per vibe; the title names the vibe in view.
+                            val vibeList = vibes.orEmpty()
+                            if (selectedChip == null && vibeList.isNotEmpty()) {
+                                item(key = "mood_songs") {
+                                    val vibeState = com.metrolist.music.ui.utils.TabStates.grid("home/vibe_rows")
+                                    val columns = remember(vibeList) { vibeList.map { it.songs.take(4) } }
+                                    val currentVibe by remember(vibeList, vibeState) {
+                                        derivedStateOf {
+                                            val closest =
+                                                vibeState.layoutInfo.visibleItemsInfo
+                                                    .minByOrNull { kotlin.math.abs(it.offset.x) }
+                                                    ?.index ?: vibeState.firstVisibleItemIndex
+                                            vibeList.getOrNull(closest / 4) ?: vibeList.first()
                                         }
                                     }
-                                }
-                                item(key = "mood_songs_rows") {
-                                    val songs = moodSongs
-                                    when {
-                                        songs == null ->
-                                            Box(
-                                                contentAlignment = Alignment.Center,
-                                                modifier = Modifier.fillMaxWidth().height(ListItemHeight * 4),
-                                            ) {
-                                                CircularProgressIndicator()
-                                            }
-                                        songs.isNotEmpty() ->
-                                            YouTubeSongRows(
-                                                songs = songs,
-                                                queueTitle = selectedMood?.title ?: stringResource(R.string.home_todays_vibe),
-                                                state = com.metrolist.music.ui.utils.TabStates.grid("home/mood_songs_rows"),
-                                            )
-                                        else -> {}
+                                    Column {
+                                        NavigationTitle(
+                                            title = stringResource(R.string.home_todays_vibe) + " · " + currentVibe.title,
+                                        )
+                                        YouTubeSongRows(
+                                            songs = columns.flatten(),
+                                            queueTitle = stringResource(R.string.home_todays_vibe),
+                                            state = vibeState,
+                                            queueFor = { index ->
+                                                val vibe = vibeList[index / 4]
+                                                vibe.title to vibe.songs
+                                            },
+                                        )
                                     }
                                 }
                             }
@@ -3090,6 +3078,8 @@ internal fun YouTubeSongRows(
     songs: List<SongItem>,
     queueTitle: String,
     state: LazyGridState,
+    // The queue title and songs to play for the song at an index; by default the whole list.
+    queueFor: ((Int) -> Pair<String, List<SongItem>>)? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val menuState = LocalMenuState.current
@@ -3101,12 +3091,13 @@ internal fun YouTubeSongRows(
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val widthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
         HomeSongRows(
-            entries = songs,
+            entries = songs.withIndex().toList(),
             state = state,
             itemWidth = maxWidth * widthFactor,
             itemWidthFactor = widthFactor,
-            key = { "yt_song_rows_${it.id}" },
-        ) { song, itemModifier ->
+            key = { "yt_song_rows_${it.index}_${it.value.id}" },
+        ) { indexed, itemModifier ->
+            val song = indexed.value
             YouTubeListItem(
                 item = song,
                 isActive = song.id == mediaMetadata?.id,
@@ -3130,11 +3121,12 @@ internal fun YouTubeSongRows(
                             if (song.id == mediaMetadata?.id) {
                                 playerConnection.togglePlayPause()
                             } else {
+                                val (title, queueSongs) = queueFor?.invoke(indexed.index) ?: (queueTitle to songs)
                                 playerConnection.playQueue(
                                     ListQueue(
-                                        title = queueTitle,
-                                        items = songs.map { it.toMediaItem() },
-                                        startIndex = songs.indexOf(song),
+                                        title = title,
+                                        items = queueSongs.map { it.toMediaItem() },
+                                        startIndex = queueSongs.indexOfFirst { it.id == song.id }.coerceAtLeast(0),
                                     ),
                                 )
                             }
