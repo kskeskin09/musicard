@@ -225,6 +225,7 @@ import com.metrolist.music.utils.reportException
 import com.metrolist.music.widget.MetrolistWidgetManager
 import com.metrolist.music.widget.MusicWidgetReceiver
 import com.metrolist.music.widget.PlaylistWidgetReceiver
+import com.metrolist.music.widget.TurntableWidgetReceiver
 import com.metrolist.music.ui.utils.resize
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
@@ -4993,7 +4994,8 @@ class MusicService :
         // foreground promotion; promoting there posted a notification while nothing played.
         val isWidgetRefresh =
             intent?.action == MusicWidgetReceiver.ACTION_UPDATE_WIDGET ||
-                intent?.action == PlaylistWidgetReceiver.ACTION_UPDATE_WIDGET
+                intent?.action == PlaylistWidgetReceiver.ACTION_UPDATE_WIDGET ||
+                intent?.action == TurntableWidgetReceiver.ACTION_UPDATE_TURNTABLE_WIDGET
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isNotificationDismissal && !isWidgetRefresh) {
             if (!ensureForegroundWithLatestNotificationOrStop()) {
                 return START_NOT_STICKY
@@ -5032,7 +5034,8 @@ class MusicService :
             }
 
             MusicWidgetReceiver.ACTION_UPDATE_WIDGET,
-            PlaylistWidgetReceiver.ACTION_UPDATE_WIDGET -> {
+            PlaylistWidgetReceiver.ACTION_UPDATE_WIDGET,
+            TurntableWidgetReceiver.ACTION_UPDATE_TURNTABLE_WIDGET -> {
                 updateWidgetUI(player.isPlaying)
             }
 

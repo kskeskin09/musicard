@@ -411,6 +411,7 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         if (::navController.isInitialized) {
             handleWidgetTargetIntent(intent, navController)
+            handleRecognitionIntent(intent, navController)
             handleDeepLinkIntent(intent, navController)
         } else {
             pendingIntent = intent
