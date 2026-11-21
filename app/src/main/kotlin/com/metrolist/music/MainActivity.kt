@@ -791,6 +791,7 @@ class MainActivity : FragmentActivity() {
 
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
+                val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 // Tell the player which page is open (with its arguments), so a queue started
                 // there remembers where it came from ("Playing from").
@@ -1178,6 +1179,11 @@ class MainActivity : FragmentActivity() {
                 val profileCrop = ProfileCrop(profileZoom, profileOffsetX, profileOffsetY)
                 val (profileName, setProfileName) =
                     rememberPreference(com.metrolist.music.constants.ListenTogetherUsernameKey, defaultValue = "")
+                // Signed in with YouTube: the YouTube picture is shown and can't be changed here.
+                val profileCookie by rememberPreference(com.metrolist.music.constants.InnerTubeCookieKey, defaultValue = "")
+                val isYouTubeLoggedIn =
+                    remember(profileCookie) { "SAPISID" in com.metrolist.innertube.utils.parseCookieString(profileCookie) }
+                val useOwnPicture = !isYouTubeLoggedIn && profileImageUrl.isNotBlank()
 
                 val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
                 val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
@@ -1267,8 +1273,8 @@ class MainActivity : FragmentActivity() {
                                     )
                                 TopLevelHeader(
                                     title = headerTitleRes(headerRoute)?.let { stringResource(it) } ?: "",
-                                    profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
-                                    profileCrop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                                    profileImageUrl = (if (useOwnPicture) profileImageUrl else accountImageUrl),
+                                    profileCrop = if (useOwnPicture) profileCrop else ProfileCrop(),
                                     showBadge = latestVersionName != BuildConfig.BASE_VERSION_NAME,
                                     // History, stats, Listen Together and the account settings are on the
                                     // Profile tab now.
@@ -1498,11 +1504,11 @@ class MainActivity : FragmentActivity() {
                                         onHomeLongHold = { showAccountDialog = true },
                                         onProfileLongClick = { showProfilePictureDialog = true },
                                         profileIcon = { size ->
-                                            val avatarUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl
+                                            val avatarUrl = (if (useOwnPicture) profileImageUrl else accountImageUrl)
                                             if (avatarUrl != null) {
                                                 com.metrolist.music.ui.component.CroppedProfileImage(
                                                     url = avatarUrl,
-                                                    crop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                                                    crop = if (useOwnPicture) profileCrop else ProfileCrop(),
                                                     modifier = Modifier.size(size).clip(CircleShape),
                                                 )
                                             } else {
@@ -1726,6 +1732,8 @@ class MainActivity : FragmentActivity() {
                             initialUrl = profileImageUrl,
                             initialCrop = profileCrop,
                             initialName = profileName,
+                            youtubeName = if (isYouTubeLoggedIn) accountName else null,
+                            youtubeImageUrl = accountImageUrl,
                             onDismiss = { showProfilePictureDialog = false },
                             onSave = { url, crop, name ->
                                 setProfileName(name)

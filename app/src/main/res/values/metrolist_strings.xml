@@ -1058,6 +1058,8 @@
     <string name="search_recommended">Recommended</string>
     <string name="search_kind_song">Song</string>
     <string name="profile_username">Username</string>
+    <string name="profile_from_youtube">From your YouTube account</string>
+    <string name="profile_youtube_locked">You can\'t change your YouTube user information from here. Change it on YouTube instead.</string>
     <string name="profile_tab">Profile</string>
     <string name="profile_change_photo">Edit profile</string>
     <plurals name="streak_days">
