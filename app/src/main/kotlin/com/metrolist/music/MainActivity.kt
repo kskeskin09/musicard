@@ -1422,8 +1422,9 @@ class MainActivity : FragmentActivity() {
                                     if (miniPlayerBlackout && bottomFadeHeight > 14.dp) {
                                         // Cover-tinted pages (stats, playlists, albums) fade into their own color.
                                         val fadeColor =
-                                            com.metrolist.music.ui.theme.PageFadeColors.current
-                                                ?: if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+                                            com.metrolist.music.ui.theme.PageFadeColors.blend(
+                                                if (pureBlack) Color.Black else MaterialTheme.colorScheme.background,
+                                            )
                                         val total = bottomFadeHeight.value
                                         val rampEnd = (BottomFadeRamp.value / total).coerceIn(0f, 1f)
                                         // On shorter fades (no tab bar) the curve is cut where Home's would be

@@ -6,6 +6,7 @@
 package com.metrolist.music.ui.theme
 
 import android.content.Context
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.palette.graphics.Palette
@@ -288,19 +290,55 @@ object PageFadeColors {
         // The cover blurred behind the page when it uses the Glass background.
         var glassUrl by mutableStateOf(glassUrl)
 
-        // Set once the page starts going away (it was shown and is now being left), so the
-        // colors switch back right as the page change starts instead of after it ends.
+        // Set once the page starts going away (it was shown and is now being left).
         var leaving by mutableStateOf(false)
+
+        // How far the page is shown (0..1), following its own enter / exit animation, so the
+        // colors change together with the page instead of before it.
+        var shownState by mutableStateOf<androidx.compose.runtime.State<Float>?>(null)
+        val shown: Float get() = shownState?.value ?: 1f
+
+        // The page's animation is heading away from the screen (also while a back gesture drags it).
+        var exiting by mutableStateOf(false)
+
+        val goingAway: Boolean get() = leaving || exiting
     }
 
     private val entries = mutableStateListOf<Entry>()
 
     val current: Color?
-        get() = entries.lastOrNull { !it.leaving }?.color
+        get() = entries.lastOrNull { !it.goingAway }?.color
+
+    /**
+     * The page color on screen right now, blended with [fallback] (the color used when no
+     * tinted page is shown) as far as the pages are shown during a page change. [map] turns a
+     * page color into the wanted shade (for example the raised color) before blending.
+     */
+    fun blend(
+        fallback: Color,
+        map: (Color) -> Color = { it },
+    ): Color {
+        val shown = entries.lastOrNull { !it.goingAway }
+        val leaving = entries.lastOrNull { it.goingAway }
+        return when {
+            shown != null -> lerp(leaving?.color?.let(map) ?: fallback, map(shown.color), shown.shown)
+            leaving != null -> lerp(fallback, map(leaving.color), leaving.shown)
+            else -> fallback
+        }
+    }
 
     /** The cover behind the page on screen when it uses the Glass background, else null. */
     val currentGlassUrl: String?
-        get() = entries.lastOrNull { !it.leaving }?.glassUrl
+        get() {
+            val shown = entries.lastOrNull { !it.goingAway }
+            val leaving = entries.lastOrNull { it.goingAway }
+            // A glass can't be blended, so it switches halfway through the page change.
+            return when {
+                shown != null && (leaving == null || shown.shown >= 0.5f) -> shown.glassUrl
+                leaving != null && leaving.shown >= 0.5f -> leaving.glassUrl
+                else -> shown?.glassUrl
+            }
+        }
 
     @Composable
     fun Register(
@@ -308,18 +346,44 @@ object PageFadeColors {
         glassUrl: String? = null,
     ) {
         val entry = remember { Entry(tint, glassUrl) }
+        val transition = com.metrolist.music.ui.utils.LocalNavAnimatedScope.current?.transition
+        val shownState =
+            transition?.animateFloat(
+                transitionSpec = { androidx.compose.animation.core.tween(200) },
+                label = "pageShown",
+            ) { if (it == androidx.compose.animation.EnterExitState.Visible) 1f else 0f }
+        val exiting = transition != null && transition.targetState != androidx.compose.animation.EnterExitState.Visible
         SideEffect {
             entry.color = tint
             entry.glassUrl = glassUrl
+            entry.shownState = shownState
+            entry.exiting = exiting
         }
         val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-        DisposableEffect(entry, lifecycle) {
+        // The whole app's lifecycle. The page also pauses when the app goes to the background
+        // (home, recents), and that must not count as leaving the page: the mini player and the
+        // bottom fade would flash the plain theme color while the app slides away and back.
+        val appLifecycle =
+            androidx.compose.ui.platform.LocalView.current
+                .findViewTreeLifecycleOwner()
+                ?.lifecycle
+        DisposableEffect(entry, lifecycle, appLifecycle) {
             entries.add(entry)
             val observer =
                 androidx.lifecycle.LifecycleEventObserver { _, event ->
                     when (event) {
                         androidx.lifecycle.Lifecycle.Event.ON_RESUME -> entry.leaving = false
-                        androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> entry.leaving = true
+                        // The app is already out of RESUMED when its own pause reaches the page,
+                        // so only a pause while the app stays on screen is a page change.
+                        androidx.lifecycle.Lifecycle.Event.ON_PAUSE ->
+                            if (appLifecycle == null ||
+                                (
+                                    appLifecycle !== lifecycle &&
+                                        appLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+                                )
+                            ) {
+                                entry.leaving = true
+                            }
                         else -> Unit
                     }
                 }
