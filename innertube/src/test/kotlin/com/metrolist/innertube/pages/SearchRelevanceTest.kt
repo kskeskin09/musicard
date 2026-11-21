@@ -8,6 +8,7 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SearchRelevanceTest {
@@ -73,5 +74,31 @@ class SearchRelevanceTest {
         val a = song("a", "Kuzu Kuzu", "Tarkan")
         val b = song("b", "Kuzu Kuzu", "Tarkan")
         assertEquals("b", SearchRelevance.rank("kuzu kuzu", listOf(a, b), knownIds = setOf("b")).first().id)
+    }
+
+    @Test
+    fun `own song beats another version of it`() {
+        val query = "thanatos if i cant be yours"
+        val mix = song("m", "THANATOS -IF I CAN'T BE YOURS- (Nine Years After Mix)", "LOREN & MASH")
+        val cover = song("c", "Thanatos If I Can't Be Yours (Piano Cover)", "Someone", "MUSIC_VIDEO_TYPE_UGC")
+        val own = song("t", "THANATOS -IF I CAN'T BE YOURS-", "LOREN & MASH")
+        val known = setOf("t")
+        val ranked = SearchRelevance.rank(query, listOf(mix, cover, own), knownIds = known)
+        assertEquals("t", ranked.first().id)
+        assertEquals("t", SearchRelevance.pickTop(query, mix, ranked, knownIds = known)?.id)
+        // YouTube's pick stays when it already is the exact song.
+        val other = song("o", "Thanatos If I Can't Be Yours", "LOREN & MASH")
+        assertEquals("o", SearchRelevance.pickTop(query, other, ranked, knownIds = known)?.id)
+    }
+
+    @Test
+    fun `close match is strict`() {
+        val own = song("t", "THANATOS -IF I CAN'T BE YOURS-", "LOREN & MASH")
+        assertTrue(SearchRelevance.isCloseMatch("thanatos if i cant be yours", own))
+        assertTrue(SearchRelevance.isCloseMatch("loren mash thanatos if i cant be yours", own))
+        assertFalse(SearchRelevance.isCloseMatch("thanatos", own))
+        assertFalse(SearchRelevance.isCloseMatch("loren mash", own))
+        assertFalse(SearchRelevance.isCloseMatch("tarkan", song("s", "Şımarık", "Tarkan")))
+        assertTrue(SearchRelevance.isCloseMatch("tarkan simarik", song("s", "Şımarık", "Tarkan")))
     }
 }
