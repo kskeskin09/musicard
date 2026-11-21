@@ -29,8 +29,6 @@ import androidx.mediarouter.app.MediaRouteDialogFactory
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.constants.EnableGoogleCastKey
-import com.metrolist.music.utils.rememberPreference
 
 @Composable
 fun CastButton(
@@ -41,19 +39,15 @@ fun CastButton(
     val playerConnection = LocalPlayerConnection.current
     val castHandler = playerConnection?.service?.castConnectionHandler
     val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
-    val (enabled) = rememberPreference(EnableGoogleCastKey, defaultValue = true)
     val contentDescription = stringResource(R.string.google_cast)
     val iconTint = if (isCasting) MaterialTheme.colorScheme.primary else tintColor
 
-    LaunchedEffect(enabled) {
-        if (enabled) {
-            castHandler?.initialize()
-        } else if (isCasting) {
-            castHandler?.disconnect()
-        }
+    // Cast can no longer be turned off in the settings, so it is always set up.
+    LaunchedEffect(Unit) {
+        castHandler?.initialize()
     }
 
-    if (enabled) {
+    run {
         AndroidView(
             factory = { viewContext ->
                 val themedContext = viewContext.castThemedContext()

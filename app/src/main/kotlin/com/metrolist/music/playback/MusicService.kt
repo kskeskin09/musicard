@@ -5263,7 +5263,8 @@ class MusicService :
      * Initialize Google Cast support
      */
     private fun initializeCast() {
-        if (dataStore.get(com.metrolist.music.constants.EnableGoogleCastKey, true)) {
+        // Cast can no longer be turned off in the settings (an old "off" value is ignored).
+        run {
             try {
                 castConnectionHandler = CastConnectionHandler(this, scope, this)
                 castConnectionHandler?.initialize()
