@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -1310,7 +1311,12 @@ fun HomeScreen(
 
             LazyColumn(
                 state = lazylistState,
-                contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+                // A little extra room at the end, so the last section (Moods and genres) clears
+                // the mini player, or the bottom bar when nothing is playing.
+                contentPadding =
+                    LocalPlayerAwareWindowInsets.current
+                        .add(WindowInsets(bottom = 24.dp))
+                        .asPaddingValues(),
                 modifier = Modifier.nestedScroll(revealChipsConnection),
             ) {
                 // The chips row stays in the list so that hiding it (on refresh) can slide it back up
