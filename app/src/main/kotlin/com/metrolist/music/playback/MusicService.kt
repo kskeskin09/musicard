@@ -73,6 +73,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
@@ -1012,7 +1013,7 @@ class MusicService :
         combine(
             currentFormat,
             dataStore.data
-                .map { it[AudioNormalizationKey] ?: true }
+                .map { it[AudioNormalizationKey] ?: false }
                 .distinctUntilChanged(),
             dataStore.data
                 .map { prefs -> prefs[LoudnessLevelKey].toEnum(LoudnessLevel.BALANCED) }
@@ -2636,7 +2637,7 @@ class MusicService :
 
     private fun seedLoudnessCacheFromPrefs() {
         val prefs = startupPrefs!!
-        normalizationEnabledCached = prefs[AudioNormalizationKey] ?: true
+        normalizationEnabledCached = prefs[AudioNormalizationKey] ?: false
         loudnessLevelCached = prefs[LoudnessLevelKey].toEnum(LoudnessLevel.BALANCED)
 
         Timber.tag(TAG).d(
@@ -2687,17 +2688,29 @@ class MusicService :
         }
 
         if (updateCache) {
+            if (armedNextSongMediaId == mediaId) {
+                armedNextSongMediaId = null
+                processor.clearNextSongGain()
+            }
             cachedNormalizationMediaId = mediaId
             cachedNormalizationGainMb = gain
             cachedNormalizationEnabled = gain != null
         }
     }
 
+    /** The song whose gain is armed to switch in at the first sample of its audio. */
+    private var armedNextSongMediaId: String? = null
+
     /** Loudness of songs loaded ahead of the current one, by media id. */
     private val upcomingLoudness = java.util.concurrent.ConcurrentHashMap<String, Pair<Double?, Double?>>()
 
     /** Sets the new song's gain at once when it starts, if its loudness is already known. */
     private fun applyUpcomingNormalizationNow(mediaId: String?) {
+        if (::player.isInitialized && armedNextSongMediaId != null && armedNextSongMediaId != mediaId) {
+            // Skipped somewhere else: the armed gain belongs to a song that is no longer next.
+            armedNextSongMediaId = null
+            playerNormalizationProcessors[player]?.clearNextSongGain()
+        }
         if (mediaId == null || isCrossfading || !::player.isInitialized) return
         val (loudnessDb, perceptualLoudnessDb) = upcomingLoudness.remove(mediaId) ?: return
         val processor = playerNormalizationProcessors[player] ?: return
@@ -2729,6 +2742,23 @@ class MusicService :
             // moment it starts, instead of after a database read a few seconds in.
             if (loudnessDb != null || perceptualLoudnessDb != null) {
                 upcomingLoudness[mediaId] = loudnessDb to perceptualLoudnessDb
+            }
+            // Also hand the gain to the audio processor so it switches at the very first sample
+            // of the next song, not when the app hears about the song change a moment later.
+            val nextIndex = targetPlayer.nextMediaItemIndex
+            val isNextSong = nextIndex != C.INDEX_UNSET &&
+                targetPlayer.getMediaItemAt(nextIndex).mediaId == mediaId
+            if (isNextSong && ::player.isInitialized && targetPlayer === player && !isCrossfading) {
+                val gain =
+                    if (normalizationEnabledCached && (loudnessDb != null || perceptualLoudnessDb != null)) {
+                        normalizationGainMb(loudnessDb, perceptualLoudnessDb, loudnessLevelCached.targetLufs)
+                    } else {
+                        null
+                    }
+                if (gain != null) {
+                    processor.setNextSongGain(gain)
+                    armedNextSongMediaId = mediaId
+                }
             }
             return@runBlocking
         }
@@ -2796,7 +2826,11 @@ class MusicService :
                         cachedNormalizationMediaId = null
                         cachedNormalizationGainMb = null
                         cachedNormalizationEnabled = false
-                        playerNormalizationProcessors.values.forEach { it.enabled = false }
+                        armedNextSongMediaId = null
+                        playerNormalizationProcessors.values.forEach {
+                            it.clearNextSongGain()
+                            it.enabled = false
+                        }
                     }
                 }
             } catch (e: CancellationException) {
@@ -4484,7 +4518,8 @@ class MusicService :
             context: Context,
             enableFloatOutput: Boolean,
             enableAudioTrackPlaybackParams: Boolean,
-        ) = DefaultAudioSink
+        ): AudioSink = object : ForwardingAudioSink(
+            DefaultAudioSink
             .Builder(this@MusicService)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(useAudioTrackPlaybackParams)
@@ -4498,7 +4533,38 @@ class MusicService :
                     SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                     SonicAudioProcessor(),
                 ),
-            ).build()
+            ).build(),
+        ) {
+            // True after a seek or skip clears the audio, until new audio arrives. A new stream
+            // set up in that window is not a seamless song change, so it must not switch gain.
+            @Volatile private var flushedSinceLastBuffer = true
+
+            override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
+                // During continuous playback this means the next song's audio is about to start:
+                // let normalization switch gain at exactly that point.
+                if (!flushedSinceLastBuffer) normalizationProcessor.onNewStreamConfigured()
+                super.configure(inputFormat, specifiedBufferSize, outputChannels)
+            }
+
+            override fun handleBuffer(
+                buffer: java.nio.ByteBuffer,
+                presentationTimeUs: Long,
+                encodedAccessUnitCount: Int,
+            ): Boolean {
+                flushedSinceLastBuffer = false
+                return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+            }
+
+            override fun flush() {
+                flushedSinceLastBuffer = true
+                super.flush()
+            }
+
+            override fun reset() {
+                flushedSinceLastBuffer = true
+                super.reset()
+            }
+        }
     }
 
     override fun onPlaybackStatsReady(

@@ -123,7 +123,7 @@ fun PlayerSettings(
     )
     val (audioNormalization, onAudioNormalizationChange) = rememberPreference(
         AudioNormalizationKey,
-        defaultValue = true
+        defaultValue = false
     )
 
     val (loudnessLevel, onLoudnessLevelChange) = rememberEnumPreference(
