@@ -2058,6 +2058,40 @@ object YouTube {
             )
         }
 
+    /**
+     * The chart playlists on YouTube Music's Charts page for the content country, as (title, playlist id),
+     * e.g. "Top 100 Songs United States". The Charts page often holds only such playlists and no songs.
+     */
+    suspend fun chartPlaylists(): Result<List<Pair<String, String>>> =
+        runCatching {
+            val response =
+                innerTube
+                    .browse(
+                        client = WEB_REMIX,
+                        browseId = "FEmusic_charts",
+                        params = "ggMGCgQIgAQ%3D",
+                    ).body<BrowseResponse>()
+            response.contents
+                ?.singleColumnBrowseResultsRenderer
+                ?.tabs
+                ?.firstOrNull()
+                ?.tabRenderer
+                ?.content
+                ?.sectionListRenderer
+                ?.contents
+                .orEmpty()
+                .flatMap { content ->
+                    val carousel = content.musicCarouselShelfRenderer?.contents?.mapNotNull { it.musicTwoRowItemRenderer }.orEmpty()
+                    val grid = content.gridRenderer?.items?.mapNotNull { it.musicTwoRowItemRenderer }.orEmpty()
+                    carousel + grid
+                }.mapNotNull { renderer ->
+                    if (!renderer.isPlaylist) return@mapNotNull null
+                    val id = renderer.navigationEndpoint.browseEndpoint?.browseId?.removePrefix("VL") ?: return@mapNotNull null
+                    val title = renderer.title.runs?.joinToString("") { it.text }?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                    title to id
+                }.distinctBy { it.second }
+        }
+
     private fun determineChartType(title: String): ChartsPage.ChartType =
         when {
             title.contains("Trending", ignoreCase = true) -> ChartsPage.ChartType.TRENDING

@@ -89,7 +89,32 @@ class PopularViewModel
             }
         }
 
+        /**
+         * The country's songs from YouTube Music's own chart playlists. The Charts page usually lists
+         * only playlists ("Top 100 Songs …", "Top 100 Music Videos …", "Trending 20 …"), no songs.
+         */
         private suspend fun countryChartPlaylistSongs(): List<SongItem> {
+            val playlists =
+                YouTube.chartPlaylists().onFailure { reportException(it) }.getOrNull().orEmpty()
+                    .filterNot { (title, id) -> id == GLOBAL_TOP_SONGS_PLAYLIST || title.contains("Global", ignoreCase = true) }
+            fun rank(title: String) =
+                when {
+                    title.contains("Song", ignoreCase = true) -> 0
+                    title.contains("Video", ignoreCase = true) -> 1
+                    title.contains("Trending", ignoreCase = true) -> 2
+                    else -> 3
+                }
+            val fromChartPlaylists =
+                playlists
+                    .sortedBy { rank(it.first) }
+                    .firstOrNull { rank(it.first) < 3 }
+                    ?.let { (_, id) -> YouTube.playlist(id).getOrNull()?.songs }
+                    .orEmpty()
+            if (fromChartPlaylists.isNotEmpty()) return fromChartPlaylists
+            return searchedChartPlaylistSongs()
+        }
+
+        private suspend fun searchedChartPlaylistSongs(): List<SongItem> {
             val gl = YouTube.locale.gl
             val englishName = Locale("", gl).getDisplayCountry(Locale.ENGLISH).ifBlank { return emptyList() }
             val playlist =
