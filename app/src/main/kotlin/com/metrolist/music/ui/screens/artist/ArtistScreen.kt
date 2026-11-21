@@ -12,6 +12,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -267,11 +268,6 @@ fun ArtistScreen(
         }
 
     val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
-    val transparentAppBar by remember {
-        derivedStateOf {
-            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset < 100
-        }
-    }
 
     val distinctItemsBySection = remember(artistPage?.sections) {
         artistPage?.sections?.map { section ->
@@ -284,9 +280,21 @@ fun ArtistScreen(
         showLocal = libraryArtist?.artist?.isLocal == true
     }
 
+    // The page takes its color (Classic) or the blurred picture (Glass) from the artist image,
+    // like album and playlist pages.
+    val pageImageUrl = artistPage?.artist?.thumbnail ?: libraryArtist?.artist?.thumbnailUrl
+    val pageGlass = com.metrolist.music.ui.component.rememberPageGlass()
+    val tint = com.metrolist.music.ui.theme.rememberCoverPageTint(pageImageUrl)
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(tint),
     ) {
+        if (pageGlass) com.metrolist.music.ui.component.PageGlassBackground(pageImageUrl)
+        com.metrolist.music.ui.theme.TintedPageColors(tint, glassUrl = if (pageGlass) pageImageUrl else null) {
+        Box(Modifier.fillMaxSize()) {
         LazyColumn(
             state = lazyListState,
             contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
@@ -443,11 +451,21 @@ fun ArtistScreen(
                                 // Artist Name
                                 Text(
                                     text = displayArtistName ?: "Unknown",
-                                    style = MaterialTheme.typography.headlineLarge,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     fontSize = 32.sp,
+                                    // A soft shadow in the page color keeps the name readable over a
+                                    // light artist image or a glass background.
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    style =
+                                        MaterialTheme.typography.headlineLarge.copy(
+                                            shadow =
+                                                androidx.compose.ui.graphics.Shadow(
+                                                    color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+                                                    blurRadius = 18f,
+                                                ),
+                                        ),
                                     modifier = Modifier.padding(bottom = 16.dp).collapsingTitleAnchor(titleState),
                                 )
 
@@ -486,29 +504,39 @@ fun ArtistScreen(
 
                                     Spacer(modifier = Modifier.weight(1f))
 
-                                    OutlinedButton(
-                                        onClick = {
-                                            viewModel.toggleChannelSubscription()
-                                        },
-                                        colors =
-                                            ButtonDefaults.outlinedButtonColors(
-                                                containerColor =
-                                                    if (isChannelSubscribed) {
-                                                        MaterialTheme.colorScheme.surface
-                                                    } else {
-                                                        Color.Transparent
-                                                    },
-                                            ),
+                                    // Not subscribed: filled like the Play button, "Subscribe" in the text color.
+                                    // Subscribed: the colors swap, a white (dark in light mode) fill with
+                                    // "Subscribed" in the Play button's color. Always solid, so it reads on
+                                    // any artist image, Classic or Glass page.
+                                    val raised = com.metrolist.music.ui.theme.pageRaisedColor()
+                                    val onPage = MaterialTheme.colorScheme.onBackground
+                                    val subscribeFill by androidx.compose.animation.animateColorAsState(
+                                        if (isChannelSubscribed) onPage else raised,
+                                        label = "subscribeFill",
+                                    )
+                                    val subscribeText by androidx.compose.animation.animateColorAsState(
+                                        if (isChannelSubscribed) raised else onPage,
+                                        label = "subscribeText",
+                                    )
+                                    androidx.compose.material3.Surface(
+                                        onClick = { viewModel.toggleChannelSubscription() },
                                         shape = RoundedCornerShape(50),
-                                        contentPadding = PaddingValues(horizontal = 14.dp),
-                                        modifier = Modifier.height(40.dp),
+                                        color = subscribeFill,
+                                        contentColor = subscribeText,
+                                        modifier = Modifier.height(48.dp),
                                     ) {
-                                        com.metrolist.music.ui.component.SteadyText(
-                                            text = stringResource(if (isChannelSubscribed) R.string.subscribed else R.string.subscribe),
-                                            variants = listOf(stringResource(R.string.subscribe), stringResource(R.string.subscribed)),
-                                            fontSize = 14.sp,
-                                            color = if (!isChannelSubscribed) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                                        )
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier.padding(horizontal = 18.dp),
+                                        ) {
+                                            com.metrolist.music.ui.component.SteadyText(
+                                                text = stringResource(if (isChannelSubscribed) R.string.subscribed else R.string.subscribe),
+                                                variants = listOf(stringResource(R.string.subscribe), stringResource(R.string.subscribed)),
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = subscribeText,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1004,8 +1032,19 @@ fun ArtistScreen(
                     .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
                     .align(Alignment.BottomCenter),
         )
-    }
 
+        // The artist image runs under the top bar, so the bar stays see-through until the
+        // name scrolls under it; then it takes the page color (Classic) or the glass behind it.
+        val pageOverCover = pageImageUrl != null && !titleState.titleHidden
+        val pageTopBarGlassAlpha = com.metrolist.music.ui.component.pageTopBarGlassAlpha(pageOverCover)
+        if (pageGlass) {
+            com.metrolist.music.ui.component.PageGlassBackground(
+                pageImageUrl,
+                modifier = Modifier.graphicsLayer { alpha = pageTopBarGlassAlpha },
+                topBarOnly = true,
+            )
+        }
+        val topBarColor = com.metrolist.music.ui.component.pageTopBarColor(tint, pageGlass, pageOverCover)
     TopAppBar(
         title = { com.metrolist.music.ui.component.CollapsingTopBarTitle(displayArtistName.orEmpty(), titleState) },
         navigationIcon = {
@@ -1036,11 +1075,9 @@ fun ArtistScreen(
                 )
             }
         },
-        colors =
-            if (transparentAppBar) {
-                TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            } else {
-                TopAppBarDefaults.topAppBarColors()
-            },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = topBarColor, scrolledContainerColor = topBarColor),
     )
+        }
+        }
+    }
 }

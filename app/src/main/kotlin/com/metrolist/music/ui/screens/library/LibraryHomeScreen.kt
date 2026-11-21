@@ -685,7 +685,7 @@ private fun LibraryItemRow(
         cover = {
             when (item) {
                 is Playlist -> PlaylistCover(item)
-                is Artist -> CoverImage(item.artist.thumbnailUrl, CircleShape, R.drawable.person)
+                is Artist -> CoverImage(item.artist.thumbnailUrl, RoundedCornerShape(CoverCorner), R.drawable.person)
                 is Album ->
                     CoverImage(
                         item.album.thumbnailUrl,
