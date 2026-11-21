@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.tappableElement
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
@@ -1485,6 +1486,33 @@ class MainActivity : FragmentActivity() {
                                                         ),
                                             )
                                         }
+                                    }
+                                    // Settings pages: when Android shows its button bar (back, home,
+                                    // recents), the strip behind those buttons is solid black instead
+                                    // of letting the list show through. Gesture navigation has no
+                                    // tappable bar, so nothing is drawn there. The full player opens
+                                    // over it.
+                                    val onSettingsPage =
+                                        currentRoute == "settings" || currentRoute?.startsWith("settings/") == true
+                                    val buttonBarHeight =
+                                        with(density) {
+                                            WindowInsets.tappableElement.getBottom(density).toDp()
+                                        }
+                                    val settingsNavScrimAlpha by androidx.compose.animation.core.animateFloatAsState(
+                                        targetValue = if (onSettingsPage) 1f else 0f,
+                                        animationSpec = tween(220),
+                                        label = "settingsNavScrim",
+                                    )
+                                    if (buttonBarHeight > 0.dp && settingsNavScrimAlpha > 0f) {
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .fillMaxWidth()
+                                                    .height(buttonBarHeight)
+                                                    .graphicsLayer { alpha = settingsNavScrimAlpha }
+                                                    .background(Color.Black),
+                                        )
                                     }
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
