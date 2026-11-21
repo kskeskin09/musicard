@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="songs_and_videos">Şarkılar ve videolar</string>
+    <string name="prefer_official_songs_playback_desc">Varsa müzik videosu yerine YouTube Music\'teki şarkı sürümünü çalar ve aramada önce onu gösterir. Sonuçlardan hiçbir şey silinmez, şarkı sürümü olmayan videolar her zamanki gibi çalar.</string>
+    <string name="hide_non_musical_videos">Müzik dışı videoları gizle</string>
+    <string name="hide_non_musical_videos_desc">Arama, ana sayfa ve sanatçı sayfalarında vlog, fragman, röportaj ve hayran yüklemelerini gizler. Resmi müzik videoları kalır. Bazı şarkılar yalnızca hayran yüklemesi olarak bulunur, sonuç eksik kalırsa bunu kapat.</string>
+    <string name="hide_video_songs_all_desc">Resmi müzik videoları dahil tüm videoları arama, listeler ve sıradan gizler</string>
+</resources>

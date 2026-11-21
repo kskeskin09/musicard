@@ -50,14 +50,14 @@ data class BrowseResult(
         }
 
     fun filterYoutubeShorts(enabled: Boolean = false) =
-        if (enabled) {
+        if (enabled || com.metrolist.innertube.models.NonMusicalVideos.hide) {
             copy(
                 items =
                     items.mapNotNull {
                         it.copy(
                             items =
                                 it.items
-                                    .filterYoutubeShorts(true)
+                                    .filterYoutubeShorts(enabled)
                                     .ifEmpty { return@mapNotNull null },
                         )
                     },

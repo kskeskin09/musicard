@@ -2900,6 +2900,16 @@ object YouTube {
         if (it is CancellationException) throw it
     }
 
+    /**
+     * The official song that YouTube Music pairs with the music video [videoId] (its Song / Video
+     * switch), or null when there is none.
+     */
+    suspend fun songCounterpart(videoId: String): Result<com.metrolist.innertube.pages.SongCounterpart?> =
+        runCatching {
+            val text = innerTube.next(WEB_REMIX, videoId, null, null, null, null).bodyAsText()
+            com.metrolist.innertube.pages.SongCounterpart.parse(Json.parseToJsonElement(text), videoId)
+        }
+
     suspend fun next(
         endpoint: WatchEndpoint,
         continuation: String? = null,

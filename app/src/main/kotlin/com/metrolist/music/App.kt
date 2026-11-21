@@ -239,6 +239,13 @@ class App :
 
         applicationScope.launch(Dispatchers.IO) {
             dataStore.data
+                .map { it[com.metrolist.music.constants.HideNonMusicalVideosKey] ?: false }
+                .distinctUntilChanged()
+                .collect { com.metrolist.innertube.models.NonMusicalVideos.hide = it }
+        }
+
+        applicationScope.launch(Dispatchers.IO) {
+            dataStore.data
                 .map { it[InnerTubeAuthUserKey] ?: "0" }
                 .distinctUntilChanged()
                 .collect { authUser ->

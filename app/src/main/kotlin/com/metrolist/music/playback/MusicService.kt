@@ -2047,6 +2047,15 @@ class MusicService :
             return
         }
 
+        // Prefer songs over videos: a tapped video starts as its song version when YouTube Music has one.
+        if (!restoringQueue &&
+            songVersionSwapper.lookUpBeforeStart(queue.preloadItem) { song ->
+                playQueue(if (song != null) queue.withPreloadItem(song) else queue, playWhenReady)
+            }
+        ) {
+            return
+        }
+
         currentQueue = queue
         queueTitle = null
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
@@ -2571,6 +2580,19 @@ class MusicService :
         runCatching {
             listenTogetherManager.role.value == com.metrolist.music.listentogether.RoomRole.GUEST
         }.getOrDefault(false)
+
+    // "Prefer songs over videos" while playing, see SongVersionSwapper.
+    private val songVersionSwapper by lazy {
+        SongVersionSwapper(
+            scope = scope,
+            player = { player },
+            enabled = dataStore.data.map { it[com.metrolist.music.constants.PreferOfficialSongsKey] ?: true },
+            canSwap = { castConnectionHandler?.isCasting?.value != true && !isListenTogetherGuest() },
+            isDownloaded = { id ->
+                downloadUtil.downloads.value[id]?.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED
+            },
+        )
+    }
 
     private fun ensureUpcomingSongs() {
         if (taskCleared || !playerInitialized.value) return
@@ -3244,6 +3266,7 @@ class MusicService :
             )
         ) {
             ensureUpcomingSongs()
+            songVersionSwapper.check()
         }
 
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
