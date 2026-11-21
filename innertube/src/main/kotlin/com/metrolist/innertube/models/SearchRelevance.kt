@@ -148,18 +148,59 @@ object SearchRelevance {
     const val KNOWN_BOOST = 15.0
 
     /**
+     * True when every word of [title] was typed, ignoring punctuation and case: "THANATOS -IF I CAN'T
+     * BE YOURS-" for "thanatos if i cant be yours". With [ignoreExtras], "(Live)", "[Official Video]"
+     * and similar extras do not count as words.
+     */
+    fun titleWithinQuery(
+        query: String,
+        title: String,
+        ignoreExtras: Boolean = false,
+    ): Boolean {
+        val typed = tokens(query).toSet()
+        val titleWords =
+            if (ignoreExtras) {
+                OfficialSongMatcher.normalize(title.replace(apostrophes, "")).split(' ').filter { it.isNotEmpty() }
+            } else {
+                tokens(title)
+            }
+        return typed.isNotEmpty() && titleWords.isNotEmpty() && titleWords.all { it in typed }
+    }
+
+    /**
+     * True when [item] is (almost) exactly what was typed: its name is made of typed words only and
+     * every typed word is in its name or artist. Used to bring the user's own songs into the results
+     * when YouTube leaves them out, so it is deliberately strict: "tarkan" alone matches no song.
+     */
+    fun isCloseMatch(
+        query: String,
+        item: YTItem,
+    ): Boolean {
+        if (!titleWithinQuery(query, item.title, ignoreExtras = true)) return false
+        val words = (tokens(item.title) + tokens(artistText(item))).toSet()
+        return tokens(query).all { it in words }
+    }
+
+    /**
      * The large "Top result" card. YouTube's pick stays unless it matches the query clearly worse
      * than the best ranked item (e.g. "thanatos if i cant be yours" → an unrelated song that only
      * shares the album), in which case the best ranked item takes its place.
+     *
+     * [knownIds]: the user's own songs. When one of them is exactly what was typed and YouTube's
+     * pick is not (another mix, a cover, a re-upload), the user's song is shown instead.
      */
     fun pickTop(
         query: String,
         youtubeTop: YTItem?,
         ranked: List<YTItem>,
         alsoMatches: String? = null,
+        knownIds: Set<String> = emptySet(),
     ): YTItem? {
         val best = ranked.firstOrNull() ?: return youtubeTop
         if (youtubeTop == null) return best
+        if (youtubeTop.id !in knownIds && !titleWithinQuery(query, youtubeTop.title)) {
+            ranked.firstOrNull { it.id in knownIds && it is SongItem && isCloseMatch(query, it) }?.let { return it }
+        }
         fun cover(item: YTItem) = maxOf(coverage(query, item), alsoMatches?.let { coverage(it, item) } ?: 0.0)
         return if (cover(youtubeTop) + 0.25 >= cover(best)) youtubeTop else best
     }

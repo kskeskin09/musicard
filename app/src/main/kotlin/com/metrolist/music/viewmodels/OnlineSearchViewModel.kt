@@ -30,6 +30,7 @@ import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.constants.PauseSearchHistoryKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.models.ItemsPage
+import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.utils.SearchRoutes
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
@@ -99,6 +100,35 @@ constructor(
             .preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
     }
 
+    /**
+     * The user's own songs (library, liked, listened to) that are exactly what was typed. YouTube's
+     * results can change a lot with a small difference in the text: "thanatos if i cant be yours"
+     * returned only other versions, while "Thanatos -if i cant be yours-" returned the original.
+     * Such a song is added to the results even when YouTube left it out.
+     */
+    private var ownMatches: List<YTItem>? = null
+
+    private suspend fun ownMatches(): List<YTItem> =
+        ownMatches ?: runCatching {
+            val candidates =
+                database
+                    .knownSongEntities()
+                    .filter { !it.isEpisode && !it.isLocal && SearchRelevance.titleWithinQuery(query, it.title, ignoreExtras = true) }
+                    .map { it.id }
+            if (candidates.isEmpty()) {
+                emptyList()
+            } else {
+                database
+                    .getSongsByIds(candidates.take(200))
+                    .map { it.toMediaMetadata().toYTItem() }
+                    .filter { SearchRelevance.isCloseMatch(query, it) }
+                    .take(MAX_OWN_MATCHES)
+                    .applyContentFilters()
+            }
+        }.onFailure { reportException(it) }
+            .getOrDefault(emptyList())
+            .also { ownMatches = it }
+
     private suspend fun loadMusicFilter(record: Boolean = recordHistory): Unit =
         coroutineScope {
             val songs = async { YouTube.search(query, YouTube.SearchFilter.FILTER_SONG, recordSearchHistory = record) }
@@ -122,10 +152,13 @@ constructor(
             val songCount = songResult?.items?.size ?: 0
             viewStateMap[YouTube.SearchFilter.FILTER_SONG.value] =
                 ItemsPage(
-                    mixSongsAndVideos(
-                        resolved.take(songCount).applyContentFilters(),
-                        resolved.drop(songCount).applyContentFilters(),
-                    ),
+                    (
+                        ownMatches() +
+                            mixSongsAndVideos(
+                                resolved.take(songCount).applyContentFilters(),
+                                resolved.drop(songCount).applyContentFilters(),
+                            )
+                    ).distinctBy { it.id },
                     musicSongContinuation ?: musicVideoContinuation,
                 )
         }
@@ -250,7 +283,7 @@ constructor(
             SearchRelevance
                 .rank(
                     query,
-                    summaryItems + musicItems + correctedItems,
+                    summaryItems + musicItems + correctedItems + ownMatches(),
                     alsoMatches = correction?.query,
                     knownIds = knownIds,
                 ).preferOfficialSongs(context.dataStore.get(PreferOfficialSongsKey, true))
@@ -260,6 +293,7 @@ constructor(
                 summaryPage?.summaries?.firstOrNull()?.items?.firstOrNull(),
                 ranked,
                 alsoMatches = correction?.query,
+                knownIds = knownIds,
             )
         rankedResults = ranked
     }
@@ -376,5 +410,9 @@ constructor(
                 searchResult.continuation
             )
         }
+    }
+
+    private companion object {
+        const val MAX_OWN_MATCHES = 3
     }
 }
