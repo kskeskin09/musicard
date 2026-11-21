@@ -273,7 +273,7 @@ fun OriginalLyrics(
                 parsedLines
                     .map { entry ->
                         val newEntry =
-                            LyricsEntry(entry.time, entry.text, entry.words, agent = entry.agent, isBackground = entry.isBackground)
+                            LyricsEntry(entry.time, entry.text, entry.words, agent = entry.agent, isBackground = entry.isBackground, endTime = entry.endTime)
 
                         scope.launch {
                             val text = if (romanizeCyrillicByLine) entry.text else lyrics
