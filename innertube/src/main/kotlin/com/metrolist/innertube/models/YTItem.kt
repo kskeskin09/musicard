@@ -160,12 +160,14 @@ data class EpisodeItem(
     )
 }
 
-fun <T : YTItem> List<T>.filterExplicit(enabled: Boolean = true) =
-    if (enabled) {
-        filter { !it.explicit }
+fun <T : YTItem> List<T>.filterExplicit(enabled: Boolean = true): List<T> {
+    val blocked = ContentBlocker.isBlocked
+    return if (enabled || blocked != null) {
+        filter { !(enabled && it.explicit) && blocked?.invoke(it) != true }
     } else {
         this
     }
+}
 
 fun <T : YTItem> List<T>.filterVideoSongs(disableVideos: Boolean = false) =
     if (disableVideos) {
@@ -174,9 +176,15 @@ fun <T : YTItem> List<T>.filterVideoSongs(disableVideos: Boolean = false) =
         this
     }
 
-fun <T : YTItem> List<T>.filterYoutubeShorts(enabled: Boolean = false) =
-    if (enabled) {
-        filterNot { it is PlaylistItem && it.id.startsWith("SS") }
+// Also drops non-musical videos while that setting is on (see NonMusicalVideos).
+fun <T : YTItem> List<T>.filterYoutubeShorts(enabled: Boolean = false): List<T> {
+    val hideNonMusical = NonMusicalVideos.hide
+    return if (enabled || hideNonMusical) {
+        filterNot {
+            (enabled && it is PlaylistItem && it.id.startsWith("SS")) ||
+                (hideNonMusical && NonMusicalVideos.isNonMusical(it))
+        }
     } else {
         this
     }
+}

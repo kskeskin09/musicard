@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.UnavailableSongListItem
 import com.metrolist.music.ui.component.collapsingTitleAnchor
 import com.metrolist.music.ui.component.ExpandingSearchField
 import com.metrolist.music.ui.component.ListPlayButton
@@ -148,8 +149,34 @@ fun OnlinePlaylistScreen(
     val titleState = com.metrolist.music.ui.component.rememberCollapsingTitleState(lazyListState)
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val unavailableSongs by viewModel.unavailableSongs.collectAsStateWithLifecycle()
+    val unavailableMessage = stringResource(R.string.song_unavailable_message)
+    val showUnavailableMessage: () -> Unit = {
+        coroutineScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(unavailableMessage)
+        }
+    }
+
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+
+    // Greyed rows follow the song before them; hidden while searching.
+    val unavailableByAnchor =
+        remember(unavailableSongs, songs, query) {
+            if (query.text.isNotEmpty()) {
+                emptyMap()
+            } else {
+                val ids = songs.mapTo(HashSet()) { it.id }
+                unavailableSongs.groupBy { row ->
+                    when (val anchor = row.afterSongId) {
+                        null -> UNAVAILABLE_TOP
+                        in ids -> anchor
+                        else -> UNAVAILABLE_END
+                    }
+                }
+            }
+        }
 
     val filteredSongs =
         remember(songs, query) {
@@ -272,6 +299,12 @@ fun OnlinePlaylistScreen(
                         }
                     }
 
+                    unavailableByAnchor[UNAVAILABLE_TOP]?.let { rows ->
+                        items(rows.size, key = { "unavailable_top_$it" }) { i ->
+                            UnavailableSongListItem(rows[i], onClick = showUnavailableMessage, modifier = Modifier.animateItem())
+                        }
+                    }
+
                     itemsIndexed(filteredSongs) { index, (_, songItem) ->
                         val onCheckedChange: (Boolean) -> Unit = {
                             if (it) {
@@ -352,6 +385,19 @@ fun OnlinePlaylistScreen(
                                 }
                             },
                         )
+
+                        // Several rows in one lazy item are stacked top to bottom.
+                        unavailableByAnchor[songItem.id]?.forEach { row ->
+                            UnavailableSongListItem(row, onClick = showUnavailableMessage)
+                        }
+                    }
+
+                    if (viewModel.continuation == null) {
+                        unavailableByAnchor[UNAVAILABLE_END]?.let { rows ->
+                            items(rows.size, key = { "unavailable_end_$it" }) { i ->
+                                UnavailableSongListItem(rows[i], onClick = showUnavailableMessage, modifier = Modifier.animateItem())
+                            }
+                        }
                     }
 
                     if (isLoadingMore) {
@@ -727,3 +773,6 @@ private fun OnlinePlaylistHeader(
         }
     }
 }
+
+private const val UNAVAILABLE_TOP = "\u0000top"
+private const val UNAVAILABLE_END = "\u0000end"

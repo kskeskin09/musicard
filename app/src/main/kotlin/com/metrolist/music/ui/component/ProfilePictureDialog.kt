@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -143,7 +144,13 @@ fun ProfilePictureDialog(
     initialName: String,
     onDismiss: () -> Unit,
     onSave: (String, ProfileCrop, String) -> Unit,
+    youtubeName: String? = null,
+    youtubeImageUrl: String? = null,
 ) {
+    if (youtubeName != null) {
+        YouTubeProfileDialog(name = youtubeName, imageUrl = youtubeImageUrl, onDismiss = onDismiss)
+        return
+    }
     val context = LocalContext.current
     var name by remember { mutableStateOf(initialName) }
     val scope = rememberCoroutineScope()
@@ -266,6 +273,86 @@ fun ProfilePictureDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+        },
+    )
+}
+
+/**
+ * Signed in with YouTube: the name and picture come from the YouTube account and can't be
+ * changed in the app, so they're shown read-only. Trying to change them shows a warning.
+ */
+@Composable
+private fun YouTubeProfileDialog(
+    name: String,
+    imageUrl: String?,
+    onDismiss: () -> Unit,
+) {
+    var showWarning by remember { mutableStateOf(false) }
+    val warn = { showWarning = true }
+    val nameInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val namePressed by nameInteraction.collectIsPressedAsState()
+    androidx.compose.runtime.LaunchedEffect(namePressed) { if (namePressed) showWarning = true }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.profile_picture)) },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .padding(bottom = 16.dp)
+                            .size(160.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable(onClick = warn),
+                ) {
+                    if (!imageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = stringResource(R.string.profile_picture),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.person),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(72.dp),
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = warn) {
+                        Text(stringResource(R.string.profile_picture_choose))
+                    }
+                    TextButton(onClick = warn) {
+                        Text(stringResource(R.string.profile_picture_link))
+                    }
+                }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {},
+                    readOnly = true,
+                    singleLine = true,
+                    interactionSource = nameInteraction,
+                    label = { Text(stringResource(R.string.profile_username)) },
+                    supportingText = { Text(stringResource(R.string.profile_from_youtube)) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                if (showWarning) {
+                    Text(
+                        text = stringResource(R.string.profile_youtube_locked),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
         },
     )
 }

@@ -88,7 +88,6 @@ import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_PODCAST
 import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_PROFILE
 import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_SONG
 import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_VIDEO
-import com.metrolist.innertube.YouTubeConstants
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.EpisodeItem
@@ -100,6 +99,7 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.utils.markSearchContentOpened
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
@@ -224,8 +224,9 @@ fun OnlineSearchResult(
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val searchFilter by viewModel.filter.collectAsStateWithLifecycle()
-    val searchSummary = viewModel.summaryPage
+    val rankedResults = viewModel.rankedResults
     val itemsPage by remember(searchFilter) {
         derivedStateOf {
             searchFilter?.value?.let {
@@ -245,6 +246,7 @@ fun OnlineSearchResult(
 
     // What tapping a result does: play a song or episode, open an album, artist or playlist.
     val openYtItem: (YTItem) -> Unit = { item ->
+        context.markSearchContentOpened(item)
         when (item) {
                                 is SongItem -> {
                                     if (item.id == mediaMetadata?.id) {
@@ -499,18 +501,28 @@ fun OnlineSearchResult(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (searchFilter == null) {
-                        val summaries = searchSummary?.summaries.orEmpty()
-                        // The first result gets a large card, then the songs whose title is the
-                        // search itself ("Exact matches"), then the usual sections.
-                        val topItem = summaries.firstOrNull()?.items?.firstOrNull()
-                        val exactMatches =
-                            summaries
-                                .flatMap { it.items }
-                                .filter { it is SongItem && it.id != topItem?.id && isExactMatch(it.title, decodedQuery) }
-                                .distinctBy { it.id }
-                                // Official releases (square cover) before video uploads of the same name.
-                                .sortedBy { (it as? SongItem)?.isVideoSong == true }
-                                .take(3)
+                        // The first result gets a large card (YouTube's top result, official song
+                        // preferred, replaced by the best match when it doesn't fit the query), then
+                        // one list of everything else, best match first.
+                        val topItem = viewModel.topResult
+                        viewModel.spellCorrection?.let { correction ->
+                            item(key = "spell_correction") {
+                                Text(
+                                    text =
+                                        stringResource(
+                                            if (correction.autoCorrected) R.string.search_showing_results_for else R.string.search_did_you_mean,
+                                            correction.query,
+                                        ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onSearch(correction.query) }
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                )
+                            }
+                        }
                         if (topItem != null) {
                             item(key = "top_title") {
                                 NavigationTitle(stringResource(R.string.search_top_result))
@@ -525,34 +537,19 @@ fun OnlineSearchResult(
                                 )
                             }
                         }
-                        if (exactMatches.isNotEmpty()) {
-                            item(key = "exact_title") {
-                                NavigationTitle(stringResource(R.string.search_exact_matches))
+                        val results = rankedResults?.filter { it.id != topItem?.id }.orEmpty()
+                        if (results.isNotEmpty()) {
+                            item(key = "results_title") {
+                                NavigationTitle(stringResource(R.string.search_results))
                             }
                             items(
-                                items = exactMatches,
-                                key = { "exact_${it.id}" },
+                                items = results,
+                                key = { "result_${it.id}" },
                                 itemContent = ytItemContent,
                             )
                         }
-                        summaries.forEachIndexed { sectionIndex, summary ->
-                            val sectionItems =
-                                summary.items.filter { item ->
-                                    !(sectionIndex == 0 && item.id == topItem?.id) && exactMatches.none { it.id == item.id }
-                                }
-                            if (sectionItems.isEmpty()) return@forEachIndexed
-                            item {
-                                NavigationTitle(summary.title.toLocalizedSearchSection())
-                            }
 
-                            itemsIndexed(
-                                items = sectionItems,
-                                key = { index, item -> "${summary.title}/${item.id}/$index" },
-                                itemContent = { index, item -> ytItemContent(item) },
-                            )
-                        }
-
-                        if (searchSummary?.summaries?.isEmpty() == true) {
+                        if (rankedResults != null && topItem == null && results.isEmpty()) {
                             item {
                                 EmptyPlaceholder(
                                     icon = R.drawable.search,
@@ -587,7 +584,7 @@ fun OnlineSearchResult(
                         }
                     }
 
-                    if (searchFilter == null && searchSummary == null || searchFilter != null && itemsPage == null) {
+                    if (searchFilter == null && rankedResults == null || searchFilter != null && itemsPage == null) {
                         item {
                             ShimmerHost {
                                 repeat(8) {
@@ -621,45 +618,6 @@ fun OnlineSearchResult(
             )
         }
     }
-}
-
-@Composable
-private fun String.toLocalizedSearchSection(): String =
-    when (this) {
-        YouTubeConstants.DEFAULT_TOP_RESULT -> stringResource(R.string.top_result)
-        YouTubeConstants.DEFAULT_OTHER_RESULTS -> stringResource(R.string.other)
-        "Songs" -> stringResource(R.string.songs)
-        "Videos" -> stringResource(R.string.filter_videos)
-        "Albums" -> stringResource(R.string.albums)
-        "Artists" -> stringResource(R.string.artists)
-        "Playlists" -> stringResource(R.string.playlists)
-        "Podcasts" -> stringResource(R.string.filter_podcasts)
-        "Episodes" -> stringResource(R.string.filter_episodes)
-        "Profiles" -> stringResource(R.string.filter_profiles)
-        else -> this
-    }
-
-/**
- * Whether a song title is what was searched: the title contains the search, or the search
- * contains the title's main part (before any "(", "-", "/" or "[" extra).
- */
-private fun isExactMatch(
-    title: String,
-    query: String,
-): Boolean {
-    fun normalize(text: String) =
-        java.text.Normalizer
-            .normalize(text.lowercase(), java.text.Normalizer.Form.NFD)
-            .replace(Regex("\\p{M}+"), "")
-            .replace("ß", "ss")
-            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
-            .trim()
-    val q = normalize(query)
-    if (q.isBlank()) return false
-    val t = normalize(title)
-    if (t.contains(q)) return true
-    val main = normalize(title.split('(', '-', '/', '／', '[', '|').first())
-    return main.length >= 3 && q.contains(main)
 }
 
 /** Large card for the first search result: cover, name, kind and artist, and a round play button. */
@@ -708,7 +666,7 @@ private fun TopResultCard(
             modifier =
                 Modifier
                     .size(120.dp)
-                    .clip(if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(12.dp)),
         ) {
             AsyncImage(
                 model = item.thumbnail,

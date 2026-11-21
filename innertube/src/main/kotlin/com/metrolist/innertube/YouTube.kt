@@ -61,12 +61,14 @@ import com.metrolist.innertube.pages.NextResult
 import com.metrolist.innertube.pages.PageHelper
 import com.metrolist.innertube.pages.PlaylistContinuationPage
 import com.metrolist.innertube.pages.PlaylistPage
+import com.metrolist.innertube.pages.UnavailableSong
 import com.metrolist.innertube.pages.PodcastPage
 import com.metrolist.innertube.pages.RelatedPage
 import com.metrolist.innertube.pages.SearchPage
 import com.metrolist.innertube.pages.SearchResult
 import com.metrolist.innertube.pages.SearchSuggestionPage
 import com.metrolist.innertube.pages.SearchSummary
+import com.metrolist.innertube.pages.SearchSpellCorrection
 import com.metrolist.innertube.pages.SearchSummaryPage
 import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB
 import com.metrolist.innertubex.models.YouTubeClient.Companion.WEB_REMIX
@@ -170,6 +172,7 @@ object YouTube {
         runCatching {
             val response = innerTube.search(WEB_REMIX, query, setLogin = recordSearchHistory).body<SearchResponse>()
             val allSummaries = mutableListOf<SearchSummary>()
+            var spellCorrection: SearchSpellCorrection? = null
 
             response.contents
                 ?.tabbedSearchResultsRenderer
@@ -241,6 +244,19 @@ object YouTube {
                             allSummaries.addAll(groupItemsByType(items))
                         }
                     } else if (section.itemSectionRenderer != null) {
+                        section.itemSectionRenderer.contents?.forEach { content ->
+                            val correction = content.showingResultsForRenderer ?: content.didYouMeanRenderer
+                            val corrected =
+                                correction?.correctedQueryEndpoint?.searchEndpoint?.query
+                                    ?: correction?.correctedQuery?.runs?.joinToString("") { it.text }
+                            if (spellCorrection == null && !corrected.isNullOrBlank()) {
+                                spellCorrection =
+                                    SearchSpellCorrection(
+                                        query = corrected,
+                                        autoCorrected = content.showingResultsForRenderer != null,
+                                    )
+                            }
+                        }
                         val items =
                             section.itemSectionRenderer.contents
                                 ?.mapNotNull { it.musicResponsiveListItemRenderer }
@@ -280,7 +296,7 @@ object YouTube {
                         }
                     }
 
-            SearchSummaryPage(summaries = mergedSummaries)
+            SearchSummaryPage(summaries = mergedSummaries, spellCorrection = spellCorrection)
         }
 
     private fun groupItemsByType(items: List<YTItem>): List<SearchSummary> {
@@ -1043,6 +1059,7 @@ object YouTube {
                 ?.avatarViewModel?.image?.sources?.firstOrNull()
                 ?.url
 
+            var parsedUnavailable: List<UnavailableSong> = emptyList()
             PlaylistPage(
                 playlist =
                     PlaylistItem(
@@ -1124,8 +1141,10 @@ object YouTube {
                             ?: singleColShelf?.musicShelfRenderer?.contents
                     (twoColContents ?: singleColContents)
                         ?.getItems()
-                        ?.mapNotNull { PlaylistPage.fromMusicResponsiveListItemRenderer(it) }
-                        ?: emptyList()
+                        .orEmpty()
+                        .let { PlaylistPage.parseRows(it) }
+                        .also { parsedUnavailable = it.second }
+                        .first
                 },
                 songsContinuation = run {
                     val twoColShelf =
@@ -1168,7 +1187,7 @@ object YouTube {
                         ?.sectionListRenderer
                         ?.continuations
                         ?.getContinuation(),
-            )
+            ).copy(unavailableSongs = parsedUnavailable)
         }
 
     suspend fun playlistContinuation(continuation: String): Result<PlaylistContinuationPage> =
@@ -1205,10 +1224,10 @@ object YouTube {
 
             val allContents = mainContents + shelfContents + musicShelfContinuationContents + appendedContents
 
-            val songs =
+            val (songs, unavailableSongs) =
                 allContents
                     .mapNotNull { content: MusicShelfRenderer.Content -> content.musicResponsiveListItemRenderer }
-                    .mapNotNull { renderer -> PlaylistPage.fromMusicResponsiveListItemRenderer(renderer) }
+                    .let { PlaylistPage.parseRows(it) }
 
             val nextContinuation =
                 response.continuationContents
@@ -1228,6 +1247,7 @@ object YouTube {
             PlaylistContinuationPage(
                 songs = songs,
                 continuation = nextContinuation,
+                unavailableSongs = unavailableSongs,
             )
         }
 
@@ -2036,6 +2056,40 @@ object YouTube {
                         ?.continuations
                         ?.getContinuation(),
             )
+        }
+
+    /**
+     * The chart playlists on YouTube Music's Charts page for the content country, as (title, playlist id),
+     * e.g. "Top 100 Songs United States". The Charts page often holds only such playlists and no songs.
+     */
+    suspend fun chartPlaylists(): Result<List<Pair<String, String>>> =
+        runCatching {
+            val response =
+                innerTube
+                    .browse(
+                        client = WEB_REMIX,
+                        browseId = "FEmusic_charts",
+                        params = "ggMGCgQIgAQ%3D",
+                    ).body<BrowseResponse>()
+            response.contents
+                ?.singleColumnBrowseResultsRenderer
+                ?.tabs
+                ?.firstOrNull()
+                ?.tabRenderer
+                ?.content
+                ?.sectionListRenderer
+                ?.contents
+                .orEmpty()
+                .flatMap { content ->
+                    val carousel = content.musicCarouselShelfRenderer?.contents?.mapNotNull { it.musicTwoRowItemRenderer }.orEmpty()
+                    val grid = content.gridRenderer?.items?.mapNotNull { it.musicTwoRowItemRenderer }.orEmpty()
+                    carousel + grid
+                }.mapNotNull { renderer ->
+                    if (!renderer.isPlaylist) return@mapNotNull null
+                    val id = renderer.navigationEndpoint.browseEndpoint?.browseId?.removePrefix("VL") ?: return@mapNotNull null
+                    val title = renderer.title.runs?.joinToString("") { it.text }?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                    title to id
+                }.distinctBy { it.second }
         }
 
     private fun determineChartType(title: String): ChartsPage.ChartType =
@@ -2879,6 +2933,16 @@ object YouTube {
     }.onFailure {
         if (it is CancellationException) throw it
     }
+
+    /**
+     * The official song that YouTube Music pairs with the music video [videoId] (its Song / Video
+     * switch), or null when there is none.
+     */
+    suspend fun songCounterpart(videoId: String): Result<com.metrolist.innertube.pages.SongCounterpart?> =
+        runCatching {
+            val text = innerTube.next(WEB_REMIX, videoId, null, null, null, null).bodyAsText()
+            com.metrolist.innertube.pages.SongCounterpart.parse(Json.parseToJsonElement(text), videoId)
+        }
 
     suspend fun next(
         endpoint: WatchEndpoint,

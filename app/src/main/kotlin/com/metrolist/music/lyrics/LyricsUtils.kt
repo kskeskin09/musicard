@@ -733,7 +733,7 @@ object LyricsUtils {
 
                     if (wordTimestamps != null) {
                         result.addAll(entries.map { entry ->
-                            LyricsEntry(entry.time, entry.text, wordTimestamps, agent = entry.agent, isBackground = entry.isBackground)
+                            LyricsEntry(entry.time, entry.text, wordTimestamps, agent = entry.agent, isBackground = entry.isBackground, endTime = entry.endTime)
                         })
                     } else {
                         result.addAll(entries)
@@ -787,18 +787,83 @@ object LyricsUtils {
             text = text.replaceFirst(BACKGROUND_REGEX, "")
         }
 
-        return timeMatchResults
-            .map { timeMatchResult ->
-                val min = timeMatchResult.groupValues[1].toLong()
-                val sec = timeMatchResult.groupValues[2].toLong()
-                val milString = timeMatchResult.groupValues[3]
-                var mil = milString.toLong()
-                if (milString.length == 2) {
-                    mil *= 10
+        val lineTimes = timeMatchResults.map { tagToMillis(it) }.toList()
+
+        // Timestamps can also sit after or inside the text: "[00:07.28]I love you[00:08.00]"
+        // ends the line at 8.00, and "[00:07.28]I [00:07.60]love you[00:08.00]" times each
+        // part. They are timing, never words, so they must not show up in the lyrics.
+        val inline = parseInlineTimestamps(text, lineTimes.singleOrNull())
+        if (inline != null) text = inline.text
+
+        return lineTimes.map { time ->
+            LyricsEntry(
+                time,
+                text,
+                words ?: inline?.words,
+                agent = agent,
+                isBackground = isBackground,
+                endTime = inline?.endTime,
+            )
+        }
+    }
+
+    private fun tagToMillis(match: MatchResult): Long {
+        val min = match.groupValues[1].toLong()
+        val sec = match.groupValues[2].toLong()
+        val milString = match.groupValues[3]
+        var mil = milString.toLong()
+        if (milString.length == 2) mil *= 10
+        return min * DateUtils.MINUTE_IN_MILLIS + sec * DateUtils.SECOND_IN_MILLIS + mil
+    }
+
+    private class InlineTiming(val text: String, val words: List<WordTimestamp>?, val endTime: Long?)
+
+    /**
+     * Strips `[MM:SS.xx]` tags found after a line's leading timestamps. A tag at the very
+     * end is the line's end time. When tags split the text into several timed parts,
+     * those parts become word timings. Timing is only kept when the line has a single
+     * start time ([lineTime]); a line repeated at several times just gets clean text.
+     * Returns null when the text holds no such tag.
+     */
+    private fun parseInlineTimestamps(text: String, lineTime: Long?): InlineTiming? {
+        val tags = TIME_REGEX.findAll(text).toList()
+        if (tags.isEmpty()) return null
+
+        // (start in ms, text) parts; the text before the first tag starts with the line.
+        val parts = mutableListOf<Pair<Long?, String>>()
+        parts.add(lineTime to text.substring(0, tags.first().range.first))
+        tags.forEachIndexed { i, tag ->
+            val end = if (i + 1 < tags.size) tags[i + 1].range.first else text.length
+            parts.add(tagToMillis(tag) to text.substring(tag.range.last + 1, end))
+        }
+
+        val cleanText = parts.joinToString("") { it.second }.replace(Regex("\\s+"), " ").trim()
+        if (lineTime == null) return InlineTiming(cleanText, null, null)
+
+        // A last tag with nothing after it marks where the line ends.
+        val endTime = if (parts.last().second.isBlank()) parts.last().first else null
+        val sung = parts.filter { it.second.isNotBlank() }.map { it.first!! to it.second }
+        if (endTime != null && endTime <= lineTime) return InlineTiming(cleanText, null, null)
+
+        // One sung part is just a line with an end time; several parts are timed words.
+        val words = if (sung.size >= 2 && sung.zipWithNext().all { (a, b) -> a.first <= b.first }) {
+            val result = mutableListOf<WordTimestamp>()
+            sung.forEachIndexed { i, (start, partText) ->
+                val partEnd = sung.getOrNull(i + 1)?.first ?: endTime ?: (start + 500L)
+                val pieces = partText.trim().split(Regex("\\s+"))
+                pieces.forEachIndexed { j, piece ->
+                    val s = start + (partEnd - start) * j / pieces.size
+                    val e = start + (partEnd - start) * (j + 1) / pieces.size
+                    val isLastPiece = j == pieces.lastIndex
+                    val trailingSpace = !isLastPiece ||
+                        (i < sung.lastIndex && (partText.last().isWhitespace() || sung[i + 1].second.first().isWhitespace()))
+                    result.add(WordTimestamp(piece, s / 1000.0, e / 1000.0, trailingSpace))
                 }
-                val time = min * DateUtils.MINUTE_IN_MILLIS + sec * DateUtils.SECOND_IN_MILLIS + mil
-                LyricsEntry(time, text, words, agent = agent, isBackground = isBackground)
-            }.toList()
+            }
+            result
+        } else null
+
+        return InlineTiming(cleanText, words, endTime)
     }
 
     fun findCurrentLineIndex(
@@ -866,6 +931,9 @@ object LyricsUtils {
             val lineEndMs: Long = if (!line.words.isNullOrEmpty()) {
                 // Use last word's endTime converted to ms
                 (line.words.last().endTime * 1000).toLong()
+            } else if (line.endTime != null) {
+                // The line said itself when it ends: [00:07.28]I love you[00:08.00]
+                line.endTime
             } else {
                 // Fallback: next line's start time
                 if (index + 1 < lines.size) lines[index + 1].time else Long.MAX_VALUE

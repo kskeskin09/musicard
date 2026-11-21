@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SponsorBlock -->
+    <string name="sponsorblock">SponsorBlock</string>
+    <string name="sponsorblock_podcasts">Skip podcast ads</string>
+    <string name="sponsorblock_podcasts_desc">Skips sponsor reads, self-promotion and \"subscribe\" reminders in podcast episodes. Segments come from the SponsorBlock community (sponsor.ajay.app).</string>
+    <string name="sponsorblock_music">Skip non-music parts</string>
+    <string name="sponsorblock_music_desc">Skips intros, talking and skits in music videos when the community has marked them. Audio-only songs are not affected.</string>
+    <string name="sponsorblock_skipped">Skipped by SponsorBlock</string>
+    <!-- AI artists -->
+    <string name="block_ai_artists">Hide AI-generated artists</string>
+    <string name="block_ai_artists_desc">Hides channels known to publish AI-generated music from Home, Search, artist pages and radio suggestions. Uses the community AiSList (github.com/Override92/AiSList, CC BY-NC 4.0), refreshed daily and kept for offline use. Your own library is not changed.</string>
+    <!-- Unavailable songs -->
+    <string name="song_unavailable_label">Unavailable</string>
+    <string name="song_unavailable_message">This song can\'t be played. It was removed or made private, or it isn\'t available in your country.</string>
+    <!-- Import by link -->
+    <string name="import_link_title">Import from a link</string>
+    <string name="import_link_desc">Paste a public playlist or album link from Spotify, Apple Music or Deezer.</string>
+    <string name="import_link_paste">Paste</string>
+    <string name="import_link_button">Get songs</string>
+    <string name="import_link_reading">Reading %1$s… %2$d songs</string>
+    <string name="import_link_how">Only the song names and artists are read from the link (no sign-in). Each song is then found on YouTube Music and saved as a new playlist in your library. Private playlists can\'t be read.</string>
+    <string name="import_link_found">%1$s · %2$d songs</string>
+    <string name="import_link_other">Use another link</string>
+    <string name="import_link_error_unknown">This doesn\'t look like a Spotify, Apple Music or Deezer playlist or album link.</string>
+    <string name="import_link_error_not_found">Couldn\'t read this link. Make sure the playlist is public and try again.</string>
+    <string name="import_link_error_empty">The link was read, but it has no songs.</string>
+    <string name="import_link_error_incomplete">Only part of this playlist could be read. Try again in a minute.</string>
+</resources>

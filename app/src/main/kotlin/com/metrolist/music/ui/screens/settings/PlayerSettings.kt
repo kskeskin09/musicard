@@ -49,7 +49,6 @@ import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
 import com.metrolist.music.constants.AutoplayKey
 import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
-import com.metrolist.music.constants.EnableGoogleCastKey
 import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.LoudnessLevel
@@ -124,7 +123,7 @@ fun PlayerSettings(
     )
     val (audioNormalization, onAudioNormalizationChange) = rememberPreference(
         AudioNormalizationKey,
-        defaultValue = true
+        defaultValue = false
     )
 
     val (loudnessLevel, onLoudnessLevelChange) = rememberEnumPreference(
@@ -154,10 +153,6 @@ fun PlayerSettings(
     val (doubleTapSeek, onDoubleTapSeekChange) = rememberPreference(
         key = com.metrolist.music.constants.DoubleTapSeekKey,
         defaultValue = true,
-    )
-    val (enableGoogleCast, onEnableGoogleCastChange) = rememberPreference(
-        key = EnableGoogleCastKey,
-        defaultValue = true
     )
 
     val (seekExtraSeconds, onSeekExtraSeconds) = rememberPreference(
@@ -528,30 +523,8 @@ fun PlayerSettings(
                     },
                     onClick = { onAudioTrackPlaybackParamsChange(!audioTrackPlaybackParams) }
                 ))
-                // Only show Cast setting in GMS builds (not in F-Droid/FOSS)
+                // Only show the Cast button setting in GMS builds (not in F-Droid/FOSS)
                 if (BuildConfig.CAST_AVAILABLE) {
-                    add(Material3SettingsItem(
-                        icon = painterResource(R.drawable.cast),
-                        title = { Text(stringResource(R.string.google_cast)) },
-                        description = { Text(stringResource(R.string.google_cast_description)) },
-                        trailingContent = {
-                            Switch(
-                                checked = enableGoogleCast,
-                                onCheckedChange = onEnableGoogleCastChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (enableGoogleCast) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onEnableGoogleCastChange(!enableGoogleCast) }
-                    ))
-                    if (enableGoogleCast) {
                     add(Material3SettingsItem(
                         icon = painterResource(R.drawable.cast),
                         title = { Text(stringResource(R.string.show_cast_button_on_art)) },
@@ -573,7 +546,6 @@ fun PlayerSettings(
                         },
                         onClick = { onShowCastButtonOnArtChange(!showCastButtonOnArt) }
                     ))
-                    }
                 }
                 add(Material3SettingsItem(
                         icon = painterResource(R.drawable.fast_forward),
@@ -1030,6 +1002,10 @@ fun PlayerSettings(
                 )
             )
         )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        SponsorBlockSettingsGroup()
 
         Spacer(modifier = Modifier.height(27.dp))
 

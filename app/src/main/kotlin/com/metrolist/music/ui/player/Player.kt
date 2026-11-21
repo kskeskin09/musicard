@@ -227,6 +227,7 @@ import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.ui.component.lockSliderDrag
 import com.metrolist.music.ui.component.rememberUnlikeGuard
 import com.metrolist.music.ui.component.rememberCrackShake
+import com.metrolist.music.ui.component.GlassCoverScale
 import com.metrolist.music.ui.component.BottomSheet
 import com.metrolist.music.ui.component.BottomSheetState
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -553,15 +554,6 @@ fun BottomSheetPlayer(
         }
     }
 
-    val TextBackgroundColor by animateColorAsState(
-        targetValue =
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-                PlayerBackgroundStyle.BLUR -> Color.White
-                PlayerBackgroundStyle.GRADIENT -> Color.White
-            },
-        label = "TextBackgroundColor",
-    )
 
     val icBackgroundColor by animateColorAsState(
         targetValue =
@@ -595,6 +587,22 @@ fun BottomSheetPlayer(
         accentPair?.second ?: Color.Black,
         tween(600),
         label = "buttonAccentDeep",
+    )
+
+    // The player's texts (song title, artist, "Playing from", lyrics, Up next) follow the same
+    // "Player button & text colors" setting: with Background color they take the light / dark
+    // shade of the song's color that the buttons use, otherwise the usual white / theme color.
+    val TextBackgroundColor by animateColorAsState(
+        targetValue =
+            if (accentButtons && accentPair != null) {
+                accentPair.first
+            } else when (playerBackground) {
+                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
+                PlayerBackgroundStyle.BLUR -> Color.White
+                PlayerBackgroundStyle.GRADIENT -> Color.White
+            },
+        animationSpec = tween(600),
+        label = "TextBackgroundColor",
     )
 
     val (textButtonColor, iconButtonColor) =
@@ -2312,6 +2320,7 @@ fun BottomSheetPlayer(
                                     mediaMetadata = mediaMetadata,
                                     showLyrics = showLyrics,
                                     positionProvider = { effectivePosition },
+                                    accentOverride = if (accentButtons) TextBackgroundColor else null,
                                 )
                             } else {
                                 Thumbnail(
@@ -2321,6 +2330,7 @@ fun BottomSheetPlayer(
                                     isPlayerExpanded = isExpandedProvider,
                                     isLandscape = true,
                                     isListenTogetherGuest = isListenTogetherGuest,
+                                    textColor = TextBackgroundColor,
                                 )
                             }
                         }
@@ -2888,6 +2898,8 @@ fun InlineLyricsView(
     expandFraction: () -> Float = { 0f },
     openBottomPadding: Dp = 0.dp,
     followState: LyricsFollowState? = null,
+    // Color of the (non-card) lyrics, e.g. the song's color from the player color setting.
+    accentOverride: Color? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
@@ -3023,6 +3035,7 @@ fun InlineLyricsView(
                         sliderPositionProvider = positionProvider,
                         modifier = Modifier.padding(horizontal = 24.dp),
                         showLyrics = showLyrics,
+                        accentOverride = accentOverride,
                     )
                 }
                 ProvideTextStyle(
@@ -3478,7 +3491,7 @@ private const val EdgeToEdgePausedScale = 0.93f
 internal val DefaultAlbumBackground = Color(0xFF2B2A30)
 
 /**
- * Glass player background: the album cover, centered, enlarged and blurred until only its colors
+ * Glass player background: the album cover, filling the screen and blurred until only its colors
  * are left, darkened a little so white text stays readable. It sits behind the whole player, so
  * the lyrics and up-next views share it.
  */
@@ -3509,14 +3522,12 @@ internal fun GlassCoverBackground(
                             .allowHardware(false)
                             .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    // Fills the background with the cover only slightly stretched instead of zoomed in.
+                    contentScale = GlassCoverScale,
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = 1.35f
-                                scaleY = 1.35f
-                            }.blur(90.dp),
+                            .blur(90.dp),
                 )
                 Box(
                     Modifier

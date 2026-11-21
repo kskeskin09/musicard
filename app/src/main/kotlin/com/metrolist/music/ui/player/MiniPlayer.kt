@@ -107,6 +107,7 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import com.metrolist.music.ui.component.GlassCoverScale
 import com.metrolist.music.ui.component.Icon as MIcon
 import androidx.compose.ui.draw.blur
 import com.metrolist.music.constants.MiniPlayerBackgroundStyle
@@ -350,15 +351,17 @@ private fun NewMiniPlayer(
         animationSpec = androidx.compose.animation.core.tween(800),
         label = "miniAlbumColor",
     )
-    val themePillColor by androidx.compose.animation.animateColorAsState(
-        targetValue =
-            com.metrolist.music.ui.theme.PageFadeColors.current
-                ?.takeIf { followPage }
-                ?.let { com.metrolist.music.ui.theme.raisedPageColor(it) }
-                ?: MaterialTheme.colorScheme.surfaceContainer,
-        animationSpec = androidx.compose.animation.core.tween(200),
-        label = "miniThemePill",
-    )
+    // Follows the page change frame by frame, so the pill keeps the page's color while that page
+    // is still on screen and turns into the next page's color as it slides in.
+    val themePillColor =
+        if (followPage) {
+            com.metrolist.music.ui.theme.PageFadeColors.blend(
+                fallback = MaterialTheme.colorScheme.surfaceContainer,
+                map = { com.metrolist.music.ui.theme.raisedPageColor(it) },
+            )
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        }
     val backgroundColor =
         when {
             // On a cover-tinted page (stats, playlists, albums) the pill takes the page's raised color.
@@ -954,14 +957,12 @@ private fun MiniGlassBackground(thumbnailUrl: String?) {
                             .allowHardware(false)
                             .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    // Fills the background with the cover only slightly stretched instead of zoomed in.
+                    contentScale = GlassCoverScale,
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = 1.35f
-                                scaleY = 1.35f
-                            }.blur(40.dp),
+                            .blur(40.dp),
                 )
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.36f)))
             }

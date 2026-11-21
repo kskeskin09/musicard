@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import com.metrolist.music.constants.SongSortType
 import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.Album
+import com.metrolist.innertube.pages.UnavailableSong
 import javax.inject.Inject
 
 @HiltViewModel
@@ -48,6 +49,9 @@ class OnlinePlaylistViewModel @Inject constructor(
 
     val playlist = MutableStateFlow<PlaylistItem?>(null)
     val playlistSongs = MutableStateFlow<List<SongItem>>(emptyList())
+
+    /** Greyed rows YouTube Music can't play; shown in place, never queued. */
+    val unavailableSongs = MutableStateFlow<List<UnavailableSong>>(emptyList())
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
@@ -148,6 +152,7 @@ class OnlinePlaylistViewModel @Inject constructor(
             .onSuccess { playlistPage ->
                 playlist.value = playlistPage.playlist
                 playlistSongs.value = applySongFilters(playlistPage.songs)
+                unavailableSongs.value = playlistPage.unavailableSongs
                 continuation = playlistPage.songsContinuation
                 _isLoading.value = false
                 if (continuation != null) {
@@ -220,6 +225,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                     .onSuccess { playlistContinuationPage ->
                         val currentSongs = playlistSongs.value.toMutableList()
                         currentSongs.addAll(playlistContinuationPage.songs)
+                        addUnavailable(playlistContinuationPage.unavailableSongs)
                         playlistSongs.value = applySongFilters(currentSongs)
                         currentProactiveToken = playlistContinuationPage.continuation
                         // Update the class-level continuation for manual loadMore if needed
@@ -246,6 +252,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                 .onSuccess { playlistContinuationPage ->
                     val currentSongs = playlistSongs.value.toMutableList()
                     currentSongs.addAll(playlistContinuationPage.songs)
+                    addUnavailable(playlistContinuationPage.unavailableSongs)
                     playlistSongs.value = applySongFilters(currentSongs)
                     continuation = playlistContinuationPage.continuation
                 }.onFailure { throwable ->
@@ -263,6 +270,14 @@ class OnlinePlaylistViewModel @Inject constructor(
     fun retry() {
         proactiveLoadJob?.cancel()
         fetchInitialPlaylistData() // This will also restart proactive loading if applicable
+    }
+
+    // A continuation page's first greyed rows have no anchor of their own: they follow the previous page.
+    private fun addUnavailable(rows: List<UnavailableSong>) {
+        if (rows.isEmpty()) return
+        val pageStartAnchor = playlistSongs.value.lastOrNull()?.id
+        unavailableSongs.value = unavailableSongs.value +
+            rows.map { if (it.afterSongId == null) it.copy(afterSongId = pageStartAnchor) else it }
     }
 
     private fun applySongFilters(songs: List<SongItem>): List<SongItem> {

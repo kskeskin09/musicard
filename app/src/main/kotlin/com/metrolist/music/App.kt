@@ -202,6 +202,8 @@ class App :
     }
 
     private fun observeSettingsChanges() {
+        com.metrolist.music.utils.aiblock.AiArtistBlocklist.start(this, applicationScope)
+
         applicationScope.launch(Dispatchers.IO) {
             dataStore.data
                 .map { it[VisitorDataKey] }
@@ -233,6 +235,13 @@ class App :
                                 ?: it.substringAfter("||")
                         }
                 }
+        }
+
+        applicationScope.launch(Dispatchers.IO) {
+            dataStore.data
+                .map { it[com.metrolist.music.constants.HideNonMusicalVideosKey] ?: false }
+                .distinctUntilChanged()
+                .collect { com.metrolist.innertube.models.NonMusicalVideos.hide = it }
         }
 
         applicationScope.launch(Dispatchers.IO) {

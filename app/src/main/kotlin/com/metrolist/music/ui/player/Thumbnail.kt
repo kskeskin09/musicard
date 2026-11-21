@@ -248,7 +248,7 @@ fun Thumbnail(
     isLandscape: Boolean = false,
     isListenTogetherGuest: Boolean = false,
     // Card layout: no "Now playing" header, art fits the given height, rounder corners,
-    // and the current art shrinks slightly while paused.
+    // and the art shrinks slightly while paused.
     compact: Boolean = false,
     isPlaying: Boolean = true,
     // Overrides the art's corner radius frame by frame (read only while drawing).
@@ -256,6 +256,8 @@ fun Thumbnail(
     carousel: ThumbnailCarousel? = null,
     // Holding the cover (the playing song's menu).
     onLongPress: (() -> Unit)? = null,
+    // Color of the header texts; by default white / the theme's text color.
+    textColor: Color? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -281,7 +283,7 @@ fun Thumbnail(
     )
     
     // Pre-calculate text color based on background style
-    val textBackgroundColor = getTextColor(playerBackground)
+    val textBackgroundColor = textColor ?: getTextColor(playerBackground)
     
     // Grid state
     
@@ -550,7 +552,9 @@ fun Thumbnail(
                                 isListenTogetherGuest = isListenTogetherGuest,
                                 currentMediaId = mediaMetadata?.id,
                                 currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
-                                shrink = compact && !isPlaying && item.mediaId == mediaMetadata?.id,
+                                // Every cover (also the ones swiped in) uses the paused size, so a swiped-in
+                                // cover doesn't arrive big and then shrink.
+                                shrink = compact && !isPlaying,
                                 cornerRadiusProvider = cornerRadiusProvider,
                                 onLongPress = onLongPress,
                             )
@@ -744,10 +748,13 @@ private fun ThumbnailItem(
                     cropArtwork = cropAlbumArt
                 )
             }
-            
-            // Cast button in the art's top-right corner, only when turned on in the settings
-            // (otherwise Cast is in the player menu).
-            if (showCastButtonOnArt) {
+        }
+
+        // Cast button at the art's top-right corner, only when turned on in the settings
+        // (otherwise Cast is in the player menu). It sits outside the scaled art, so it
+        // stays in the same spot whether the song is playing or paused.
+        if (showCastButtonOnArt) {
+            Box(modifier = Modifier.size(dimensions.thumbnailSize)) {
                 CastButton(
                     modifier = Modifier
                         .align(Alignment.TopEnd)

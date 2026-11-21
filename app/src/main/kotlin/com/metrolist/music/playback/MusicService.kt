@@ -73,6 +73,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
@@ -201,6 +202,8 @@ import com.metrolist.music.playback.alarm.MusicAlarmScheduler
 import com.metrolist.music.playback.alarm.MusicAlarmStore
 import com.metrolist.music.playback.audio.SilenceDetectorAudioProcessor
 import com.metrolist.music.playback.queues.EmptyQueue
+import com.metrolist.music.playback.sponsorblock.observeSponsorBlockSkipping
+import com.metrolist.music.utils.aiblock.AiArtistBlocklist
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.Queue
 import com.metrolist.music.playback.queues.YouTubeQueue
@@ -946,7 +949,7 @@ class MusicService :
             lyricsPrefetchQueueVersion,
             dataStore.data
                 .map { prefs ->
-                    val enabled = prefs[com.metrolist.music.constants.PrefetchNextLyricsKey] ?: false
+                    val enabled = prefs[com.metrolist.music.constants.PrefetchNextLyricsKey] ?: true
                     val count = (prefs[com.metrolist.music.constants.PrefetchNextLyricsCountKey]
                         ?: com.metrolist.music.constants.DEFAULT_PREFETCH_NEXT_LYRICS_COUNT)
                         .coerceIn(1, com.metrolist.music.constants.MAX_PREFETCH_NEXT_LYRICS_COUNT)
@@ -1022,7 +1025,7 @@ class MusicService :
         combine(
             currentFormat,
             dataStore.data
-                .map { it[AudioNormalizationKey] ?: true }
+                .map { it[AudioNormalizationKey] ?: false }
                 .distinctUntilChanged(),
             dataStore.data
                 .map { prefs -> prefs[LoudnessLevelKey].toEnum(LoudnessLevel.BALANCED) }
@@ -1392,6 +1395,22 @@ class MusicService :
                     saveEpisodePosition(currentMetadata.id, player.currentPosition)
                 }
             }
+        }
+
+        scope.launch {
+            observeSponsorBlockSkipping(
+                currentMetadata = currentMediaMetadata,
+                preferences = dataStore.data,
+                currentMediaId = { player.currentMediaItem?.mediaId },
+                isPlaying = { player.isPlaying },
+                positionMs = { player.currentPosition },
+                durationMs = { player.duration },
+                canSeek = { castConnectionHandler?.isCasting?.value != true && !isListenTogetherGuest() },
+                seekTo = { player.seekTo(it) },
+                onSkipped = {
+                    Toast.makeText(this@MusicService, R.string.sponsorblock_skipped, Toast.LENGTH_SHORT).show()
+                },
+            )
         }
     }
 
@@ -2038,6 +2057,15 @@ class MusicService :
             return
         }
 
+        // Prefer songs over videos: a tapped video starts as its song version when YouTube Music has one.
+        if (!restoringQueue &&
+            songVersionSwapper.lookUpBeforeStart(queue.preloadItem) { song ->
+                playQueue(if (song != null) queue.withPreloadItem(song) else queue, playWhenReady)
+            }
+        ) {
+            return
+        }
+
         currentQueue = queue
         queueTitle = null
         playedLog.clear()
@@ -2176,6 +2204,7 @@ class MusicService :
                         val shufflePlaylistFirst = dataStore.get(ShufflePlaylistFirstKey, false)
                         applyShuffleOrder(player.currentMediaItemIndex, player.mediaItemCount, shufflePlaylistFirst, played)
                     }
+                    showRadioStartedToast()
                 }
 
                 currentQueue = radioQueue
@@ -2196,6 +2225,7 @@ class MusicService :
                                     .filter { it.id != currentMediaId }
                                     .map { it.toMediaItem() }
                                     .filterExplicit(cachedHideExplicit)
+                                    .filterNot { AiArtistBlocklist.isBlocked(it) }
                                     .filterVideoSongs(cachedHideVideoSongs)
 
                             if (radioItems.isNotEmpty()) {
@@ -2213,6 +2243,7 @@ class MusicService :
                                         played,
                                     )
                                 }
+                                showRadioStartedToast()
                             }
                         }
                     }
@@ -2564,6 +2595,19 @@ class MusicService :
             listenTogetherManager.role.value == com.metrolist.music.listentogether.RoomRole.GUEST
         }.getOrDefault(false)
 
+    // "Prefer songs over videos" while playing, see SongVersionSwapper.
+    private val songVersionSwapper by lazy {
+        SongVersionSwapper(
+            scope = scope,
+            player = { player },
+            enabled = dataStore.data.map { it[com.metrolist.music.constants.PreferOfficialSongsKey] ?: true },
+            canSwap = { castConnectionHandler?.isCasting?.value != true && !isListenTogetherGuest() },
+            isDownloaded = { id ->
+                downloadUtil.downloads.value[id]?.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED
+            },
+        )
+    }
+
     private fun ensureUpcomingSongs() {
         if (taskCleared || !playerInitialized.value) return
         if (upcomingFillJob?.isActive == true || loadingQueue != null) return
@@ -2609,6 +2653,7 @@ class MusicService :
                         }
                     page
                         .filterExplicit(cachedHideExplicit)
+                        .filterNot { AiArtistBlocklist.isBlocked(it) }
                         .filterVideoSongs(cachedHideVideoSongs)
                         .forEach { item ->
                             if (item.metadata?.isEpisode != true && known.add(item.mediaId)) found.add(item)
@@ -2640,13 +2685,17 @@ class MusicService :
         return null
     }
 
+    private fun showRadioStartedToast() {
+        Toast.makeText(this, getString(R.string.radio_started), Toast.LENGTH_SHORT).show()
+    }
+
     fun toggleStartRadio() {
         startRadioSeamlessly()
     }
 
     private fun seedLoudnessCacheFromPrefs() {
         val prefs = startupPrefs!!
-        normalizationEnabledCached = prefs[AudioNormalizationKey] ?: true
+        normalizationEnabledCached = prefs[AudioNormalizationKey] ?: false
         loudnessLevelCached = prefs[LoudnessLevelKey].toEnum(LoudnessLevel.BALANCED)
 
         Timber.tag(TAG).d(
@@ -2697,17 +2746,29 @@ class MusicService :
         }
 
         if (updateCache) {
+            if (armedNextSongMediaId == mediaId) {
+                armedNextSongMediaId = null
+                processor.clearNextSongGain()
+            }
             cachedNormalizationMediaId = mediaId
             cachedNormalizationGainMb = gain
             cachedNormalizationEnabled = gain != null
         }
     }
 
+    /** The song whose gain is armed to switch in at the first sample of its audio. */
+    private var armedNextSongMediaId: String? = null
+
     /** Loudness of songs loaded ahead of the current one, by media id. */
     private val upcomingLoudness = java.util.concurrent.ConcurrentHashMap<String, Pair<Double?, Double?>>()
 
     /** Sets the new song's gain at once when it starts, if its loudness is already known. */
     private fun applyUpcomingNormalizationNow(mediaId: String?) {
+        if (::player.isInitialized && armedNextSongMediaId != null && armedNextSongMediaId != mediaId) {
+            // Skipped somewhere else: the armed gain belongs to a song that is no longer next.
+            armedNextSongMediaId = null
+            playerNormalizationProcessors[player]?.clearNextSongGain()
+        }
         if (mediaId == null || isCrossfading || !::player.isInitialized) return
         val (loudnessDb, perceptualLoudnessDb) = upcomingLoudness.remove(mediaId) ?: return
         val processor = playerNormalizationProcessors[player] ?: return
@@ -2739,6 +2800,23 @@ class MusicService :
             // moment it starts, instead of after a database read a few seconds in.
             if (loudnessDb != null || perceptualLoudnessDb != null) {
                 upcomingLoudness[mediaId] = loudnessDb to perceptualLoudnessDb
+            }
+            // Also hand the gain to the audio processor so it switches at the very first sample
+            // of the next song, not when the app hears about the song change a moment later.
+            val nextIndex = targetPlayer.nextMediaItemIndex
+            val isNextSong = nextIndex != C.INDEX_UNSET &&
+                targetPlayer.getMediaItemAt(nextIndex).mediaId == mediaId
+            if (isNextSong && ::player.isInitialized && targetPlayer === player && !isCrossfading) {
+                val gain =
+                    if (normalizationEnabledCached && (loudnessDb != null || perceptualLoudnessDb != null)) {
+                        normalizationGainMb(loudnessDb, perceptualLoudnessDb, loudnessLevelCached.targetLufs)
+                    } else {
+                        null
+                    }
+                if (gain != null) {
+                    processor.setNextSongGain(gain)
+                    armedNextSongMediaId = mediaId
+                }
             }
             return@runBlocking
         }
@@ -2806,7 +2884,11 @@ class MusicService :
                         cachedNormalizationMediaId = null
                         cachedNormalizationGainMb = null
                         cachedNormalizationEnabled = false
-                        playerNormalizationProcessors.values.forEach { it.enabled = false }
+                        armedNextSongMediaId = null
+                        playerNormalizationProcessors.values.forEach {
+                            it.clearNextSongGain()
+                            it.enabled = false
+                        }
                     }
                 }
             } catch (e: CancellationException) {
@@ -3016,6 +3098,7 @@ class MusicService :
                         currentQueue
                             .nextPage()
                             .filterExplicit(cachedHideExplicit)
+                            .let { items -> if (currentQueue is YouTubeQueue) items.filterNot { AiArtistBlocklist.isBlocked(it) } else items }
                             .filterVideoSongs(cachedHideVideoSongs)
                     }
                 if (player.playbackState != STATE_IDLE && mediaItems.isNotEmpty()) {
@@ -3213,6 +3296,7 @@ class MusicService :
             )
         ) {
             ensureUpcomingSongs()
+            songVersionSwapper.check()
         }
 
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
@@ -4538,7 +4622,8 @@ class MusicService :
             context: Context,
             enableFloatOutput: Boolean,
             enableAudioTrackPlaybackParams: Boolean,
-        ) = DefaultAudioSink
+        ): AudioSink = object : ForwardingAudioSink(
+            DefaultAudioSink
             .Builder(this@MusicService)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(useAudioTrackPlaybackParams)
@@ -4552,7 +4637,38 @@ class MusicService :
                     SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                     SonicAudioProcessor(),
                 ),
-            ).build()
+            ).build(),
+        ) {
+            // True after a seek or skip clears the audio, until new audio arrives. A new stream
+            // set up in that window is not a seamless song change, so it must not switch gain.
+            @Volatile private var flushedSinceLastBuffer = true
+
+            override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
+                // During continuous playback this means the next song's audio is about to start:
+                // let normalization switch gain at exactly that point.
+                if (!flushedSinceLastBuffer) normalizationProcessor.onNewStreamConfigured()
+                super.configure(inputFormat, specifiedBufferSize, outputChannels)
+            }
+
+            override fun handleBuffer(
+                buffer: java.nio.ByteBuffer,
+                presentationTimeUs: Long,
+                encodedAccessUnitCount: Int,
+            ): Boolean {
+                flushedSinceLastBuffer = false
+                return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+            }
+
+            override fun flush() {
+                flushedSinceLastBuffer = true
+                super.flush()
+            }
+
+            override fun reset() {
+                flushedSinceLastBuffer = true
+                super.reset()
+            }
+        }
     }
 
     override fun onPlaybackStatsReady(
@@ -5317,7 +5433,8 @@ class MusicService :
      * Initialize Google Cast support
      */
     private fun initializeCast() {
-        if (dataStore.get(com.metrolist.music.constants.EnableGoogleCastKey, true)) {
+        // Cast can no longer be turned off in the settings (an old "off" value is ignored).
+        run {
             try {
                 castConnectionHandler = CastConnectionHandler(this, scope, this)
                 castConnectionHandler?.initialize()

@@ -1,5 +1,6 @@
 package com.metrolist.innertube.pages
 
+import com.metrolist.innertube.models.ContentBlocker
 import com.metrolist.innertube.models.Album
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -21,17 +22,24 @@ data class SearchSummary(
     val items: List<YTItem>,
 )
 
+/** YouTube's spelling fix for a search. [autoCorrected]: the results are already for [query]. */
+data class SearchSpellCorrection(
+    val query: String,
+    val autoCorrected: Boolean,
+)
+
 data class SearchSummaryPage(
     val summaries: List<SearchSummary>,
+    val spellCorrection: SearchSpellCorrection? = null,
 ) {
     fun filterExplicit(enabled: Boolean) =
-        if (enabled) {
+        if (enabled || ContentBlocker.active) {
             SearchSummaryPage(
                 summaries.mapNotNull { s ->
                     SearchSummary(
                         title = s.title,
                         items =
-                            s.items.filterExplicit().ifEmpty {
+                            s.items.filterExplicit(enabled).ifEmpty {
                                 return@mapNotNull null
                             },
                     )
@@ -59,13 +67,13 @@ data class SearchSummaryPage(
         }
 
     fun filterYoutubeShorts(enabled: Boolean = false) =
-        if (enabled) {
+        if (enabled || com.metrolist.innertube.models.NonMusicalVideos.hide) {
             SearchSummaryPage(
                 summaries.mapNotNull { s ->
                     SearchSummary(
                         title = s.title,
                         items =
-                            s.items.filterYoutubeShorts(true).ifEmpty {
+                            s.items.filterYoutubeShorts(enabled).ifEmpty {
                                 return@mapNotNull null
                             },
                     )

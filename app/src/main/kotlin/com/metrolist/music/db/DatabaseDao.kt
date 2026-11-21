@@ -86,6 +86,14 @@ interface DatabaseDao {
     @Query("SELECT id FROM song WHERE liked")
     suspend fun likedSongIds(): List<String>
 
+    /** Songs the user has in the library, liked or listened to (used to rank search results). */
+    @Query("SELECT id FROM song WHERE inLibrary IS NOT NULL OR liked OR totalPlayTime > 0")
+    suspend fun knownSongIds(): List<String>
+
+    /** The same songs as [knownSongIds], as entities (to look for them in search, see OnlineSearchViewModel). */
+    @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL OR liked OR totalPlayTime > 0")
+    suspend fun knownSongEntities(): List<SongEntity>
+
     @Query("SELECT * FROM song WHERE inLibrary IS NOT NULL ORDER BY title")
     suspend fun librarySongEntitiesByNameAsc(): List<SongEntity>
 

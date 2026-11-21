@@ -37,6 +37,49 @@ class VolumeNormalizationAudioProcessor : BaseAudioProcessor() {
         }
     }
 
+    // Gain for the song that plays next. Audio is processed a little ahead of what you hear, so
+    // the next song's first seconds pass through here before the app is told the song changed.
+    // Switching at the exact point where its audio starts keeps them from playing at the old level.
+    private var nextSongArmed = false
+    private var nextSongGainMb: Int? = null
+    private var nextSongBoundaryReached = false
+
+    /** Sets the gain to use from the first sample of the next song (null = no normalization). */
+    @Synchronized
+    fun setNextSongGain(gainMb: Int?) {
+        nextSongArmed = true
+        nextSongGainMb = gainMb
+        nextSongBoundaryReached = false
+    }
+
+    @Synchronized
+    fun clearNextSongGain() {
+        nextSongArmed = false
+        nextSongGainMb = null
+        nextSongBoundaryReached = false
+    }
+
+    /** Called when the audio output is set up for a new stream: the next flush starts that stream. */
+    @Synchronized
+    fun onNewStreamConfigured() {
+        if (nextSongArmed) nextSongBoundaryReached = true
+    }
+
+    @Synchronized
+    override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
+        if (!nextSongBoundaryReached) return
+        val gain = nextSongGainMb
+        if (gain != null) {
+            setTargetGain(gain)
+            enabled = true
+        } else {
+            setTargetGain(0)
+            enabled = false
+        }
+        Timber.tag(TAG).d("Next song started: gain switched to ${gain ?: 0} mB at its first sample")
+        clearNextSongGain()
+    }
+
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
         encoding = inputAudioFormat.encoding
         bytesPerSample =
@@ -131,6 +174,7 @@ class VolumeNormalizationAudioProcessor : BaseAudioProcessor() {
     }
 
     override fun onReset() {
+        clearNextSongGain()
         encoding = C.ENCODING_INVALID
         bytesPerSample = 0
     }

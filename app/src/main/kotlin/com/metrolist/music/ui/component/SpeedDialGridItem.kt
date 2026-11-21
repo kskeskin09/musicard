@@ -49,7 +49,7 @@ fun SpeedDialGridItem(
             thumbnailUrl = item.thumbnail?.resize(200, 200),
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(ThumbnailCornerRadius),
             modifier = Modifier.fillMaxSize()
         )
 

@@ -23,7 +23,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import kotlin.math.roundToInt
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -58,6 +57,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.tappableElement
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
@@ -792,6 +792,7 @@ class MainActivity : FragmentActivity() {
 
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
+                val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 // Tell the player which page is open (with its arguments), so a queue started
                 // there remembers where it came from ("Playing from").
@@ -967,7 +968,26 @@ class MainActivity : FragmentActivity() {
                 // The main tabs' header scrolls away with the page: first the page name, then the
                 // search bar; scrolling back brings it back the same way.
                 val headerMaxPx = with(density) { TopLevelHeaderHeight.toPx() }
-                var headerCollapsePx by remember { mutableFloatStateOf(0f) }
+                // Each tab keeps how far its header is scrolled away (TabStates.headerCollapse), and
+                // the header reads it for the page that is open in the same frame the page opens.
+                // (It used to be copied over a frame later, so a page you came back to first showed
+                // its whole header, search bar and all, and then jumped to where it should be.)
+                // It also follows changes a page makes itself, such as bringing the header back
+                // when its list is at the top (see HeaderFollowsList).
+                // The page the header was last shown for. While the header goes away it keeps that
+                // page's look (title, search bar, how far it was scrolled), instead of picking up the
+                // values of the page that is opening.
+                val headerRouteHolder = remember { arrayOfNulls<String>(1) }
+                if (shouldShowTopBar) headerRouteHolder[0] = currentRoute
+                val headerRoute = headerRouteHolder[0]
+                val headerOnHome = headerRoute == Screens.Home.route
+                val headerOnProfile = headerRoute == Screens.Profile.route
+                fun headerCollapsePx(): Float =
+                    headerRoute?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] } ?: 0f
+                // Going to another tab of the bottom bar (such as Search), the header fades out
+                // together with the page, so the Home title doesn't vanish at once with a dark band
+                // over the status bar. Other pages still drop it at once.
+                val headerFadesOut = !shouldShowTopBar && currentRoute in navigationItemRoutes
                 val latestRoute = androidx.compose.runtime.rememberUpdatedState(currentRoute)
                 val headerCollapseConnection =
                     remember(headerMaxPx) {
@@ -977,26 +997,16 @@ class MainActivity : FragmentActivity() {
                                 available: Offset,
                                 source: NestedScrollSource,
                             ): Offset {
-                                if (consumed.y != 0f) {
-                                    headerCollapsePx = (headerCollapsePx - consumed.y).coerceIn(0f, headerMaxPx)
-                                    latestRoute.value?.let { com.metrolist.music.ui.utils.TabStates.headerCollapse[it] = headerCollapsePx }
+                                val route = latestRoute.value
+                                if (consumed.y != 0f && route != null) {
+                                    val collapse = com.metrolist.music.ui.utils.TabStates.headerCollapse[route] ?: 0f
+                                    com.metrolist.music.ui.utils.TabStates.headerCollapse[route] =
+                                        (collapse - consumed.y).coerceIn(0f, headerMaxPx)
                                 }
                                 return Offset.Zero
                             }
                         }
                     }
-                // Each tab's header comes back as far scrolled away as its page was.
-                // It also follows changes a page makes itself, such as bringing the header back
-                // when its list is at the top (see HeaderFollowsList).
-                LaunchedEffect(currentRoute) {
-                    val route = currentRoute
-                    if (route == null) {
-                        headerCollapsePx = 0f
-                    } else {
-                        androidx.compose.runtime.snapshotFlow { com.metrolist.music.ui.utils.TabStates.headerCollapse[route] ?: 0f }
-                            .collect { headerCollapsePx = it }
-                    }
-                }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -1150,17 +1160,15 @@ class MainActivity : FragmentActivity() {
                     onDispose { removeOnNewIntentListener(listener) }
                 }
 
-                val currentTitleRes =
-                    remember(navBackStackEntry) {
-                        when (navBackStackEntry?.destination?.route) {
-                            Screens.Home.route -> R.string.home
-                            Screens.Explore.route -> R.string.explore
-                            Screens.Profile.route -> R.string.profile_tab
-                            Screens.Search.route -> R.string.search
-                            Screens.Library.route -> R.string.filter_library
-                            Screens.ListenTogether.route -> R.string.together
-                            else -> null
-                        }
+                fun headerTitleRes(route: String?): Int? =
+                    when (route) {
+                        Screens.Home.route -> R.string.home
+                        Screens.Explore.route -> R.string.explore
+                        Screens.Profile.route -> R.string.profile_tab
+                        Screens.Search.route -> R.string.search
+                        Screens.Library.route -> R.string.filter_library
+                        Screens.ListenTogether.route -> R.string.together
+                        else -> null
                     }
 
                 var showAccountDialog by remember { mutableStateOf(false) }
@@ -1172,6 +1180,11 @@ class MainActivity : FragmentActivity() {
                 val profileCrop = ProfileCrop(profileZoom, profileOffsetX, profileOffsetY)
                 val (profileName, setProfileName) =
                     rememberPreference(com.metrolist.music.constants.ListenTogetherUsernameKey, defaultValue = "")
+                // Signed in with YouTube: the YouTube picture is shown and can't be changed here.
+                val profileCookie by rememberPreference(com.metrolist.music.constants.InnerTubeCookieKey, defaultValue = "")
+                val isYouTubeLoggedIn =
+                    remember(profileCookie) { "SAPISID" in com.metrolist.innertube.utils.parseCookieString(profileCookie) }
+                val useOwnPicture = !isYouTubeLoggedIn && profileImageUrl.isNotBlank()
 
                 val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
                 val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
@@ -1237,7 +1250,7 @@ class MainActivity : FragmentActivity() {
                                 animationSpec = if (shouldShowTopBar) androidx.compose.animation.core.snap() else tween(320),
                                 label = "statusScrim",
                             )
-                            if (!shouldShowTopBar && statusScrimAlpha > 0f) {
+                            if (!shouldShowTopBar && !headerFadesOut && statusScrimAlpha > 0f) {
                                 Box(
                                     Modifier
                                         .fillMaxWidth()
@@ -1249,7 +1262,7 @@ class MainActivity : FragmentActivity() {
                             AnimatedVisibility(
                                 visible = shouldShowTopBar,
                                 enter = fadeIn(animationSpec = tween(durationMillis = 200)),
-                                exit = ExitTransition.None,
+                                exit = if (headerFadesOut) fadeOut(animationSpec = tween(durationMillis = 200)) else ExitTransition.None,
                             ) {
                                 // Main tabs: large page name, profile picture and a search pill, on the
                                 // page background (below the status bar).
@@ -1260,9 +1273,9 @@ class MainActivity : FragmentActivity() {
                                         contentColor = MaterialTheme.colorScheme.onSurface,
                                     )
                                 TopLevelHeader(
-                                    title = currentTitleRes?.let { stringResource(it) } ?: "",
-                                    profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl,
-                                    profileCrop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                                    title = headerTitleRes(headerRoute)?.let { stringResource(it) } ?: "",
+                                    profileImageUrl = (if (useOwnPicture) profileImageUrl else accountImageUrl),
+                                    profileCrop = if (useOwnPicture) profileCrop else ProfileCrop(),
                                     showBadge = latestVersionName != BuildConfig.BASE_VERSION_NAME,
                                     // History, stats, Listen Together and the account settings are on the
                                     // Profile tab now.
@@ -1277,7 +1290,7 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onProfileLongClick = { showProfilePictureDialog = true },
                                     showProfile = false,
-                                    showSearch = !onProfileTab && !onHomeTab,
+                                    showSearch = !headerOnProfile && !headerOnHome,
                                     // Tapping the page name works like tapping its tab again.
                                     onTitleClick = {
                                         navController.currentBackStackEntry?.savedStateHandle?.set("scrollToTop", true)
@@ -1293,7 +1306,7 @@ class MainActivity : FragmentActivity() {
                                     modifier =
                                         Modifier
                                             .background(
-                                                if (onHomeTab) {
+                                                if (headerOnHome) {
                                                     // The page shows through toward the bottom of the header.
                                                     val pageColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
                                                     Brush.verticalGradient(
@@ -1311,7 +1324,7 @@ class MainActivity : FragmentActivity() {
                                                 // Shorter by how far the page has scrolled, with the
                                                 // content moved up so its top part goes first.
                                                 val placeable = measurable.measure(constraints)
-                                                val cut = if (onHomeTab) 0 else headerCollapsePx.roundToInt().coerceAtMost(placeable.height)
+                                                val cut = if (headerOnHome) 0 else headerCollapsePx().roundToInt().coerceAtMost(placeable.height)
                                                 layout(placeable.width, placeable.height - cut) {
                                                     placeable.place(0, -cut)
                                                 }
@@ -1371,7 +1384,6 @@ class MainActivity : FragmentActivity() {
                                                 // Tapping the tab again starts it over: back to the top with the
                                                 // header (and its search bar) shown and the filters cleared.
                                                 com.metrolist.music.ui.utils.TabStates.reset(screen.route)
-                                                headerCollapsePx = 0f
                                             } else {
                                                 targetEntry?.savedStateHandle?.set("scrollToTop", true)
                                             }
@@ -1422,8 +1434,9 @@ class MainActivity : FragmentActivity() {
                                     if (miniPlayerBlackout && bottomFadeHeight > 14.dp) {
                                         // Cover-tinted pages (stats, playlists, albums) fade into their own color.
                                         val fadeColor =
-                                            com.metrolist.music.ui.theme.PageFadeColors.current
-                                                ?: if (pureBlack) Color.Black else MaterialTheme.colorScheme.background
+                                            com.metrolist.music.ui.theme.PageFadeColors.blend(
+                                                if (pureBlack) Color.Black else MaterialTheme.colorScheme.background,
+                                            )
                                         val total = bottomFadeHeight.value
                                         val rampEnd = (BottomFadeRamp.value / total).coerceIn(0f, 1f)
                                         // On shorter fades (no tab bar) the curve is cut where Home's would be
@@ -1474,6 +1487,33 @@ class MainActivity : FragmentActivity() {
                                             )
                                         }
                                     }
+                                    // Settings pages: when Android shows its button bar (back, home,
+                                    // recents), the strip behind those buttons is solid black instead
+                                    // of letting the list show through. Gesture navigation has no
+                                    // tappable bar, so nothing is drawn there. The full player opens
+                                    // over it.
+                                    val onSettingsPage =
+                                        currentRoute == "settings" || currentRoute?.startsWith("settings/") == true
+                                    val buttonBarHeight =
+                                        with(density) {
+                                            WindowInsets.tappableElement.getBottom(density).toDp()
+                                        }
+                                    val settingsNavScrimAlpha by androidx.compose.animation.core.animateFloatAsState(
+                                        targetValue = if (onSettingsPage) 1f else 0f,
+                                        animationSpec = tween(220),
+                                        label = "settingsNavScrim",
+                                    )
+                                    if (buttonBarHeight > 0.dp && settingsNavScrimAlpha > 0f) {
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .fillMaxWidth()
+                                                    .height(buttonBarHeight)
+                                                    .graphicsLayer { alpha = settingsNavScrimAlpha }
+                                                    .background(Color.Black),
+                                        )
+                                    }
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
@@ -1492,11 +1532,11 @@ class MainActivity : FragmentActivity() {
                                         onHomeLongHold = { showAccountDialog = true },
                                         onProfileLongClick = { showProfilePictureDialog = true },
                                         profileIcon = { size ->
-                                            val avatarUrl = profileImageUrl.takeIf { it.isNotBlank() } ?: accountImageUrl
+                                            val avatarUrl = (if (useOwnPicture) profileImageUrl else accountImageUrl)
                                             if (avatarUrl != null) {
                                                 com.metrolist.music.ui.component.CroppedProfileImage(
                                                     url = avatarUrl,
-                                                    crop = if (profileImageUrl.isNotBlank()) profileCrop else ProfileCrop(),
+                                                    crop = if (useOwnPicture) profileCrop else ProfileCrop(),
                                                     modifier = Modifier.size(size).clip(CircleShape),
                                                 )
                                             } else {
@@ -1720,6 +1760,8 @@ class MainActivity : FragmentActivity() {
                             initialUrl = profileImageUrl,
                             initialCrop = profileCrop,
                             initialName = profileName,
+                            youtubeName = if (isYouTubeLoggedIn) accountName else null,
+                            youtubeImageUrl = accountImageUrl,
                             onDismiss = { showProfilePictureDialog = false },
                             onSave = { url, crop, name ->
                                 setProfileName(name)

@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 /**
  * Blurs the bottom of the content behind the tab bar and the mini player. The blur grows in from
  * [startFromBottomPx] (measured up from the bottom edge, the same point where the darkening
- * starts): light at first, getting stronger over 40 dp, then full. Needs Android 12 for the blur itself;
+ * starts): light at first, slowly getting stronger over 64 dp, then full. Needs Android 12 for the blur itself;
  * older versions draw the content unchanged.
  */
 fun Modifier.bottomEdgeBlur(
@@ -49,7 +49,10 @@ fun Modifier.bottomEdgeBlur(
 private var blurBroken = false
 
 // Levels of the soft start at the top of the blurred area.
-private const val BlurSteps = 6
+private const val BlurSteps = 8
+
+// How far the soft start reaches down before the blur is full.
+private val BlurRamp = 64.dp
 
 @Composable
 private fun Modifier.bottomEdgeBlurImpl(
@@ -82,7 +85,7 @@ private fun Modifier.bottomEdgeBlurImpl(
             // Level k (k = 0 sharp .. BlurSteps full) is strongest at k * stepHeight and fades
             // into its neighbours over one step on each side. The fades always add up to one and
             // are added together (Plus), so the blur grows smoothly instead of in visible bands.
-            val ramp = 40.dp.toPx().coerceAtMost(height)
+            val ramp = BlurRamp.toPx().coerceAtMost(height)
             val stepHeight = ramp / BlurSteps
             val canvas = drawContext.canvas
             val plus = Paint().apply { blendMode = BlendMode.Plus }
@@ -117,10 +120,14 @@ private fun Modifier.bottomEdgeBlurImpl(
                         BlurSteps -> arrayOf(0f to Color.Transparent, peakAt to Color.Black, 1f to Color.Black)
                         else -> arrayOf(0f to Color.Transparent, peakAt to Color.Black, 1f to Color.Transparent)
                     }
+                // The mask reaches 2 px past the level on both sides (the gradient keeps its end
+                // color there). Ending exactly on the level's edge, which mostly falls between
+                // two pixels, left that pixel row half unmasked, so the levels added up to a
+                // thin bright line at every step.
                 drawRect(
                     brush = Brush.verticalGradient(*stops, startY = top + from, endY = top + to),
-                    topLeft = Offset(0f, top + from),
-                    size = Size(width, to - from),
+                    topLeft = Offset(0f, top + from - 2f),
+                    size = Size(width, to - from + 4f),
                     blendMode = BlendMode.DstIn,
                 )
                 canvas.restore()

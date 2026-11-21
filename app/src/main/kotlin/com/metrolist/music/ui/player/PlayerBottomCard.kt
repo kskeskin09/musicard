@@ -1730,8 +1730,12 @@ private fun SweepingWordsLine(
                                 val edgeEnd = fillX
                                 val edgeStart = (fillX - edgeWidthPx).coerceAtLeast(left).coerceAtMost(edgeEnd - 0.5f)
                                 clipRect(left, top, right, bottom) {
+                                    // alpha = 1f on purpose: left out, the text keeps the alpha of the
+                                    // dim draw just before (they share one paint), so the glow showed
+                                    // grey and only turned white once the whole word was sung.
                                     drawText(
                                         textLayoutResult = textLayout,
+                                        alpha = 1f,
                                         brush =
                                             Brush.horizontalGradient(
                                                 0f to bright,
@@ -1781,6 +1785,7 @@ private fun SweepingWordsLine(
                                 val edgeStart = (letter.fillX - edgeWidthPx).coerceAtLeast(letter.wordLeft).coerceAtMost(edgeEnd - 0.5f)
                                 drawText(
                                     textLayoutResult = textLayout,
+                                    alpha = 1f,
                                     brush =
                                         Brush.horizontalGradient(
                                             0f to bright,

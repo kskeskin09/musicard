@@ -62,6 +62,16 @@ data class ItemSectionRenderer(
         val musicShelfRenderer: MusicShelfRenderer? = null,
         val musicPlaylistShelfRenderer: MusicPlaylistShelfRenderer? = null,
         val gridRenderer: GridRenderer? = null,
+        // Spelling notes at the top of search results: "Did you mean: X" (results are still for
+        // what was typed) and "Showing results for: X" (YouTube already searched X instead).
+        val didYouMeanRenderer: SpellCorrectionRenderer? = null,
+        val showingResultsForRenderer: SpellCorrectionRenderer? = null,
+    )
+
+    @Serializable
+    data class SpellCorrectionRenderer(
+        val correctedQuery: Runs? = null,
+        val correctedQueryEndpoint: NavigationEndpoint? = null,
     )
 
     @Serializable

@@ -81,7 +81,7 @@ fun WrappedTopArtistScreen(topArtist: Artist?, isVisible: Boolean) {
                 contentDescription = stringResource(id = R.string.wrapped_top_artist_image_content_description),
                 modifier = Modifier
                     .size(200.dp)
-                    .clip(CircleShape),
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)),
                 contentScale = ContentScale.Crop
             )
         }

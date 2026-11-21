@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_new_for_you">New songs for you</string>
+    <string name="discovery_shuffle">New discoveries</string>
+    <string name="home_new_for_you_label">Songs you haven\'t played yet</string>
+    <string name="home_artist_spotlight">Artist spotlight</string>
+    <string name="home_new_from_artists">New from your artists</string>
+    <string name="home_todays_vibe">Today\'s vibe</string>
+    <string name="search_popular">Popular</string>
+    <string name="search_popular_in_country">Popular in %1$s</string>
+    <string name="search_popular_in_world">Popular in the World</string>
+</resources>

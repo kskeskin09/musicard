@@ -1,0 +1,166 @@
+/**
+ * Metrolist Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
+package com.metrolist.music.viewmodels
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.filterExplicit
+import com.metrolist.innertube.models.filterVideoSongs
+import com.metrolist.innertube.pages.ChartsPage
+import com.metrolist.music.constants.HideExplicitKey
+import com.metrolist.music.constants.HideVideoSongsKey
+import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.get
+import com.metrolist.music.utils.reportException
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import java.util.Locale
+import javax.inject.Inject
+
+/** Popular songs for the bottom of the Search tab: in the content country, and in the world. */
+@HiltViewModel
+class PopularViewModel
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) : ViewModel() {
+        /** The content country's name in the app's language, e.g. "Türkiye". */
+        val countryName: String =
+            runCatching {
+                val appLocale = context.resources.configuration.locales[0]
+                Locale("", YouTube.locale.gl).getDisplayCountry(appLocale)
+            }.getOrNull().orEmpty().ifBlank { YouTube.locale.gl }
+
+        val countrySongs = MutableStateFlow<List<SongItem>?>(null)
+        val worldSongs = MutableStateFlow<List<SongItem>?>(null)
+
+        init {
+            viewModelScope.launch(Dispatchers.IO) {
+                val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+                // Charts change once a day: reuse what was loaded in the last few hours.
+                countryCache?.takeIf { it.isFresh(YouTube.locale.gl) }?.let { cached ->
+                    countrySongs.value = cached.songs.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).take(20)
+                    return@launch
+                }
+                val fromCharts =
+                    YouTube.getChartsPage().onFailure { reportException(it) }.getOrNull()?.let { page ->
+                        // The country's top songs first, then its trending songs.
+                        page.sections
+                            .sortedBy { section ->
+                                when (section.chartType) {
+                                    ChartsPage.ChartType.TOP -> 0
+                                    ChartsPage.ChartType.TRENDING -> 1
+                                    else -> 2
+                                }
+                            }.flatMap { it.items }
+                            .filterIsInstance<SongItem>()
+                    }.orEmpty()
+                // The Charts page is empty or holds no songs in some countries: then use YouTube
+                // Music's own "Top 100 Songs <country>" chart playlist.
+                val songs = fromCharts.ifEmpty { countryChartPlaylistSongs() }
+                if (songs.isNotEmpty()) countryCache = CachedSongs(YouTube.locale.gl, System.currentTimeMillis(), songs)
+                countrySongs.value =
+                    songs
+                        .distinctBy { it.id }
+                        .filterExplicit(hideExplicit)
+                        .filterVideoSongs(hideVideoSongs)
+                        .take(20)
+            }
+
+            viewModelScope.launch(Dispatchers.IO) {
+                val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+                worldCache?.takeIf { it.isFresh("") }?.let { cached ->
+                    worldSongs.value = cached.songs.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).take(20)
+                    return@launch
+                }
+                // YouTube Music's "Top 100 Songs Global" chart playlist.
+                YouTube.playlist(GLOBAL_TOP_SONGS_PLAYLIST).onSuccess { page ->
+                    if (page.songs.isNotEmpty()) worldCache = CachedSongs("", System.currentTimeMillis(), page.songs.distinctBy { it.id })
+                    worldSongs.value =
+                        page.songs
+                            .distinctBy { it.id }
+                            .filterExplicit(hideExplicit)
+                            .filterVideoSongs(hideVideoSongs)
+                            .take(20)
+                }.onFailure {
+                    worldSongs.value = emptyList()
+                    reportException(it)
+                }
+            }
+        }
+
+        /**
+         * The country's songs from YouTube Music's own chart playlists. The Charts page usually lists
+         * only playlists ("Top 100 Songs …", "Top 100 Music Videos …", "Trending 20 …"), no songs.
+         */
+        private suspend fun countryChartPlaylistSongs(): List<SongItem> {
+            val playlists =
+                YouTube.chartPlaylists().onFailure { reportException(it) }.getOrNull().orEmpty()
+                    .filterNot { (title, id) -> id == GLOBAL_TOP_SONGS_PLAYLIST || title.contains("Global", ignoreCase = true) }
+            fun rank(title: String) =
+                when {
+                    title.contains("Song", ignoreCase = true) -> 0
+                    title.contains("Video", ignoreCase = true) -> 1
+                    title.contains("Trending", ignoreCase = true) -> 2
+                    else -> 3
+                }
+            val fromChartPlaylists =
+                playlists
+                    .sortedBy { rank(it.first) }
+                    .firstOrNull { rank(it.first) < 3 }
+                    ?.let { (_, id) -> YouTube.playlist(id).getOrNull()?.songs }
+                    .orEmpty()
+            if (fromChartPlaylists.isNotEmpty()) return fromChartPlaylists
+            return searchedChartPlaylistSongs()
+        }
+
+        private suspend fun searchedChartPlaylistSongs(): List<SongItem> {
+            val gl = YouTube.locale.gl
+            val englishName = Locale("", gl).getDisplayCountry(Locale.ENGLISH).ifBlank { return emptyList() }
+            val playlist =
+                YouTube
+                    .search("Top 100 Songs $englishName", YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST)
+                    .getOrNull()
+                    ?.items
+                    ?.filterIsInstance<com.metrolist.innertube.models.PlaylistItem>()
+                    ?.firstOrNull { item ->
+                        // Countries can go by another English name ("Türkiye"/"Turkey"), so only
+                        // ask for a "Top … Songs" chart made by YouTube Music itself.
+                        item.title.contains("Top", ignoreCase = true) &&
+                            item.title.contains("Song", ignoreCase = true) &&
+                            !item.title.contains("Global", ignoreCase = true) &&
+                            item.author?.name?.contains("YouTube", ignoreCase = true) != false
+                    } ?: return emptyList()
+            return YouTube.playlist(playlist.id).getOrNull()?.songs.orEmpty()
+        }
+
+        private class CachedSongs(
+            val country: String,
+            val loadedAt: Long,
+            val songs: List<SongItem>,
+        ) {
+            fun isFresh(currentCountry: String) =
+                country == currentCountry && System.currentTimeMillis() - loadedAt < CACHE_MS
+        }
+
+        private companion object {
+            const val GLOBAL_TOP_SONGS_PLAYLIST = "PL4fGSI1pDJn6puJdseH2Rt9sMvt9E2M4i"
+            const val CACHE_MS = 6 * 60 * 60 * 1000L
+
+            /** Kept while the app runs, so opening Search again doesn't load the charts again. */
+            @Volatile var countryCache: CachedSongs? = null
+
+            @Volatile var worldCache: CachedSongs? = null
+        }
+    }
