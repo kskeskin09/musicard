@@ -1,3 +1,77 @@
+---v13.12.0
+# Musicard 13.12.0
+
+## Highlights
+- Plays the song instead of the music video: when YouTube Music has the official song for a video, that version plays (Prefer songs over videos, on by default)
+- SponsorBlock: skip podcast ads and the non-music parts of music videos (both off by default)
+- Hide AI-generated artists (off by default), greyed-out unplayable songs in playlists, and import a playlist or album from a Spotify, Apple Music or Deezer link
+- A richer Home: New songs for you, Artist spotlight, New from your artists, Today's vibe (one column of four songs per vibe) and rows that snap card by card
+- Search: For You moods and genres, and Popular in your country and in the world at the bottom
+- First-run setup: pick your theme, player look, lyrics style and favorite artists over a live preview
+- Reset options under Import or Export: clear your contents, your settings, or everything
+- New search screen: Recent contents you opened, up to 5 suggestions and 5 recommendations while typing, and the Music filter shows songs and videos together in one list ranked by how well they match
+- The artist page follows the page background setting (Classic or Glass) with the artist picture, and artist pictures are rounded squares like albums and playlists
+
+## New features
+- Long-press the playing song (mini player or the big cover) to open its menu; long-press the Top result in search to open its options
+- When a list, album or Quick picks song runs out, suggested songs keep the queue going (follows the Auto load more setting)
+- Tap to recognize shows sound waves that grow with how loud the music is
+- Up next: swipe an upcoming song to the left to remove it from the queue
+- Playlists go on with suggested songs when they end, and "Playing from" then shows the playlist's name followed by Mix
+- Artist songs use the same sort row as playlists: Name, Date added (newest / oldest), where Date added is when you added the song to your library
+- Hide non-musical videos (off by default) in a new Songs and videos group under Content
+- Home shuffle mostly plays New discoveries: songs you have never played and don't have in your library
+- "Radio started!" shows once a radio has really started
+- Player button & text colors: with Background color, the song title, artist, lyrics and Up next follow the song's color too
+- Signed in with YouTube, the profile edit window shows your YouTube name and picture (change them on YouTube)
+
+## Fixes and improvements
+- Shuffle only mixes the songs still to come: the songs you already played keep their order, also when more songs load
+- Up next always shows the next song to play, also right after turning shuffle on or off
+- Starting a radio from a song no longer leaves its playlist's Play button on Pause
+- The blur under the mini player grows smoothly instead of in layers, and no longer flickers while scrolling
+- Sliders in sheets can be dragged without moving the sheet
+- Swiping songs in the player keeps it paused if it was paused, and the mini player no longer flashes another song when a swipe lands
+- YouTube song sections on Home snap column by column like Quick picks
+- Quick picks stay on Home after a reset or a fresh install, filled from your favorite artists and the charts
+- Album and playlist covers are as big and round as the player's album art
+- Lyrics: the line no longer flashes bright while a word starts
+- Settings regrouped: one Music player group, lyrics settings under Lyrics, a new Display group, and Auto download on like moved to Downloads
+- Slider style defaults to Classic, and Home order is no longer shuffled by default
+- The navigation and status bars stay visible by default, and Moods and genres on Home snaps one column at a time
+- No more stray "Music Player" notification when nothing is playing
+- Lyrics of the next song load ahead of time by default
+- Home has more room at the bottom, so the last section is not hidden behind the mini player
+- Glass background shows more of the cover instead of a zoomed-in crop
+- Mood chips on Home slide away when refreshing
+- Page colors stay when the app goes to the background, so the mini player no longer flashes the default color
+- The search bar no longer flashes when Settings opens from Profile
+- Coming back to a scrolled page no longer shows its search bar for a moment
+- The Home title no longer disappears behind a dark band when switching to Search
+- Leaving a playlist or album, the mini player changes color together with the page instead of before it
+- Search: the keyboard no longer closes by itself after you clear what you typed, Recent searches come after Recent contents, and the top result picks a better match; misspelled searches are corrected and songs from your library come first
+- The artist Subscribe button is always readable: in the accent color before you subscribe, white with "Subscribed" after
+- Song recognition is faster and more accurate: it records the music without voice filtering and tries at 4, 8 and 12 seconds, stopping at the first match
+- The Music Recognizer widget opens the recognition screen also when the app is already open, and the Turntable widget no longer stays blank
+- Audio normalization is off by default, and when on, the next song's level is set right as it starts instead of a moment later
+- Google Cast is always in the player's menu (the on/off setting is gone); the Cast button on the album art stays in the same place when the cover shrinks on pause
+- Swiping to the next or previous song while paused shows the cover at its paused size straight away
+- Up next: a swipe to the right on a song goes back to the lyrics
+- Modern lyrics: the white fill keeps up with the rising letters
+- Synced lyrics no longer show timestamps inside or at the end of a line, and a line stops highlighting at its own end time
+- Search: more recommendations while typing, the last row stays above the bottom bar and mini player, your own version of a song comes first when YouTube leaves it out, and Popular in your country shows again
+- The blur under the mini player and tab bar has a longer, smoother soft start with no lines between levels
+- Settings: solid black behind the 3-button navigation bar
+
+## Türkçe özet
+- Müzik videosu yerine şarkının kendisi çalıyor (Videolar yerine şarkıları tercih et, varsayılan açık)
+- SponsorBlock: podcast reklamlarını ve müzik videolarının müzik olmayan kısımlarını atlama (varsayılan kapalı)
+- Yapay zekâ sanatçılarını gizleme, çalınamayan şarkılar gri görünüyor, Spotify, Apple Music veya Deezer linkiyle çalma listesi aktarma
+- Ana sayfada Senin için yeni şarkılar, Sanatçı vitrini, Sanatçılarından yeni çıkanlar ve Bugünün havası; kartlar tek tek oturuyor
+- Aramada Sana özel ruh hâlleri ve türler, en altta ülkende ve dünyada popüler olanlar
+- İlk açılış kurulumu, Sıfırlama seçenekleri, yeni arama ekranı, karıştırmada çalınan şarkılar yerinde kalıyor, Sıradakiler'den kaydırarak silme
+- Müzik tanıma daha hızlı ve daha doğru, ses normalleştirme varsayılan olarak kapalı, çok sayıda düzeltme
+
 ---v13.11.0
 # Musicard 13.11.0
 
