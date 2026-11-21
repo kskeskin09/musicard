@@ -50,6 +50,11 @@ object MusicRecognitionService {
     private val _recognitionStatus = MutableStateFlow<RecognitionStatus>(RecognitionStatus.Ready)
     val recognitionStatus: StateFlow<RecognitionStatus> = _recognitionStatus.asStateFlow()
 
+    // Live microphone loudness while listening, 0f (silence) .. 1f (loud).
+    // Drives the sound-wave animation on the recognition screen.
+    private val _micLevel = MutableStateFlow(0f)
+    val micLevel: StateFlow<Float> = _micLevel.asStateFlow()
+
     /**
      * Set to true by the widget service after it has already persisted the result to the
      * database, so that [RecognitionScreen] skips the duplicate insert.
@@ -184,9 +189,11 @@ object MusicRecognitionService {
                 val bytesRead = audioRecord.read(buffer, 0, bufferSize)
                 if (bytesRead > 0) {
                     outputStream.write(buffer, 0, bytesRead)
+                    _micLevel.value = computeLevel(buffer, bytesRead)
                 }
             }
         } finally {
+            _micLevel.value = 0f
             audioRecord.stop()
             audioRecord.release()
         }
@@ -196,9 +203,29 @@ object MusicRecognitionService {
         outputStream.toByteArray()
     }
     
+    /**
+     * RMS loudness of a little-endian 16-bit PCM chunk, mapped from -55..-10 dBFS to 0..1.
+     */
+    private fun computeLevel(buffer: ByteArray, length: Int): Float {
+        val samples = length / 2
+        if (samples == 0) return 0f
+        var sum = 0.0
+        var i = 0
+        while (i + 1 < length) {
+            val sample = ((buffer[i + 1].toInt() shl 8) or (buffer[i].toInt() and 0xFF)).toShort().toDouble()
+            sum += sample * sample
+            i += 2
+        }
+        val rms = kotlin.math.sqrt(sum / samples)
+        if (rms < 1.0) return 0f
+        val db = 20.0 * kotlin.math.log10(rms / 32768.0)
+        return ((db + 55.0) / 45.0).coerceIn(0.0, 1.0).toFloat()
+    }
+
     fun reset() {
         Timber.tag(TAG).d("Recognition state reset")
         _recognitionStatus.value = RecognitionStatus.Ready
+        _micLevel.value = 0f
         resultSavedExternally = false
     }
 }
