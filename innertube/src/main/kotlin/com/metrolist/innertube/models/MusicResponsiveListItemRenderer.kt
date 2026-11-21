@@ -29,7 +29,23 @@ data class MusicResponsiveListItemRenderer(
     val playlistItemData: PlaylistItemData?,
     val overlay: Overlay?,
     val navigationEndpoint: NavigationEndpoint?,
+    val musicItemRendererDisplayPolicy: String? = null,
 ) {
+    /** YouTube Music draws the row grey (removed, private or region-blocked). */
+    val isGreyedOut: Boolean
+        get() = musicItemRendererDisplayPolicy == "MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"
+
+    /** A video id the row can be played with (ignores playlistItemData, which greyed rows keep). */
+    val playableVideoId: String?
+        get() = navigationEndpoint?.watchEndpoint?.videoId
+            ?: flexColumns.firstOrNull()
+                ?.musicResponsiveListItemFlexColumnRenderer
+                ?.text?.runs?.firstOrNull()
+                ?.navigationEndpoint?.watchEndpoint?.videoId
+            ?: overlay?.musicItemThumbnailOverlayRenderer
+                ?.content?.musicPlayButtonRenderer
+                ?.playNavigationEndpoint?.watchEndpoint?.videoId
+
     val isSong: Boolean
         get() = navigationEndpoint == null
             || navigationEndpoint.watchEndpoint != null

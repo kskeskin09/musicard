@@ -160,12 +160,14 @@ data class EpisodeItem(
     )
 }
 
-fun <T : YTItem> List<T>.filterExplicit(enabled: Boolean = true) =
-    if (enabled) {
-        filter { !it.explicit }
+fun <T : YTItem> List<T>.filterExplicit(enabled: Boolean = true): List<T> {
+    val blocked = ContentBlocker.isBlocked
+    return if (enabled || blocked != null) {
+        filter { !(enabled && it.explicit) && blocked?.invoke(it) != true }
     } else {
         this
     }
+}
 
 fun <T : YTItem> List<T>.filterVideoSongs(disableVideos: Boolean = false) =
     if (disableVideos) {

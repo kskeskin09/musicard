@@ -15,8 +15,48 @@ data class PlaylistPage(
     val songs: List<SongItem>,
     val songsContinuation: String?,
     val continuation: String?,
+    val unavailableSongs: List<UnavailableSong> = emptyList(),
 ) {
     companion object {
+        /**
+         * Same rule as Metrolist: a greyed row with no duration and nothing to play
+         * (or no title) cannot be played. Greyed rows that still have a duration play fine.
+         */
+        fun isUnavailable(renderer: MusicResponsiveListItemRenderer): Boolean {
+            if (!renderer.isGreyedOut) return false
+            val title = renderer.flexColumns.firstOrNull()
+                ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text
+            if (title.isNullOrBlank()) return true
+            val duration = renderer.fixedColumns?.firstOrNull()
+                ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text?.parseTime()
+            if ((duration ?: 0) > 0) return false
+            return renderer.playableVideoId.isNullOrBlank()
+        }
+
+        /** Splits playlist rows into playable songs and greyed rows kept for display only. */
+        fun parseRows(renderers: List<MusicResponsiveListItemRenderer>): Pair<List<SongItem>, List<UnavailableSong>> {
+            val songs = mutableListOf<SongItem>()
+            val unavailable = mutableListOf<UnavailableSong>()
+            for (renderer in renderers) {
+                if (isUnavailable(renderer)) {
+                    val runs = renderer.flexColumns.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
+                    val title = runs?.firstOrNull()?.text?.takeIf { it.isNotBlank() } ?: continue
+                    unavailable += UnavailableSong(
+                        title = title,
+                        subtitle = renderer.flexColumns.getOrNull(1)
+                            ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
+                            ?.joinToString("") { it.text }
+                            ?.takeIf { it.isNotBlank() },
+                        thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl(),
+                        afterSongId = songs.lastOrNull()?.id,
+                    )
+                } else {
+                    fromMusicResponsiveListItemRenderer(renderer)?.let { songs += it }
+                }
+            }
+            return songs to unavailable
+        }
+
         fun ownerFromDetailSubtitle(runs: List<Run>?): Artist? = ownerFromByline(runs?.splitBySeparator()?.getOrNull(1))
 
         fun ownerFromByline(runs: List<Run>?): Artist? =

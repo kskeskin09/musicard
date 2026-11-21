@@ -1005,6 +1005,10 @@ fun PlayerSettings(
 
         Spacer(modifier = Modifier.height(27.dp))
 
+        SponsorBlockSettingsGroup()
+
+        Spacer(modifier = Modifier.height(27.dp))
+
         Material3SettingsGroup(
             title = stringResource(R.string.misc),
             items = listOf(

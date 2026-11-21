@@ -15,6 +15,9 @@ import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.ArtistEntity
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.models.toMediaMetadata
+import com.metrolist.music.constants.ContentCountryKey
+import com.metrolist.music.utils.dataStore
+import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +36,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import timber.log.Timber
 import java.time.LocalDateTime
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -59,6 +63,8 @@ sealed interface ServiceImportState {
     data object Idle : ServiceImportState
     data object Reading : ServiceImportState
     data object Unsupported : ServiceImportState
+    data class LinkFailed(val reason: LinkImportException.Reason) : ServiceImportState
+    data class LinkReading(val service: LinkService, val loaded: Int) : ServiceImportState
     data class Ready(val bundle: ImportBundle) : ServiceImportState
     data class Running(
         val step: String,
@@ -106,6 +112,38 @@ class ServiceImportManager @Inject constructor(
                         ServiceImportState.Unsupported
                     },
                 )
+        }
+    }
+
+    /** Reads a pasted playlist or album link, then shows the same preview as a file. */
+    fun readLink(text: String) {
+        if (_state.value is ServiceImportState.Running) return
+        val link = LinkPlaylistImporter.extractLink(text)
+        val service = LinkPlaylistImporter.detect(link)
+        if (service == null) {
+            _state.value = ServiceImportState.LinkFailed(LinkImportException.Reason.NOT_A_LINK)
+            return
+        }
+        _state.value = ServiceImportState.LinkReading(service, 0)
+        job = scope.launch {
+            val country = context.dataStore.get(ContentCountryKey, "system")
+                .takeUnless { it == "system" }
+                ?: Locale.getDefault().country
+            _state.value = try {
+                val playlist = LinkPlaylistImporter.load(link, country) { loaded ->
+                    _state.value = ServiceImportState.LinkReading(service, loaded)
+                }
+                ServiceImportState.Ready(
+                    ImportBundle(source = ImportSource.LINK, playlists = listOf(playlist)),
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: LinkImportException) {
+                ServiceImportState.LinkFailed(e.reason)
+            } catch (e: Exception) {
+                Timber.w(e, "Link import failed")
+                ServiceImportState.LinkFailed(LinkImportException.Reason.NOT_FOUND)
+            }
         }
     }
 

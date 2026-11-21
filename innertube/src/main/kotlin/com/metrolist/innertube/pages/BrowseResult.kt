@@ -1,5 +1,6 @@
 package com.metrolist.innertube.pages
 
+import com.metrolist.innertube.models.ContentBlocker
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
@@ -15,14 +16,14 @@ data class BrowseResult(
     )
 
     fun filterExplicit(enabled: Boolean = true) =
-        if (enabled) {
+        if (enabled || ContentBlocker.active) {
             copy(
                 items =
                     items.mapNotNull {
                         it.copy(
                             items =
                                 it.items
-                                    .filterExplicit()
+                                    .filterExplicit(enabled)
                                     .ifEmpty { return@mapNotNull null },
                         )
                     },

@@ -1,5 +1,6 @@
 package com.metrolist.innertube.pages
 
+import com.metrolist.innertube.models.ContentBlocker
 import com.metrolist.innertube.models.Album
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -32,13 +33,13 @@ data class SearchSummaryPage(
     val spellCorrection: SearchSpellCorrection? = null,
 ) {
     fun filterExplicit(enabled: Boolean) =
-        if (enabled) {
+        if (enabled || ContentBlocker.active) {
             SearchSummaryPage(
                 summaries.mapNotNull { s ->
                     SearchSummary(
                         title = s.title,
                         items =
-                            s.items.filterExplicit().ifEmpty {
+                            s.items.filterExplicit(enabled).ifEmpty {
                                 return@mapNotNull null
                             },
                     )

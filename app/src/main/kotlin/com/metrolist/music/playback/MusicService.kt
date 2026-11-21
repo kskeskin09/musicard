@@ -202,6 +202,8 @@ import com.metrolist.music.playback.alarm.MusicAlarmScheduler
 import com.metrolist.music.playback.alarm.MusicAlarmStore
 import com.metrolist.music.playback.audio.SilenceDetectorAudioProcessor
 import com.metrolist.music.playback.queues.EmptyQueue
+import com.metrolist.music.playback.sponsorblock.observeSponsorBlockSkipping
+import com.metrolist.music.utils.aiblock.AiArtistBlocklist
 import com.metrolist.music.playback.queues.ListQueue
 import com.metrolist.music.playback.queues.Queue
 import com.metrolist.music.playback.queues.YouTubeQueue
@@ -1384,6 +1386,22 @@ class MusicService :
                 }
             }
         }
+
+        scope.launch {
+            observeSponsorBlockSkipping(
+                currentMetadata = currentMediaMetadata,
+                preferences = dataStore.data,
+                currentMediaId = { player.currentMediaItem?.mediaId },
+                isPlaying = { player.isPlaying },
+                positionMs = { player.currentPosition },
+                durationMs = { player.duration },
+                canSeek = { castConnectionHandler?.isCasting?.value != true && !isListenTogetherGuest() },
+                seekTo = { player.seekTo(it) },
+                onSkipped = {
+                    Toast.makeText(this@MusicService, R.string.sponsorblock_skipped, Toast.LENGTH_SHORT).show()
+                },
+            )
+        }
     }
 
     private fun createExoPlayer(prefs: Preferences? = null): ExoPlayer {
@@ -2177,6 +2195,7 @@ class MusicService :
                                     .filter { it.id != currentMediaId }
                                     .map { it.toMediaItem() }
                                     .filterExplicit(cachedHideExplicit)
+                                    .filterNot { AiArtistBlocklist.isBlocked(it) }
                                     .filterVideoSongs(cachedHideVideoSongs)
 
                             if (radioItems.isNotEmpty()) {
@@ -2598,6 +2617,7 @@ class MusicService :
                         }
                     page
                         .filterExplicit(cachedHideExplicit)
+                        .filterNot { AiArtistBlocklist.isBlocked(it) }
                         .filterVideoSongs(cachedHideVideoSongs)
                         .forEach { item ->
                             if (item.metadata?.isEpisode != true && known.add(item.mediaId)) found.add(item)
@@ -3027,6 +3047,7 @@ class MusicService :
                         currentQueue
                             .nextPage()
                             .filterExplicit(cachedHideExplicit)
+                            .let { items -> if (currentQueue is YouTubeQueue) items.filterNot { AiArtistBlocklist.isBlocked(it) } else items }
                             .filterVideoSongs(cachedHideVideoSongs)
                     }
                 if (player.playbackState != STATE_IDLE && mediaItems.isNotEmpty()) {

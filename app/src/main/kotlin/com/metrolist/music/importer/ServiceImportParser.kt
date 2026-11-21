@@ -18,7 +18,7 @@ import java.nio.charset.Charset
 import java.util.zip.ZipInputStream
 
 /** Where the file a user picked came from, as far as its contents tell. */
-enum class ImportSource { SPOTIFY, APPLE_MUSIC, FILE }
+enum class ImportSource { SPOTIFY, APPLE_MUSIC, FILE, LINK }
 
 data class ImportTrack(
     val title: String,

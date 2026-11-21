@@ -62,6 +62,7 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.importer.ImportBundle
 import com.metrolist.music.importer.ImportOptions
+import com.metrolist.music.importer.ImportSource
 import com.metrolist.music.importer.MatchQuality
 import com.metrolist.music.importer.MatchReportItem
 import com.metrolist.music.importer.ServiceImportManager
@@ -116,7 +117,10 @@ fun ImportFromServicesScreen(
                 onStart = { options ->
                     manager.start(s.bundle, options, ServiceImportManager.StepNames(stepSongs, stepAlbums, stepArtists))
                 },
-                onPickOther = { manager.reset(); pick() },
+                onPickOther = {
+                    manager.reset()
+                    if (s.bundle.source != ImportSource.LINK) pick()
+                },
             )
 
             is ServiceImportState.Running -> RunningSection(s, onCancel = manager::cancel)
@@ -156,6 +160,8 @@ fun ImportFromServicesScreen(
                         )
                     }
                 }
+
+                LinkImportCard(state = s, onSubmit = manager::readLink)
 
                 SourceCard(
                     badge = { BrandBadge(R.drawable.brand_spotify) },
@@ -384,6 +390,12 @@ private fun PreviewSection(
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
     )
+    if (bundle.source == ImportSource.LINK) {
+        bundle.playlists.firstOrNull()?.let { linked ->
+            Hint(stringResource(R.string.import_link_found, linked.name, linked.tracks.size))
+            Spacer(Modifier.height(4.dp))
+        }
+    }
     if (bundle.playlists.isNotEmpty()) {
         OptionRow(stringResource(R.string.playlists), bundle.playlists.size, playlists) { playlists = it }
     }
@@ -413,7 +425,7 @@ private fun PreviewSection(
         Text(stringResource(R.string.import_start))
     }
     OutlinedButton(onClick = onPickOther, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.import_choose_other))
+        Text(stringResource(if (bundle.source == ImportSource.LINK) R.string.import_link_other else R.string.import_choose_other))
     }
 }
 

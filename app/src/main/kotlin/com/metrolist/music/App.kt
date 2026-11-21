@@ -202,6 +202,8 @@ class App :
     }
 
     private fun observeSettingsChanges() {
+        com.metrolist.music.utils.aiblock.AiArtistBlocklist.start(this, applicationScope)
+
         applicationScope.launch(Dispatchers.IO) {
             dataStore.data
                 .map { it[VisitorDataKey] }
