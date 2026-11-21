@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="home_new_for_you">New songs for you</string>
+    <string name="discovery_shuffle">New discoveries</string>
     <string name="home_new_for_you_label">Songs you haven\'t played yet</string>
     <string name="home_artist_spotlight">Artist spotlight</string>
     <string name="home_new_from_artists">New from your artists</string>

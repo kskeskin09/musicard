@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="home_new_for_you">Senin için yeni şarkılar</string>
+    <string name="discovery_shuffle">Yeni keşifler</string>
     <string name="home_new_for_you_label">Henüz dinlemediğin şarkılar</string>
     <string name="home_artist_spotlight">Sanatçı vitrini</string>
     <string name="home_new_from_artists">Sanatçılarından yeni çıkanlar</string>

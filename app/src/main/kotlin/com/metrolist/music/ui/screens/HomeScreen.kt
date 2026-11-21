@@ -2740,77 +2740,112 @@ fun HomeScreen(
                 }
             }
 
+            // The old shuffle: a random Home item, played as a radio.
+            suspend fun playLuckyItem() {
+                if (allLocalItems.isEmpty() && allYtItems.isEmpty()) return
+                val local =
+                    when {
+                        allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5
+                        allLocalItems.isNotEmpty() -> true
+                        else -> false
+                    }
+                if (local) {
+                    when (val luckyItem = allLocalItems.random()) {
+                        is Song -> {
+                            playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
+                        }
+
+                        is Album -> {
+                            val albumWithSongs =
+                                withContext(Dispatchers.IO) {
+                                    database.albumWithSongs(luckyItem.id).first()
+                                }
+                            albumWithSongs?.let {
+                                playerConnection.playQueue(LocalAlbumRadio(it))
+                            }
+                        }
+
+                        is Artist -> {}
+
+                        is Playlist -> {}
+                    }
+                } else {
+                    when (val luckyItem = allYtItems.random()) {
+                        is SongItem -> {
+                            playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
+                        }
+
+                        is AlbumItem -> {
+                            playerConnection.playQueue(YouTubeAlbumRadio(luckyItem.playlistId))
+                        }
+
+                        is ArtistItem -> {
+                            luckyItem.radioEndpoint?.let {
+                                playerConnection.playQueue(YouTubeQueue(it))
+                            }
+                        }
+
+                        is PlaylistItem -> {
+                            luckyItem.playEndpoint?.let {
+                                playerConnection.playQueue(YouTubeQueue(it))
+                            }
+                        }
+
+                        is PodcastItem -> {
+                            luckyItem.playEndpoint?.let {
+                                playerConnection.playQueue(YouTubeQueue(it))
+                            }
+                        }
+
+                        is EpisodeItem -> {
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = luckyItem.title,
+                                    items = listOf(luckyItem.toMediaMetadata().toMediaItem()),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+
             HideOnScrollFAB(
-                visible = allLocalItems.isNotEmpty() || allYtItems.isNotEmpty(),
+                visible = allLocalItems.isNotEmpty() || allYtItems.isNotEmpty() ||
+                    !newForYou.isNullOrEmpty() || !dailyDiscover.isNullOrEmpty(),
                 lazyListState = lazylistState,
                 icon = R.drawable.shuffle,
                 onClick = {
                     if (!isListenTogetherGuest) {
-                        val local =
-                            when {
-                                allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5
-                                allLocalItems.isNotEmpty() -> true
-                                else -> false
-                            }
+                        // Most taps play new discoveries: songs never played and not in the
+                        // library. If there are not enough good ones, play as before.
+                        val discoveryPool =
+                            (
+                                newForYou.orEmpty() +
+                                    dailyDiscover.orEmpty().mapNotNull { it.recommendation as? SongItem }
+                            ).distinctBy { it.id }
+                        val tryDiscoveries =
+                            discoveryPool.isNotEmpty() && Random.nextFloat() < DISCOVERY_SHUFFLE_CHANCE
                         scope.launch(Dispatchers.Main) {
-                            if (local) {
-                                when (val luckyItem = allLocalItems.random()) {
-                                    is Song -> {
-                                        playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
-                                    }
-
-                                    is Album -> {
-                                        val albumWithSongs =
-                                            withContext(Dispatchers.IO) {
-                                                database.albumWithSongs(luckyItem.id).first()
-                                            }
-                                        albumWithSongs?.let {
-                                            playerConnection.playQueue(LocalAlbumRadio(it))
+                            if (tryDiscoveries) {
+                                val fresh =
+                                    withContext(Dispatchers.IO) {
+                                        discoveryPool.filter { item ->
+                                            val song = database.song(item.id).first()?.song
+                                            song == null ||
+                                                (song.totalPlayTime == 0L && song.inLibrary == null && !song.liked)
                                         }
-                                    }
-
-                                    is Artist -> {}
-
-                                    is Playlist -> {}
-                                }
-                            } else {
-                                when (val luckyItem = allYtItems.random()) {
-                                    is SongItem -> {
-                                        playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
-                                    }
-
-                                    is AlbumItem -> {
-                                        playerConnection.playQueue(YouTubeAlbumRadio(luckyItem.playlistId))
-                                    }
-
-                                    is ArtistItem -> {
-                                        luckyItem.radioEndpoint?.let {
-                                            playerConnection.playQueue(YouTubeQueue(it))
-                                        }
-                                    }
-
-                                    is PlaylistItem -> {
-                                        luckyItem.playEndpoint?.let {
-                                            playerConnection.playQueue(YouTubeQueue(it))
-                                        }
-                                    }
-
-                                    is PodcastItem -> {
-                                        luckyItem.playEndpoint?.let {
-                                            playerConnection.playQueue(YouTubeQueue(it))
-                                        }
-                                    }
-
-                                    is EpisodeItem -> {
-                                        playerConnection.playQueue(
-                                            ListQueue(
-                                                title = luckyItem.title,
-                                                items = listOf(luckyItem.toMediaMetadata().toMediaItem()),
-                                            ),
-                                        )
-                                    }
+                                    }.shuffled().take(25)
+                                if (fresh.size >= MIN_DISCOVERY_SONGS) {
+                                    playerConnection.playQueue(
+                                        ListQueue(
+                                            title = context.getString(R.string.discovery_shuffle),
+                                            items = fresh.map { it.toMediaMetadata().toMediaItem() },
+                                        ),
+                                    )
+                                    return@launch
                                 }
                             }
+                            playLuckyItem()
                         }
                     }
                 },
@@ -2818,6 +2853,10 @@ fun HomeScreen(
         }
     }
 }
+
+private const val DISCOVERY_SHUFFLE_CHANCE = 0.75f
+private const val MIN_DISCOVERY_SONGS = 3
+
 
 
 /** An album, artist or playlist played lately, for the row under the recent songs on Home. */
