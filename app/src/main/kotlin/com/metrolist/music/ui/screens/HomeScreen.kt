@@ -24,6 +24,12 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -1307,17 +1313,27 @@ fun HomeScreen(
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 modifier = Modifier.nestedScroll(revealChipsConnection),
             ) {
-                if (showChips || selectedChip != null) item(key = "mood_chips") {
-                    ChipsRow(
-                        chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
-                        currentValue = selectedChip,
-                        onValueUpdate = {
-                            viewModel.toggleChip(it)
-                        },
-                    )
+                // The chips row stays in the list so that hiding it (on refresh) can slide it back up
+                // smoothly instead of making it vanish at once.
+                val chipsVisible = showChips || selectedChip != null
+                item(key = "mood_chips") {
+                    AnimatedVisibility(
+                        visible = chipsVisible,
+                        enter = expandVertically(tween(200), expandFrom = Alignment.Top) + fadeIn(tween(200)),
+                        exit = shrinkVertically(tween(250), shrinkTowards = Alignment.Top) +
+                            slideOutVertically(tween(250)) { -it } + fadeOut(tween(200)),
+                    ) {
+                        ChipsRow(
+                            chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
+                            currentValue = selectedChip,
+                            onValueUpdate = {
+                                viewModel.toggleChip(it)
+                            },
+                        )
+                    }
                 }
 
-                if ((showChips || selectedChip != null) && isLoading && homePage?.chips.isNullOrEmpty()) {
+                if (chipsVisible && isLoading && homePage?.chips.isNullOrEmpty()) {
                     item(key = "chips_shimmer") {
                         ShimmerHost(showGradient = false) {
                             LazyRow(
