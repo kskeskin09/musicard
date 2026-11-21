@@ -21,8 +21,15 @@ data class SearchSummary(
     val items: List<YTItem>,
 )
 
+/** YouTube's spelling fix for a search. [autoCorrected]: the results are already for [query]. */
+data class SearchSpellCorrection(
+    val query: String,
+    val autoCorrected: Boolean,
+)
+
 data class SearchSummaryPage(
     val summaries: List<SearchSummary>,
+    val spellCorrection: SearchSpellCorrection? = null,
 ) {
     fun filterExplicit(enabled: Boolean) =
         if (enabled) {
