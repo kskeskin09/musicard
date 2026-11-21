@@ -526,6 +526,8 @@ class HomeViewModel @Inject constructor(
 
             launch(Dispatchers.IO) {
                 YouTube.home().onSuccess { page ->
+                    // Search's "For You" reads these, so it doesn't have to load Home again.
+                    MoodAndGenresViewModel.homeChipTitles.value = page.chips?.map { it.title }
                     homePage.value = page.copy(
                         sections = page.sections.mapNotNull { section ->
                             val filtered = section.items

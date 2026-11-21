@@ -47,28 +47,28 @@ class PopularViewModel
             viewModelScope.launch(Dispatchers.IO) {
                 val hideExplicit = context.dataStore.get(HideExplicitKey, false)
                 val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-                YouTube.getChartsPage().onSuccess { page ->
-                    // The country's top songs first, then its trending songs.
-                    val sections =
-                        page.sections.sortedBy { section ->
-                            when (section.chartType) {
-                                ChartsPage.ChartType.TOP -> 0
-                                ChartsPage.ChartType.TRENDING -> 1
-                                else -> 2
-                            }
-                        }
-                    countrySongs.value =
-                        sections
-                            .flatMap { it.items }
+                val fromCharts =
+                    YouTube.getChartsPage().onFailure { reportException(it) }.getOrNull()?.let { page ->
+                        // The country's top songs first, then its trending songs.
+                        page.sections
+                            .sortedBy { section ->
+                                when (section.chartType) {
+                                    ChartsPage.ChartType.TOP -> 0
+                                    ChartsPage.ChartType.TRENDING -> 1
+                                    else -> 2
+                                }
+                            }.flatMap { it.items }
                             .filterIsInstance<SongItem>()
-                            .distinctBy { it.id }
-                            .filterExplicit(hideExplicit)
-                            .filterVideoSongs(hideVideoSongs)
-                            .take(20)
-                }.onFailure {
-                    countrySongs.value = emptyList()
-                    reportException(it)
-                }
+                    }.orEmpty()
+                // The Charts page is empty or holds no songs in some countries: then use YouTube
+                // Music's own "Top 100 Songs <country>" chart playlist.
+                val songs = fromCharts.ifEmpty { countryChartPlaylistSongs() }
+                countrySongs.value =
+                    songs
+                        .distinctBy { it.id }
+                        .filterExplicit(hideExplicit)
+                        .filterVideoSongs(hideVideoSongs)
+                        .take(20)
             }
 
             viewModelScope.launch(Dispatchers.IO) {
@@ -87,6 +87,26 @@ class PopularViewModel
                     reportException(it)
                 }
             }
+        }
+
+        private suspend fun countryChartPlaylistSongs(): List<SongItem> {
+            val gl = YouTube.locale.gl
+            val englishName = Locale("", gl).getDisplayCountry(Locale.ENGLISH).ifBlank { return emptyList() }
+            val playlist =
+                YouTube
+                    .search("Top 100 Songs $englishName", YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST)
+                    .getOrNull()
+                    ?.items
+                    ?.filterIsInstance<com.metrolist.innertube.models.PlaylistItem>()
+                    ?.firstOrNull { item ->
+                        // Countries can go by another English name ("Türkiye"/"Turkey"), so only
+                        // ask for a "Top … Songs" chart made by YouTube Music itself.
+                        item.title.contains("Top", ignoreCase = true) &&
+                            item.title.contains("Song", ignoreCase = true) &&
+                            !item.title.contains("Global", ignoreCase = true) &&
+                            item.author?.name?.contains("YouTube", ignoreCase = true) != false
+                    } ?: return emptyList()
+            return YouTube.playlist(playlist.id).getOrNull()?.songs.orEmpty()
         }
 
         private companion object {
