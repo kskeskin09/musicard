@@ -23,6 +23,7 @@ import com.metrolist.innertube.models.filterVideoSongs
 import com.metrolist.innertube.models.filterYoutubeShorts
 import com.metrolist.innertube.pages.ExplorePage
 import com.metrolist.innertube.pages.HomePage
+import com.metrolist.innertube.pages.MoodAndGenres
 import com.metrolist.innertube.utils.completed
 import com.metrolist.music.constants.AccountNameKey
 import com.metrolist.music.constants.HideExplicitKey
@@ -71,6 +72,18 @@ data class DailyDiscoverItem(
     val relatedEndpoint: BrowseEndpoint?
 )
 
+/** One of the user's artists, shown as a big card with a few of their top songs. */
+data class ArtistSpotlight(
+    val artist: ArtistItem,
+    val songs: List<SongItem>,
+)
+
+/** One mood of "Today's vibe" and songs from its playlists. */
+data class Vibe(
+    val title: String,
+    val songs: List<SongItem>,
+)
+
 data class CommunityPlaylistItem(
     val playlist: PlaylistItem,
     val songs: List<SongItem>
@@ -112,6 +125,18 @@ class HomeViewModel @Inject constructor(
     val albumsForYou = MutableStateFlow<List<AlbumItem>?>(null)
     val keepListening = MutableStateFlow<List<LocalItem>?>(null)
     val similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
+
+    /** Songs like the ones the user plays that they have never played themselves. */
+    val newForYou = MutableStateFlow<List<SongItem>?>(null)
+
+    /** Big cards for a few of the artists the user listens to or follows. */
+    val artistSpotlights = MutableStateFlow<List<ArtistSpotlight>?>(null)
+
+    /** This year's albums and singles of the artists the user listens to or follows. */
+    val newFromArtists = MutableStateFlow<List<AlbumItem>?>(null)
+
+    /** "Today's vibe": a few moods, each with its songs (the first four show as one column). */
+    val vibes = MutableStateFlow<List<Vibe>?>(null)
     val accountPlaylists = MutableStateFlow<List<PlaylistItem>?>(null)
     val homePage = MutableStateFlow<HomePage?>(null)
     val explorePage = MutableStateFlow<ExplorePage?>(null)
@@ -531,6 +556,14 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) { getAlbumsForYou(hideExplicit) }
 
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { getNewForYou(hideExplicit, hideVideoSongs) }.onFailure { reportException(it) }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { getArtistSections(hideExplicit, hideVideoSongs) }.onFailure { reportException(it) }
+        }
+
         // "My Top" replaces the old Weekly / Monthly Most playlists; remove them if they exist.
         viewModelScope.launch(Dispatchers.IO) {
             listOf(
@@ -552,6 +585,9 @@ class HomeViewModel @Inject constructor(
                     newReleaseAlbums = page.newReleaseAlbums.filterOutNulls().filterExplicit(hideExplicit),
                     moodAndGenres = page.moodAndGenres.filterOutNulls()
                 )
+                // Different moods on each refresh, so "Today's vibe" doesn't always look the same.
+                runCatching { getVibes(page.moodAndGenres.filterOutNulls(), hideExplicit, hideVideoSongs) }
+                    .onFailure { reportException(it) }
             }.onFailure { reportException(it) }
         }
 
@@ -638,6 +674,140 @@ class HomeViewModel @Inject constructor(
             allYtItems.value = similarRecommendations.value?.flatMap { it.items }.orEmpty() +
                     homePage.value?.sections?.flatMap { it.items }.orEmpty()
         }
+    }
+
+    private suspend fun getNewForYou(
+        hideExplicit: Boolean,
+        hideVideoSongs: Boolean,
+    ) {
+        val since = LocalDateTime.now().minusWeeks(4)
+        val seeds =
+            (
+                database.mostPlayedSongs(fromTimeStamp = since, limit = 20).first() +
+                    database.recentEvents(40).first().map { it.song }
+            ).distinctBy { it.id }
+                .shuffled()
+                .take(5)
+        if (seeds.isEmpty()) {
+            newForYou.value = emptyList()
+            return
+        }
+        val found =
+            coroutineScope {
+                seeds.map { seed ->
+                    async(Dispatchers.IO) {
+                        val endpoint =
+                            YouTube.next(WatchEndpoint(videoId = seed.id)).getOrNull()?.relatedEndpoint
+                                ?: return@async emptyList<SongItem>()
+                        YouTube.related(endpoint).getOrNull()?.songs.orEmpty().shuffled()
+                    }
+                }.map { it.await() }
+            }
+        // One song from each seed in turn, so no single seed fills the list.
+        val mixed = mutableListOf<SongItem>()
+        val longest = found.maxOfOrNull { it.size } ?: 0
+        for (i in 0 until longest) found.forEach { list -> list.getOrNull(i)?.let { mixed += it } }
+        val seedIds = seeds.map { it.id }.toSet()
+        newForYou.value =
+            mixed
+                .distinctBy { it.id }
+                .filter { it.id !in seedIds }
+                .filterExplicit(hideExplicit)
+                .filterVideoSongs(hideVideoSongs)
+                // Only songs the user has never played.
+                .filter { song -> (database.song(song.id).first()?.song?.totalPlayTime ?: 0L) == 0L }
+                .take(20)
+    }
+
+    /** Artist spotlight cards and "New from your artists", from the same artist pages. */
+    private suspend fun getArtistSections(
+        hideExplicit: Boolean,
+        hideVideoSongs: Boolean,
+    ) {
+        val since = LocalDateTime.now().minusWeeks(8)
+        val listened =
+            database.mostPlayedArtists(since, limit = 12).first()
+                .filter { it.artist.isYouTubeArtist && !it.artist.isPodcastChannel }
+        val followed =
+            database.artistsBookmarkedByCreateDateAsc().first()
+                .filter { it.artist.isYouTubeArtist && !it.artist.isPodcastChannel }
+        val seeds = (listened.shuffled().take(4) + followed.shuffled().take(4)).distinctBy { it.id }.take(6)
+        if (seeds.isEmpty()) {
+            artistSpotlights.value = emptyList()
+            newFromArtists.value = emptyList()
+            return
+        }
+        val pages =
+            coroutineScope {
+                seeds.map { seed -> async(Dispatchers.IO) { YouTube.artist(seed.id).getOrNull() } }
+                    .mapNotNull { it.await() }
+            }
+        artistSpotlights.value =
+            pages
+                .mapNotNull { page ->
+                    val songs =
+                        page.sections
+                            .flatMap { it.items }
+                            .filterIsInstance<SongItem>()
+                            .filterExplicit(hideExplicit)
+                            .filterVideoSongs(hideVideoSongs)
+                            .distinctBy { it.id }
+                            .take(5)
+                    if (songs.isEmpty() || page.artist.thumbnail.isNullOrBlank()) null else ArtistSpotlight(page.artist, songs)
+                }.shuffled()
+                .take(4)
+
+        val today = LocalDate.now()
+        // Early in the year, last year's releases still count as new.
+        val firstYear = if (today.monthValue <= 2) today.year - 1 else today.year
+        val seedIds = seeds.map { it.id }.toSet()
+        val fromPages =
+            pages.flatMap { page ->
+                page.sections
+                    .flatMap { it.items }
+                    .filterIsInstance<AlbumItem>()
+                    .filter { (it.year ?: 0) >= firstYear }
+            }
+        val fromNewReleases =
+            YouTube.newReleaseAlbums().getOrNull().orEmpty()
+                .filter { album -> album.artists.orEmpty().any { it.id in seedIds } }
+        newFromArtists.value =
+            (fromNewReleases + fromPages)
+                .distinctBy { it.id }
+                .filterExplicit(hideExplicit)
+                .take(16)
+    }
+
+    /** Loads songs for six random moods; a mood with fewer than four songs is left out. */
+    private suspend fun getVibes(
+        moods: List<MoodAndGenres.Item>,
+        hideExplicit: Boolean,
+        hideVideoSongs: Boolean,
+    ) {
+        val picked = moods.shuffled().take(6)
+        vibes.value =
+            coroutineScope {
+                picked.map { mood ->
+                    async(Dispatchers.IO) {
+                        val playlists =
+                            YouTube.browse(mood.endpoint.browseId, mood.endpoint.params).getOrNull()
+                                ?.items.orEmpty()
+                                .flatMap { it.items }
+                                .filterIsInstance<PlaylistItem>()
+                                .shuffled()
+                                .take(2)
+                        val songs =
+                            playlists.flatMap { playlist ->
+                                YouTube.playlist(playlist.id.removePrefix("VL")).getOrNull()?.songs.orEmpty().shuffled().take(12)
+                            }.distinctBy { it.id }
+                                .filterExplicit(hideExplicit)
+                                .filterVideoSongs(hideVideoSongs)
+                                .shuffled()
+                                .take(20)
+                        if (songs.size < 4) null else Vibe(mood.title, songs)
+                    }
+                }.mapNotNull { it.await() }
+            }
     }
 
     private suspend fun getAlbumsForYou(hideExplicit: Boolean) {

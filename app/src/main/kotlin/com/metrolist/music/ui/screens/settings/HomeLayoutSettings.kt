@@ -73,6 +73,10 @@ fun HomeLayoutSettings(navController: NavController) {
             HomeLayout.SIMILAR to stringResource(R.string.home_section_similar),
             HomeLayout.YOUTUBE to stringResource(R.string.home_section_youtube),
             HomeLayout.MOOD_AND_GENRES to stringResource(R.string.mood_and_genres),
+            HomeLayout.NEW_FOR_YOU to stringResource(R.string.home_new_for_you),
+            HomeLayout.ARTIST_SPOTLIGHT to stringResource(R.string.home_artist_spotlight),
+            HomeLayout.NEW_FROM_ARTISTS to stringResource(R.string.home_new_from_artists),
+            HomeLayout.MOOD_SONGS to stringResource(R.string.home_todays_vibe),
         )
     val icons =
         mapOf(
@@ -87,6 +91,10 @@ fun HomeLayoutSettings(navController: NavController) {
             HomeLayout.SIMILAR to painterResource(R.drawable.playlist_play),
             HomeLayout.YOUTUBE to painterResource(R.drawable.explore_outlined),
             HomeLayout.MOOD_AND_GENRES to painterResource(R.drawable.palette),
+            HomeLayout.NEW_FOR_YOU to painterResource(R.drawable.discover_tune),
+            HomeLayout.ARTIST_SPOTLIGHT to painterResource(R.drawable.artist),
+            HomeLayout.NEW_FROM_ARTISTS to painterResource(R.drawable.album),
+            HomeLayout.MOOD_SONGS to painterResource(R.drawable.radio),
         )
     val rows =
         order.map { id ->
