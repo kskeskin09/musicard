@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -56,6 +57,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.foundation.gestures.horizontalDrag
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
@@ -557,11 +563,23 @@ private fun UpNextList(
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = nextIndex.coerceAtMost(shown.lastIndex))
     // When the song changes, the new next song slides back to the top.
-    val appliedCurrent = remember { intArrayOf(currentWindowIndex) }
-    LaunchedEffect(currentWindowIndex, shown.size) {
-        if (appliedCurrent[0] == currentWindowIndex) return@LaunchedEffect
-        appliedCurrent[0] = currentWindowIndex
+    val currentKey: Any? = if (hasCurrent) queueWindows[currentWindowIndex].uid else null
+    val nextKey: Any? = shown.getOrNull(nextIndex)?.uid
+    val appliedCurrent = remember { arrayOf(currentKey) }
+    LaunchedEffect(currentKey) {
+        if (appliedCurrent[0] == currentKey) return@LaunchedEffect
+        appliedCurrent[0] = currentKey
         listState.glideTo(nextIndex.coerceIn(0, shown.lastIndex)) { 0 }
+    }
+    // A lazy list keeps its place by song. When the order changes under the same song (shuffle,
+    // a song added or removed), the list must show the new next song, not follow the old one.
+    val seenKeys = remember { arrayOf(currentKey, nextKey) }
+    SideEffect {
+        if (seenKeys[0] == currentKey && seenKeys[1] != nextKey) {
+            listState.requestScrollToItem(nextIndex.coerceIn(0, shown.lastIndex))
+        }
+        seenKeys[0] = currentKey
+        seenKeys[1] = nextKey
     }
     // Holding a song picks it up; dropping it moves it in the queue. While dragging, the list
     // shows the moved order; the player is updated once the song is dropped.
@@ -669,6 +687,17 @@ private fun UpNextList(
                 key = "${window.uid}_${window.firstPeriodIndex}",
                 enabled = upcoming && !isListenTogetherGuest,
             ) { isDragging ->
+            SwipeToRemoveBox(
+                enabled = upcoming && !isListenTogetherGuest && !isDragging,
+                contentColor = contentColor,
+                onRemove = {
+                    val player = playerConnection.player
+                    val at = window.firstPeriodIndex
+                    if (at in 0 until player.mediaItemCount && player.getMediaItemAt(at).mediaId == window.mediaItem.mediaId) {
+                        player.removeMediaItem(at)
+                    }
+                },
+            ) {
             UpNextRow(
                 metadata = metadata,
                 contentColor = contentColor,
@@ -696,6 +725,132 @@ private fun UpNextList(
                 },
             )
             }
+            }
+        }
+    }
+}
+
+/**
+ * Swipe an upcoming song to the left to take it out of the queue. Like the swipe that adds a song
+ * to the queue: a pill grows out of the uncovered side, first its icon, then its label once the
+ * swipe is far enough to count, with a tick at that point. Let go there and the row slides out.
+ */
+@Composable
+private fun SwipeToRemoveBox(
+    enabled: Boolean,
+    contentColor: Color,
+    onRemove: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val view = androidx.compose.ui.platform.LocalView.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val offset = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val widthPx = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val threshold = with(density) { 150.dp.toPx() }
+    val maxDrag = with(density) { 190.dp.toPx() }
+    val gapPx = with(density) { 12.dp.toPx() }
+    var armed by remember { mutableStateOf(false) }
+    val latestOnRemove by rememberUpdatedState(onRemove)
+
+    fun dragBy(delta: Float) {
+        offset.floatValue = (offset.floatValue + delta).coerceIn(-maxDrag, 0f)
+        val nowArmed = -offset.floatValue >= threshold
+        if (nowArmed != armed) {
+            armed = nowArmed
+            if (nowArmed) view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+        }
+    }
+
+    fun settle() {
+        val remove = -offset.floatValue >= threshold
+        armed = false
+        scope.launch {
+            androidx.compose.animation.core.animate(
+                initialValue = offset.floatValue,
+                targetValue = if (remove) -widthPx.intValue.toFloat() else 0f,
+                animationSpec = tween(if (remove) 180 else 300),
+            ) { value, _ -> offset.floatValue = value }
+            if (remove) latestOnRemove()
+        }
+    }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .onSizeChanged { widthPx.intValue = it.width }
+                // Only a swipe to the left belongs to the row. A swipe to the right is left
+                // untouched so the Lyrics / Up next pager gets it and goes back to the lyrics
+                // (a plain draggable took every sideways swipe on a song, so once on Up next the
+                // only way back was outside the list).
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var started = false
+                        val slop =
+                            awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
+                                if (over < 0f || offset.floatValue < 0f) {
+                                    change.consume()
+                                    started = true
+                                    dragBy(over)
+                                }
+                            }
+                        if (slop == null || !started) return@awaitEachGesture
+                        horizontalDrag(slop.id) { change ->
+                            dragBy(change.positionChange().x)
+                            change.consume()
+                        }
+                        settle()
+                    }
+                },
+    ) {
+        val value = -offset.floatValue
+        if (value > 0f) {
+            val pillWidthPx = (value - gapPx * 2).coerceAtLeast(0f)
+            Box(
+                contentAlignment = Alignment.CenterEnd,
+                modifier = Modifier.matchParentSize().padding(horizontal = 12.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier =
+                        Modifier
+                            .width(with(density) { pillWidthPx.toDp() })
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(contentColor.copy(alpha = 0.92f)),
+                ) {
+                    if (pillWidthPx > with(density) { 28.dp.toPx() }) {
+                        Icon(
+                            painter = painterResource(R.drawable.delete),
+                            contentDescription = null,
+                            tint = Color.Black.copy(alpha = 0.75f),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    androidx.compose.animation.AnimatedVisibility(visible = value >= threshold * 0.8f) {
+                        Text(
+                            text = stringResource(R.string.remove_from_queue),
+                            color = Color.Black.copy(alpha = 0.75f),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
+            }
+        }
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { translationX = offset.floatValue },
+        ) {
+            content()
         }
     }
 }

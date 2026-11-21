@@ -239,7 +239,7 @@ class PlayerConnection(
         playbackState.value = newPlayer.playbackState
         playWhenReady.value = newPlayer.playWhenReady
         mediaMetadata.value = newPlayer.currentMetadata
-        queueTitle.value = service.queueTitle
+        queueTitle.value = service.displayQueueTitle
         queueWindows.value = newPlayer.getQueueWindows()
         currentWindowIndex.value = newPlayer.getCurrentQueueIndex()
         currentMediaItemIndex.value = newPlayer.currentMediaItemIndex
@@ -288,6 +288,9 @@ class PlayerConnection(
         if (!playerReadinessFlow.value) {
             Timber.tag(TAG).w("startRadioSeamlessly called before player ready; delegating to service")
         }
+        // The radio is no longer the list it was started from, so that list's Play button and
+        // "Playing from" let go of it.
+        queueSourceRoute.value = null
         try {
             service.startRadioSeamlessly()
         } catch (e: Exception) {
@@ -629,6 +632,7 @@ class PlayerConnection(
         reason: Int,
     ) {
         mediaMetadata.value = mediaItem?.metadata
+        queueTitle.value = service.displayQueueTitle
         currentMediaItemIndex.value = player.currentMediaItemIndex
         currentWindowIndex.value = player.getCurrentQueueIndex()
         updateCanSkipPreviousAndNext()
@@ -639,7 +643,7 @@ class PlayerConnection(
         reason: Int,
     ) {
         queueWindows.value = player.getQueueWindows()
-        queueTitle.value = service.queueTitle
+        queueTitle.value = service.displayQueueTitle
         currentMediaItemIndex.value = player.currentMediaItemIndex
         currentWindowIndex.value = player.getCurrentQueueIndex()
         updateCanSkipPreviousAndNext()

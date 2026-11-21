@@ -157,4 +157,5 @@
     <string name="about_made_by">Yapımcı</string>
     <string name="prefer_official_songs">Videolar yerine şarkıları tercih et</string>
     <string name="prefer_official_songs_desc">En iyi sonuç bir video olduğunda, şarkının resmi sürümünü göster</string>
+    <string name="queue_mix_title">%1$s Mix</string>
 </resources>
